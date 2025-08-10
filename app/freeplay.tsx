@@ -5,32 +5,46 @@ import {
   TouchableOpacity,
   Pressable,
 } from "react-native";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { StyleSheet } from "react-native";
 import { squareGenerator } from "@/helper/squareGenerator";
+import { ThemedText } from "@/components/ThemedText";
+import BoardSizeModal from "@/components/BoardSizeModal";
 
 export interface Square {
   color: ColorKey;
   captured: boolean;
   defaultColor: ColorKey;
   landLocked: boolean;
+  size: number;
   x: number;
   y: number;
 }
 
 export type ColorKey = 0 | 1 | 2 | 3 | 4;
+export type BoardSize = "Small" | "Medium" | "Large";
 
 const colorMap = {
-  0: "red",
-  1: "orange",
-  2: "yellow",
-  3: "green",
-  4: "blue",
+  0: "purple",
+  1: "#d1264b",
+  2: "gray",
+  3: "#cffc03",
+  4: "#8375eb",
+};
+
+const boardConfig = {
+  Small: 64,
+  Medium: 100,
+  Large: 144,
 };
 
 export default function Freeplay() {
+  const [boardSize, setBoardSize] = useState<BoardSize>("Small");
   const [boardState, setBoardState] = useState(() => {
-    const boardData = squareGenerator(100);
+    const boardData = squareGenerator(
+      64,
+      calculateSquareSize(boardConfig[boardSize])
+    );
     checkAdjacentSquares(
       boardData[0][0],
       boardData,
@@ -41,6 +55,7 @@ export default function Freeplay() {
   });
   const [activeColor, setActiveColor] = useState(boardState[0][0].color);
   const [score, setScore] = useState(1);
+  const [showBoardSizeModal, setShowBoardSizeModal] = useState(false);
 
   const handleColorChange = (color: ColorKey) => {
     const visited = new Set<string>();
@@ -133,7 +148,8 @@ export default function Freeplay() {
   };
 
   const newBoardProcess = () => {
-    const boardData = squareGenerator(100);
+    const squareSize = calculateSquareSize(boardConfig[boardSize]);
+    const boardData = squareGenerator(boardConfig[boardSize], squareSize);
     checkAdjacentSquares(
       boardData[0][0],
       boardData,
@@ -145,9 +161,20 @@ export default function Freeplay() {
     setActiveColor(boardData[0][0].color);
   };
 
+  function calculateSquareSize(squareCount: number) {
+    const screenWidth = Dimensions.get("window").width;
+
+    const columns = Math.sqrt(squareCount);
+
+    // Optional: add some padding or margin
+    const padding = 20;
+
+    return Math.floor((screenWidth - padding) / columns);
+  }
+
   return (
     <View style={styles.container}>
-      <Text style={styles.score}>Moves: {score}</Text>
+      <ThemedText style={styles.score}>Moves: {score}</ThemedText>
       <View style={styles.squareGrid}>
         {boardState.map((row) => {
           return row.map((square: Square) => {
@@ -156,7 +183,11 @@ export default function Freeplay() {
                 key={`${square.x}-${square.y}`}
                 style={[
                   styles.square,
-                  { backgroundColor: colorMap[square.color] },
+                  {
+                    backgroundColor: colorMap[square.color],
+                    width: square.size,
+                    height: square.size,
+                  },
                 ]}
                 onPress={() => console.log("square", square)}
               />
@@ -182,6 +213,15 @@ export default function Freeplay() {
           onPress={() => resetBoardProcess()}
         >
           <Text style={styles.extraText}>Reset Board</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.extraButton,
+            { backgroundColor: "rgba(46, 46, 46, 1)" },
+          ]}
+          onPress={() => setShowBoardSizeModal(true)}
+        >
+          <Text style={styles.extraText}>Board Size</Text>
         </TouchableOpacity>
       </View>
       <View style={styles.colorRow}>
@@ -221,6 +261,14 @@ export default function Freeplay() {
           onPress={() => activeColor !== 4 && handleColorChange(4)}
         />
       </View>
+      {showBoardSizeModal && (
+        <BoardSizeModal
+          boardSize={boardSize}
+          setShowBoardSizeModal={setShowBoardSizeModal}
+          setBoardSize={setBoardSize}
+          newBoardProcess={newBoardProcess}
+        />
+      )}
     </View>
   );
 }
@@ -243,8 +291,6 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   square: {
-    width: 40,
-    height: 40,
     borderColor: "black",
     borderWidth: 1,
   },
