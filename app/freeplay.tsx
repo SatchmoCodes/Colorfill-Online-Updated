@@ -5,11 +5,18 @@ import {
   TouchableOpacity,
   Pressable,
 } from "react-native";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, act } from "react";
 import { StyleSheet } from "react-native";
 import { squareGenerator } from "@/helper/squareGenerator";
 import { ThemedText } from "@/components/ThemedText";
 import BoardSizeModal from "@/components/BoardSizeModal";
+import { colorPaletteOptions } from "@/constants/ColorPaletteOptions";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect } from "@react-navigation/native";
+import { ThemedView } from "@/components/ThemedView";
+import { auth, db } from "@/firebaseConfig";
+import BoardCompleteModal from "@/components/ui/BoardCompleteModal";
+import { PaletteObj } from "./settings";
 
 export interface Square {
   color: ColorKey;
@@ -24,13 +31,25 @@ export interface Square {
 export type ColorKey = 0 | 1 | 2 | 3 | 4;
 export type BoardSize = "Small" | "Medium" | "Large";
 
-const colorMap = {
-  0: "purple",
-  1: "#d1264b",
-  2: "gray",
-  3: "#cffc03",
-  4: "#8375eb",
-};
+interface GameBoardProps {
+  boardState: Square[][];
+  selectedColorPalette: PaletteObj;
+  boardSize: BoardSize;
+  calculateSquareSize: (x: number) => number;
+}
+
+interface GameEffectButtonProps {
+  newBoardProcess: (x: BoardSize) => void;
+  resetBoardProcess: () => void;
+  setShowBoardSizeModal: React.Dispatch<React.SetStateAction<boolean>>;
+  boardSize: BoardSize;
+}
+
+interface ColorRowButtons {
+  activeColor: number;
+  selectedColorPalette: PaletteObj;
+  handleColorChange: (color: ColorKey) => void;
+}
 
 const boardConfig = {
   Small: 64,
@@ -54,11 +73,40 @@ export default function Freeplay() {
     return boardData;
   });
   const [activeColor, setActiveColor] = useState(boardState[0][0].color);
-  const [score, setScore] = useState(1);
+  const [score, setScore] = useState(0);
   const [showBoardSizeModal, setShowBoardSizeModal] = useState(false);
+  const [showBoardCompleteModal, setShowBoardCompleteModal] = useState(false);
+  const [selectedColorPalette, setSelectedColorPalette] = useState(
+    colorPaletteOptions[0]
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      console.log("focusing");
+      const loadPalette = async () => {
+        try {
+          const colorIndexString =
+            (await AsyncStorage.getItem("color-index")) ?? 0;
+          const colorIndex = Number(colorIndexString);
+          if (Number.isInteger(colorIndex)) {
+            setSelectedColorPalette(colorPaletteOptions[colorIndex]);
+          }
+        } catch (error) {
+          console.log("error setting initial settings", error);
+        }
+      };
+      loadPalette();
+    }, [])
+  );
+
+  async function loadInitialSettings() {
+    const color = (await AsyncStorage.getItem("color-index")) ?? 0;
+    setSelectedColorPalette(colorPaletteOptions[color as number]);
+  }
 
   const handleColorChange = (color: ColorKey) => {
     const visited = new Set<string>();
+    let remainingSquares = false;
     const currentBoardState = boardState.map((row) =>
       row.map((square) => ({ ...square }))
     );
@@ -74,18 +122,28 @@ export default function Freeplay() {
     });
     currentBoardState.forEach((row) => {
       row.forEach((square) => {
-        if (square.captured && !square.landLocked) {
-          const neighbors = getAdjacentSquares(square, currentBoardState);
-          const allNeighborsCaptured = neighbors.every((n) => !n || n.captured);
-          if (allNeighborsCaptured) {
-            square.landLocked = true;
+        if (square.captured) {
+          if (!square.landLocked) {
+            const neighbors = getAdjacentSquares(square, currentBoardState);
+            const allNeighborsCaptured = neighbors.every(
+              (n) => !n || n.captured
+            );
+            if (allNeighborsCaptured) {
+              square.landLocked = true;
+            }
           }
+        } else {
+          remainingSquares = true;
         }
       });
     });
     setBoardState(currentBoardState);
     setActiveColor(color);
     setScore((prev) => prev + 1);
+    if (!remainingSquares) {
+      console.log("no remaining squares!");
+      setShowBoardCompleteModal(true);
+    }
   };
 
   function checkAdjacentSquares(
@@ -147,9 +205,9 @@ export default function Freeplay() {
     setScore(0);
   };
 
-  const newBoardProcess = () => {
-    const squareSize = calculateSquareSize(boardConfig[boardSize]);
-    const boardData = squareGenerator(boardConfig[boardSize], squareSize);
+  const newBoardProcess = (size: BoardSize) => {
+    const squareSize = calculateSquareSize(boardConfig[size]);
+    const boardData = squareGenerator(boardConfig[size], squareSize);
     checkAdjacentSquares(
       boardData[0][0],
       boardData,
@@ -159,6 +217,7 @@ export default function Freeplay() {
     setBoardState(boardData);
     setScore(0);
     setActiveColor(boardData[0][0].color);
+    setShowBoardSizeModal(false);
   };
 
   function calculateSquareSize(squareCount: number) {
@@ -167,100 +226,31 @@ export default function Freeplay() {
     const columns = Math.sqrt(squareCount);
 
     // Optional: add some padding or margin
-    const padding = 20;
+    const padding = 24;
 
     return Math.floor((screenWidth - padding) / columns);
   }
 
   return (
-    <View style={styles.container}>
+    <ThemedView style={styles.container}>
       <ThemedText style={styles.score}>Moves: {score}</ThemedText>
-      <View style={styles.squareGrid}>
-        {boardState.map((row) => {
-          return row.map((square: Square) => {
-            return (
-              <TouchableOpacity
-                key={`${square.x}-${square.y}`}
-                style={[
-                  styles.square,
-                  {
-                    backgroundColor: colorMap[square.color],
-                    width: square.size,
-                    height: square.size,
-                  },
-                ]}
-                onPress={() => console.log("square", square)}
-              />
-            );
-          });
-        })}
-      </View>
-      <View style={styles.colorRow}>
-        <TouchableOpacity
-          style={[
-            styles.extraButton,
-            { backgroundColor: "rgba(46, 46, 46, 1)" },
-          ]}
-          onPress={() => newBoardProcess()}
-        >
-          <Text style={styles.extraText}>New Board</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.extraButton,
-            { backgroundColor: "rgba(46, 46, 46, 1)" },
-          ]}
-          onPress={() => resetBoardProcess()}
-        >
-          <Text style={styles.extraText}>Reset Board</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.extraButton,
-            { backgroundColor: "rgba(46, 46, 46, 1)" },
-          ]}
-          onPress={() => setShowBoardSizeModal(true)}
-        >
-          <Text style={styles.extraText}>Board Size</Text>
-        </TouchableOpacity>
-      </View>
-      <View style={styles.colorRow}>
-        <TouchableOpacity
-          style={[
-            styles.colorButton,
-            { backgroundColor: activeColor === 0 ? "white" : colorMap[0] },
-          ]}
-          onPress={() => activeColor !== 0 && handleColorChange(0)}
-        />
-        <TouchableOpacity
-          style={[
-            styles.colorButton,
-            { backgroundColor: activeColor === 1 ? "white" : colorMap[1] },
-          ]}
-          onPress={() => activeColor !== 1 && handleColorChange(1)}
-        />
-        <TouchableOpacity
-          style={[
-            styles.colorButton,
-            { backgroundColor: activeColor === 2 ? "white" : colorMap[2] },
-          ]}
-          onPress={() => activeColor !== 2 && handleColorChange(2)}
-        />
-        <TouchableOpacity
-          style={[
-            styles.colorButton,
-            { backgroundColor: activeColor === 3 ? "white" : colorMap[3] },
-          ]}
-          onPress={() => activeColor !== 3 && handleColorChange(3)}
-        />
-        <TouchableOpacity
-          style={[
-            styles.colorButton,
-            { backgroundColor: activeColor === 4 ? "white" : colorMap[4] },
-          ]}
-          onPress={() => activeColor !== 4 && handleColorChange(4)}
-        />
-      </View>
+      <GameBoard
+        boardState={boardState}
+        selectedColorPalette={selectedColorPalette}
+        boardSize={boardSize}
+        calculateSquareSize={calculateSquareSize}
+      />
+      <GameEffectButtons
+        newBoardProcess={newBoardProcess}
+        resetBoardProcess={resetBoardProcess}
+        setShowBoardSizeModal={setShowBoardSizeModal}
+        boardSize={boardSize}
+      />
+      <ColorRowButtons
+        activeColor={activeColor}
+        selectedColorPalette={selectedColorPalette}
+        handleColorChange={handleColorChange}
+      />
       {showBoardSizeModal && (
         <BoardSizeModal
           boardSize={boardSize}
@@ -269,9 +259,151 @@ export default function Freeplay() {
           newBoardProcess={newBoardProcess}
         />
       )}
-    </View>
+      {showBoardCompleteModal && (
+        <BoardCompleteModal
+          setShowBoardCompleteModal={setShowBoardCompleteModal}
+          newBoardProcess={newBoardProcess}
+          resetBoardProcess={resetBoardProcess}
+          boardSize={boardSize}
+          score={score}
+        />
+      )}
+    </ThemedView>
   );
 }
+
+const GameBoard = (props: GameBoardProps) => {
+  const { boardState, selectedColorPalette, boardSize, calculateSquareSize } =
+    props;
+
+  const columns = Math.sqrt(boardConfig[boardSize]);
+  const squareSize = calculateSquareSize(boardConfig[boardSize]);
+  const containerSize = columns * squareSize;
+
+  return (
+    <View
+      style={[
+        styles.squareGrid,
+        {
+          width: containerSize,
+          height: containerSize,
+        },
+      ]}
+    >
+      {boardState.map((row) => {
+        return row.map((square: Square) => {
+          return (
+            <View
+              key={`${square.x}-${square.y}`}
+              style={[
+                styles.square,
+                {
+                  backgroundColor: selectedColorPalette[square.color],
+                  width: square.size,
+                  height: square.size,
+                },
+              ]}
+            />
+          );
+        });
+      })}
+    </View>
+  );
+};
+
+const GameEffectButtons = (props: GameEffectButtonProps) => {
+  const {
+    newBoardProcess,
+    resetBoardProcess,
+    setShowBoardSizeModal,
+    boardSize,
+  } = props;
+  return (
+    <View style={styles.colorRow}>
+      <TouchableOpacity
+        style={[styles.extraButton, { backgroundColor: "rgba(46, 46, 46, 1)" }]}
+        onPress={() => newBoardProcess(boardSize)}
+      >
+        <Text style={styles.extraText}>New Board</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.extraButton, { backgroundColor: "rgba(46, 46, 46, 1)" }]}
+        onPress={() => resetBoardProcess()}
+      >
+        <Text style={styles.extraText}>Reset Board</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.extraButton, { backgroundColor: "rgba(46, 46, 46, 1)" }]}
+        onPress={() => setShowBoardSizeModal(true)}
+      >
+        <Text style={styles.extraText}>Board Size</Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+const ColorRowButtons = (props: ColorRowButtons) => {
+  const { activeColor, selectedColorPalette, handleColorChange } = props;
+  return (
+    <View style={styles.colorRow}>
+      <TouchableOpacity
+        style={[
+          styles.colorButton,
+          {
+            backgroundColor:
+              activeColor === 0 ? "white" : selectedColorPalette[0],
+            opacity: activeColor === 0 ? 0.05 : 1,
+          },
+        ]}
+        onPress={() => activeColor !== 0 && handleColorChange(0)}
+      />
+      <TouchableOpacity
+        style={[
+          styles.colorButton,
+          {
+            backgroundColor:
+              activeColor === 1 ? "white" : selectedColorPalette[1],
+            opacity: activeColor === 1 ? 0.05 : 1,
+          },
+        ]}
+        onPress={() => activeColor !== 1 && handleColorChange(1)}
+      />
+      <TouchableOpacity
+        style={[
+          styles.colorButton,
+          {
+            backgroundColor:
+              activeColor === 2 ? "white" : selectedColorPalette[2],
+            opacity: activeColor === 2 ? 0.05 : 1,
+          },
+        ]}
+        onPress={() => activeColor !== 2 && handleColorChange(2)}
+      />
+      <TouchableOpacity
+        style={[
+          styles.colorButton,
+          {
+            backgroundColor:
+              activeColor === 3 ? "white" : selectedColorPalette[3],
+            opacity: activeColor === 3 ? 0.05 : 1,
+          },
+        ]}
+        onPress={() => activeColor !== 3 && handleColorChange(3)}
+      />
+      <TouchableOpacity
+        style={[
+          styles.colorButton,
+          {
+            backgroundColor:
+              activeColor === 4 ? "white" : selectedColorPalette[4],
+            opacity: activeColor === 4 ? 0.05 : 1,
+          },
+        ]}
+        onPress={() => activeColor !== 4 && handleColorChange(4)}
+      />
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -285,8 +417,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   squareGrid: {
-    width: 400,
-    height: 400,
     flexDirection: "row",
     flexWrap: "wrap",
   },
@@ -304,6 +434,8 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     width: 60,
     height: 60,
+    borderWidth: 1,
+    borderColor: "black",
   },
   extraButton: {
     justifyContent: "center",

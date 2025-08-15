@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "185336486852",
+    "project_id": "colorfill-updated",
+    "storage_bucket": "colorfill-updated.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:185336486852:android:e7d88c545b9ff01a27e291",
+        "android_client_info": {
+          "package_name": "com.colorfillonlineupdated"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAjWP1wUhGw9ZEsZV9-N_OhwcKDFEQTneM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

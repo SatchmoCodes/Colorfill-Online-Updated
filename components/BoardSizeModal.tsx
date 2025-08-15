@@ -1,60 +1,78 @@
-import { View, Text, Modal, TouchableOpacity } from "react-native";
-import React from "react";
+import {
+  View,
+  Text,
+  Modal,
+  TouchableOpacity,
+  useColorScheme,
+} from "react-native";
+import React, { useState } from "react";
 import { ThemedText } from "./ThemedText";
 import { StyleSheet } from "react-native";
 import { ThemedView } from "./ThemedView";
 import { BoardSize } from "@/app/freeplay";
 import { RadioButton } from "react-native-paper";
+import { useThemeColor } from "@/hooks/useThemeColor";
+import { IconSymbol } from "./ui/IconSymbol";
 
 interface ModalProps {
   setShowBoardSizeModal: React.Dispatch<React.SetStateAction<boolean>>;
   setBoardSize: React.Dispatch<React.SetStateAction<BoardSize>>;
   boardSize: BoardSize;
-  newBoardProcess: () => void;
+  newBoardProcess: (size: BoardSize) => void;
 }
 
 const boardSizeOptions: BoardSize[] = ["Small", "Medium", "Large"];
 
 export default function BoardSizeModal(props: ModalProps) {
-  const { boardSize, setBoardSize, setShowBoardSizeModal, newBoardProcess } =
-    props;
+  const { setBoardSize, setShowBoardSizeModal, newBoardProcess } = props;
+
+  const theme = useColorScheme() ?? "light";
+  console.log("theme", theme);
 
   return (
-    <Modal transparent animationType="fade">
-      <ThemedView style={styles.centeredView}>
+    <Modal
+      onRequestClose={() => setShowBoardSizeModal(false)}
+      transparent
+      animationType="fade"
+    >
+      <ThemedView
+        style={[
+          styles.centeredView,
+          // {
+          //   backgroundColor: theme === "dark" ? "#151718" : "white",
+          //   position: "relative",
+          // },
+        ]}
+      >
+        <TouchableOpacity
+          style={{ position: "absolute", top: 5, right: 5 }}
+          onPress={() => setShowBoardSizeModal(false)}
+        >
+          <IconSymbol size={28} name="clear.fill" color={"white"} />
+        </TouchableOpacity>
+
         <ThemedText type="title">Choose board size</ThemedText>
-        <ThemedView>
-          <RadioButton.Group
-            onValueChange={(newValue) => setBoardSize(newValue as BoardSize)}
-            value={boardSize}
-          >
-            {boardSizeOptions.map((option, i) => {
-              return (
-                <RadioButton.Item
-                  label={option}
-                  value={option}
-                  key={i}
-                ></RadioButton.Item>
-              );
-            })}
-          </RadioButton.Group>
-        </ThemedView>
-        <ThemedView style={styles.buttonView}>
-          <TouchableOpacity
-            style={[styles.modalButtons, styles.confirmButton]}
-            onPress={() => {
-              newBoardProcess();
-              setShowBoardSizeModal(false);
-            }}
-          >
-            <ThemedText style={styles.buttonText}>Confirm</ThemedText>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.modalButtons, styles.cancelButton]}
-            onPress={() => setShowBoardSizeModal(false)}
-          >
-            <ThemedText style={styles.buttonText}>Cancel</ThemedText>
-          </TouchableOpacity>
+        <ThemedView style={{ gap: 10, marginBottom: 20, marginTop: 20 }}>
+          {boardSizeOptions.map((option, i) => {
+            return (
+              <TouchableOpacity
+                key={i}
+                onPress={() => {
+                  setBoardSize(option);
+                  newBoardProcess(option);
+                }}
+                style={{
+                  backgroundColor: "gray",
+                  borderRadius: 30,
+                  padding: 5,
+                }}
+              >
+                <ThemedText style={{ textAlign: "center" }}>
+                  {option}
+                </ThemedText>
+              </TouchableOpacity>
+            );
+          })}
         </ThemedView>
       </ThemedView>
     </Modal>
@@ -68,7 +86,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     margin: "auto",
     // margin: 20,
-    backgroundColor: "white",
     borderRadius: 20,
     padding: 35,
     shadowColor: "#000",

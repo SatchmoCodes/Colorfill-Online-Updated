@@ -19,6 +19,7 @@ export default function HomeScreen() {
       }
     >
       <Button title="Freeplay" onPress={() => router.push("/freeplay")} />
+      <Button title="Login" onPress={() => router.push("/login")}></Button>
     </ParallaxScrollView>
   );
 }

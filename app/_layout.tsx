@@ -4,14 +4,17 @@ import {
   ThemeProvider,
 } from "@react-navigation/native";
 import { useFonts } from "expo-font";
-import { Stack } from "expo-router";
+import { Stack, useNavigation } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
 
 import { useColorScheme } from "@/hooks/useColorScheme";
+import CustomHeader from "@/components/CustomHeader";
+import { router } from "expo-router";
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+
   const [loaded] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
   });
@@ -23,10 +26,26 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack
+        screenOptions={({ route }) => ({
+          header: ({ options, route }) => (
+            <CustomHeader
+              title={options.title || route.name}
+              // Pass a function to handle the icon press
+              onIconPress={() => {
+                router.push("/settings");
+              }}
+            />
+          ),
+        })}
+      >
+        <Stack.Screen
+          name="(tabs)"
+          options={{ headerShown: true, title: "Home" }}
+        />
         <Stack.Screen name="freeplay" options={{ title: "Free Play" }} />
         <Stack.Screen name="+not-found" />
+        <Stack.Screen name="settings" options={{ title: "Settings" }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
