@@ -1,28 +1,21 @@
-import { useNavigation, CommonActions } from "@react-navigation/core";
+import { CommonActions, useNavigation } from "@react-navigation/core";
 import React, { useEffect, useState } from "react";
 import {
+  Image,
+  ImageBackground,
   KeyboardAvoidingView,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  Image,
-  ImageBackground,
-  Platform,
 } from "react-native";
 // import firebase from '@react-native-firebase/app'
-import { signInWithEmailAndPassword, signInAnonymously } from "firebase/auth";
-import {
-  query,
-  collection,
-  doc,
-  addDoc,
-  where,
-  getDocs,
-} from "firebase/firestore";
 import { auth, db } from "@/firebaseConfig";
 import { router } from "expo-router";
+import { signInAnonymously, signInWithEmailAndPassword } from "firebase/auth";
+import { collection, getDocs, query, where } from "firebase/firestore";
 
 const LoginScreen = ({}) => {
   const [emailOrUsername, setEmailOrUsername] = useState("");
@@ -129,7 +122,10 @@ const LoginScreen = ({}) => {
           </View>
 
           <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.button}>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={() => handleLogin()}
+            >
               <Text style={styles.buttonText}>Login</Text>
             </TouchableOpacity>
             <TouchableOpacity

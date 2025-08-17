@@ -1,27 +1,19 @@
+import { auth, db } from "@/firebaseConfig";
+import { CommonActions, useNavigation } from "@react-navigation/native";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import React, { useEffect, useState } from "react";
 import {
+  Image,
+  ImageBackground,
   KeyboardAvoidingView,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  Image,
-  ImageBackground,
-  Platform,
 } from "react-native";
-import React, { useState, useEffect } from "react";
-import { useNavigation, CommonActions } from "@react-navigation/native";
-import { auth, db } from "@/firebaseConfig";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import {
-  query,
-  collection,
-  doc,
-  addDoc,
-  where,
-  getDocs,
-  serverTimestamp,
-} from "firebase/firestore";
 
 const Register = () => {
   const [email, setEmail] = useState("");
@@ -73,7 +65,9 @@ const Register = () => {
         email,
         password
       );
-
+      updateProfile(response.user, {
+        displayName: displayName,
+      });
       const newUser = await addDoc(collection(db, "Users"), {
         email: email,
         // password: password,

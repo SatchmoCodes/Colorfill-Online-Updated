@@ -1,21 +1,21 @@
-import {
-  View,
-  Text,
-  Dimensions,
-  TouchableOpacity,
-  Pressable,
-} from "react-native";
-import React, { useEffect, useState, useCallback, act } from "react";
-import { StyleSheet } from "react-native";
-import { squareGenerator } from "@/helper/squareGenerator";
-import { ThemedText } from "@/components/ThemedText";
 import BoardSizeModal from "@/components/BoardSizeModal";
+import { ThemedText } from "@/components/ThemedText";
+import { ThemedView } from "@/components/ThemedView";
+import BoardCompleteModal from "@/components/ui/BoardCompleteModal";
 import { colorPaletteOptions } from "@/constants/ColorPaletteOptions";
+import { auth } from "@/firebaseConfig";
+import { squareGenerator } from "@/helper/squareGenerator";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
-import { ThemedView } from "@/components/ThemedView";
-import { auth, db } from "@/firebaseConfig";
-import BoardCompleteModal from "@/components/ui/BoardCompleteModal";
+import React, { useCallback, useEffect, useState } from "react";
+import {
+  Dimensions,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { PaletteObj } from "./settings";
 
 export interface Square {
@@ -79,6 +79,7 @@ export default function Freeplay() {
   const [selectedColorPalette, setSelectedColorPalette] = useState(
     colorPaletteOptions[0]
   );
+  const [uid, setUid] = useState<String | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -98,6 +99,19 @@ export default function Freeplay() {
       loadPalette();
     }, [])
   );
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      // The user object will be null if not logged in or a user object if logged in
+      if (user) {
+        setUid(user.uid);
+        console.log("uid ", user);
+      }
+    });
+
+    // Clean up the subscription when the component unmounts
+    return unsubscribe;
+  }, [auth]);
 
   async function loadInitialSettings() {
     const color = (await AsyncStorage.getItem("color-index")) ?? 0;
@@ -221,7 +235,10 @@ export default function Freeplay() {
   };
 
   function calculateSquareSize(squareCount: number) {
-    const screenWidth = Dimensions.get("window").width;
+    const screenWidth =
+      Platform.OS === "web"
+        ? Dimensions.get("window").width * 0.32
+        : Dimensions.get("window").width;
 
     const columns = Math.sqrt(squareCount);
 
@@ -279,6 +296,7 @@ const GameBoard = (props: GameBoardProps) => {
   const columns = Math.sqrt(boardConfig[boardSize]);
   const squareSize = calculateSquareSize(boardConfig[boardSize]);
   const containerSize = columns * squareSize;
+  console.log("size", squareSize);
 
   return (
     <View

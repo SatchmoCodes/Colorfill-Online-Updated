@@ -1,15 +1,15 @@
-import {
-  View,
-  TouchableOpacity,
-  FlatList,
-  Dimensions,
-  StyleSheet,
-} from "react-native";
-import React, { useEffect, useMemo, useState } from "react";
-import { ThemedView } from "@/components/ThemedView";
 import { ThemedText } from "@/components/ThemedText";
+import { ThemedView } from "@/components/ThemedView";
 import { colorPaletteOptions } from "@/constants/ColorPaletteOptions";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  Dimensions,
+  FlatList,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 

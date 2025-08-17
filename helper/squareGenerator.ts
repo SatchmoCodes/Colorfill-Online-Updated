@@ -2,14 +2,18 @@ import { ColorKey, Square } from "@/app/freeplay";
 
 export const squareGenerator = (
   numberOfSquares: number,
-  squareSize: number
+  squareSize: number,
+  boardColors?: ColorKey[]
 ) => {
   const squareGrid: Square[][] = [];
   let xCoord = 1;
   let yCoord = 1;
   let squareRow = [];
+  const colorData = boardColors
+    ? [...boardColors]
+    : createRandomColorList(numberOfSquares);
   for (let x = 0; x < numberOfSquares; x++) {
-    const color = Math.floor(Math.random() * 5) as ColorKey;
+    const color = colorData[x] as ColorKey;
     if (x === 0) {
       squareRow.push({
         color: color,
@@ -41,4 +45,10 @@ export const squareGenerator = (
     xCoord++;
   }
   return squareGrid;
+};
+
+const createRandomColorList = (numberOfSquares: number) => {
+  return new Array(numberOfSquares).map((_) => {
+    return Math.floor(Math.random() * 5);
+  });
 };
