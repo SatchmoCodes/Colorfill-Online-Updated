@@ -3,7 +3,7 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import BoardCompleteModal from "@/components/ui/BoardCompleteModal";
 import { colorPaletteOptions } from "@/constants/ColorPaletteOptions";
-import { auth } from "@/firebaseConfig";
+import { auth, db } from "@/firebaseConfig";
 import { squareGenerator } from "@/helper/squareGenerator";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
@@ -17,6 +17,9 @@ import {
   View,
 } from "react-native";
 import { PaletteObj } from "./settings";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { User } from "firebase/auth";
+import uuid from "react-native-uuid";
 
 export interface Square {
   color: ColorKey;
@@ -79,7 +82,7 @@ export default function Freeplay() {
   const [selectedColorPalette, setSelectedColorPalette] = useState(
     colorPaletteOptions[0]
   );
-  const [uid, setUid] = useState<String | null>(null);
+  const [user, setUser] = useState<User | null>();
 
   useFocusEffect(
     useCallback(() => {
@@ -102,21 +105,14 @@ export default function Freeplay() {
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
-      // The user object will be null if not logged in or a user object if logged in
       if (user) {
-        setUid(user.uid);
-        console.log("uid ", user);
+        setUser(user);
       }
     });
 
     // Clean up the subscription when the component unmounts
     return unsubscribe;
   }, [auth]);
-
-  async function loadInitialSettings() {
-    const color = (await AsyncStorage.getItem("color-index")) ?? 0;
-    setSelectedColorPalette(colorPaletteOptions[color as number]);
-  }
 
   const handleColorChange = (color: ColorKey) => {
     const visited = new Set<string>();
@@ -153,10 +149,10 @@ export default function Freeplay() {
     });
     setBoardState(currentBoardState);
     setActiveColor(color);
-    setScore((prev) => prev + 1);
+    const updatedScore = score + 1;
+    setScore(updatedScore);
     if (!remainingSquares) {
-      console.log("no remaining squares!");
-      setShowBoardCompleteModal(true);
+      handleBoardComplete(updatedScore);
     }
   };
 
@@ -234,6 +230,25 @@ export default function Freeplay() {
     setShowBoardSizeModal(false);
   };
 
+  async function handleBoardComplete(updatedScore: number) {
+    console.log("no remaining squares!");
+    setShowBoardCompleteModal(true);
+    const boardData = boardState.flatMap((row) =>
+      row.map((x) => x.defaultColor)
+    );
+    await addDoc(collection(db, "Scores"), {
+      boardId: uuid.v4(),
+      score: updatedScore,
+      size: boardSize,
+      boardData: boardData,
+      createdBy: user?.displayName,
+      uid: user?.uid,
+      gamemode: "FreePlay",
+      highScore: true,
+      createdAt: serverTimestamp(),
+    });
+  }
+
   function calculateSquareSize(squareCount: number) {
     const screenWidth =
       Platform.OS === "web"
@@ -304,7 +319,6 @@ const GameBoard = (props: GameBoardProps) => {
         styles.squareGrid,
         {
           width: containerSize,
-          height: containerSize,
         },
       ]}
     >

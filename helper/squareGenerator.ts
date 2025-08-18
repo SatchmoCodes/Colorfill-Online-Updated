@@ -12,6 +12,7 @@ export const squareGenerator = (
   const colorData = boardColors
     ? [...boardColors]
     : createRandomColorList(numberOfSquares);
+  console.log("poo data", colorData);
   for (let x = 0; x < numberOfSquares; x++) {
     const color = colorData[x] as ColorKey;
     if (x === 0) {
@@ -48,7 +49,7 @@ export const squareGenerator = (
 };
 
 const createRandomColorList = (numberOfSquares: number) => {
-  return new Array(numberOfSquares).map((_) => {
+  return new Array(numberOfSquares).fill(null).map((_) => {
     return Math.floor(Math.random() * 5);
   });
 };
