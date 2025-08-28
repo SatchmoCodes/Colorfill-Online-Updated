@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["ES2020"], // 🚨 remove "DOM"
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "outDir": "lib",
+    "rootDir": "src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true, // helps with type conflicts
+    "types": ["node"] // 🚨 only include node types
+  },
+  "include": ["src"]
+}

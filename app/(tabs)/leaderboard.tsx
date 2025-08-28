@@ -1,13 +1,13 @@
 import {
   FlatList,
   Modal,
-  Platform,
   StyleSheet,
   TouchableOpacity,
+  View,
 } from "react-native";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Dropdown } from "react-native-element-dropdown";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import { auth, db } from "@/firebaseConfig";
@@ -18,21 +18,21 @@ import {
   limit,
   orderBy,
   query,
-  QuerySnapshot,
   where,
 } from "firebase/firestore";
-import { useFocusEffect } from "@react-navigation/native";
+import { LinearGradient } from "expo-linear-gradient";
 
 const gamemodeOptions = [
-  { label: "Free Play", value: "FreePlay" },
-  { label: "Progressive", value: "Progressive" },
-  { label: "Player vs Player", value: "PVP" },
+  { label: "Free Play", value: "freeplay" },
+  { label: "Progressive", value: "progressive" },
+  { label: "Board of the Day", value: "boardoftheday" },
+  { label: "Player vs Player", value: "pvp" },
 ];
 
 const sizeOptions = [
-  { label: "Small", value: "Small" },
-  { label: "Medium", value: "Medium" },
-  { label: "Large", value: "Large" },
+  { label: "Small", value: "small" },
+  { label: "Medium", value: "medium" },
+  { label: "Large", value: "large" },
 ];
 
 interface LeaderboardOptionsModal {
@@ -51,9 +51,9 @@ interface LeaderboardOptionsModal {
 export default function Leaderboard() {
   const [openLeaderboardOptionsModal, setOpenLeaderboardOptionsModal] =
     useState(false);
-  const [gamemode, setGamemode] = useState("FreePlay");
-  const [size, setSize] = useState("Small");
-  const [tempGamemode, setTempGamemode] = useState(gamemode); // working copy
+  const [gamemode, setGamemode] = useState("freeplay");
+  const [size, setSize] = useState("small");
+  const [tempGamemode, setTempGamemode] = useState(gamemode);
   const [tempSize, setTempSize] = useState(size);
   const [tableData, setTableData] = useState<DocumentData[]>([]);
 
@@ -62,10 +62,9 @@ export default function Leaderboard() {
   }, [gamemode, size]);
 
   async function getQueryResults() {
-    console.log("hahahah");
     try {
       const scoreQuery = query(
-        collection(db, "Scores"),
+        collection(db, "scores"),
         where("gamemode", "==", gamemode),
         where("size", "==", size),
         where("highScore", "==", true),
@@ -75,8 +74,6 @@ export default function Leaderboard() {
       );
 
       const snapshot = await getDocs(scoreQuery);
-      console.log("snap", snapshot);
-
       if (!snapshot.empty) {
         const docs = snapshot.docs.map((doc) => ({
           id: doc.id,
@@ -96,16 +93,26 @@ export default function Leaderboard() {
       <ThemedText style={{ marginTop: 20, marginBottom: 20 }} type="title">
         Leaderboard
       </ThemedText>
+
+      {/* Sort Options Button */}
       <TouchableOpacity
         style={styles.optionsButton}
         onPress={() =>
           setOpenLeaderboardOptionsModal(!openLeaderboardOptionsModal)
         }
+        activeOpacity={0.8}
       >
+        <IconSymbol size={20} name="slider.horizontal.3" color={"#fff"} />
         <ThemedText style={styles.optionsText}>Sort Options</ThemedText>
       </TouchableOpacity>
-      <TopRow />
-      <Table tableData={tableData} />
+
+      {/* Leaderboard Table */}
+      <View style={styles.tableWrapper}>
+        <TopRow />
+        <Table tableData={tableData} />
+      </View>
+
+      {/* Options Modal */}
       {openLeaderboardOptionsModal && (
         <OptionsModal
           gamemode={gamemode}
@@ -126,17 +133,22 @@ export default function Leaderboard() {
 
 const TopRow = () => {
   return (
-    <ThemedView style={styles.topRow}>
-      <ThemedView style={[styles.topRowCell, { width: "15%" }]}>
+    <LinearGradient
+      colors={["#0a3d91", "#051937"]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.topRow}
+    >
+      <ThemedView style={[styles.topRowCell, { width: "20%" }]}>
         <ThemedText style={styles.topRowCellText}>Rank</ThemedText>
       </ThemedView>
-      <ThemedView style={[styles.topRowCell, { width: "60%" }]}>
+      <ThemedView style={[styles.topRowCell, { width: "55%" }]}>
         <ThemedText style={styles.topRowCellText}>User</ThemedText>
       </ThemedView>
       <ThemedView style={[styles.topRowCell, { width: "25%" }]}>
         <ThemedText style={styles.topRowCellText}>Score</ThemedText>
       </ThemedView>
-    </ThemedView>
+    </LinearGradient>
   );
 };
 
@@ -144,20 +156,27 @@ const Table = ({ tableData }: { tableData: DocumentData[] }) => {
   return (
     <FlatList
       data={tableData}
-      keyExtractor={(item) => item.id} // important for performance
-      renderItem={({ item, index }) => (
-        <ThemedView style={styles.row}>
-          <ThemedView style={[styles.cell, { width: "15%" }]}>
-            <ThemedText style={styles.cellText}>{index + 1}</ThemedText>
+      keyExtractor={(item) => item.id}
+      renderItem={({ item, index }) => {
+        return (
+          <ThemedView
+            style={[
+              styles.row,
+              index % 2 === 0 ? styles.rowEven : styles.rowOdd,
+            ]}
+          >
+            <ThemedView style={[styles.cell, { width: "20%" }]}>
+              <ThemedText style={[styles.cellText]}>{index + 1}</ThemedText>
+            </ThemedView>
+            <ThemedView style={[styles.cell, { width: "55%" }]}>
+              <ThemedText style={styles.cellText}>{item.createdBy}</ThemedText>
+            </ThemedView>
+            <ThemedView style={[styles.cell, { width: "25%" }]}>
+              <ThemedText style={styles.cellText}>{item.score}</ThemedText>
+            </ThemedView>
           </ThemedView>
-          <ThemedView style={[styles.cell, { width: "60%" }]}>
-            <ThemedText style={styles.cellText}>{item.createdBy}</ThemedText>
-          </ThemedView>
-          <ThemedView style={[styles.cell, { width: "25%" }]}>
-            <ThemedText style={styles.cellText}>{item.score}</ThemedText>
-          </ThemedView>
-        </ThemedView>
-      )}
+        );
+      }}
     />
   );
 };
@@ -176,8 +195,6 @@ const OptionsModal = ({
 }: LeaderboardOptionsModal) => {
   const handleApply = () => {
     setOpenLeaderboardOptionsModal(false);
-
-    // only update if different
     if (gamemode !== tempGamemode || size !== tempSize) {
       setGamemode(tempGamemode);
       setSize(tempSize);
@@ -192,52 +209,59 @@ const OptionsModal = ({
   }, [openLeaderboardOptionsModal]);
 
   return (
-    <Modal
-      onRequestClose={() => setOpenLeaderboardOptionsModal(false)}
-      animationType="slide"
-    >
-      <ThemedView style={styles.container}>
-        {/* close button */}
-        <TouchableOpacity
-          style={{ position: "absolute", top: 5, right: 5 }}
-          onPress={() => setOpenLeaderboardOptionsModal(false)}
-        >
-          <IconSymbol size={28} name="clear.fill" color={"white"} />
-        </TouchableOpacity>
+    <Modal transparent animationType="fade">
+      <View style={styles.modalContainer}>
+        <ThemedView style={styles.modalCard}>
+          {/* Close button */}
+          <TouchableOpacity
+            style={{ position: "absolute", top: 10, right: 10 }}
+            onPress={() => setOpenLeaderboardOptionsModal(false)}
+          >
+            <IconSymbol size={28} name="clear.fill" color={"white"} />
+          </TouchableOpacity>
 
-        <ThemedText style={{ marginBottom: 10, marginTop: 10 }} type="title">
-          Options
-        </ThemedText>
+          <ThemedText style={{ marginBottom: 20 }} type="title">
+            Options
+          </ThemedText>
 
-        <ThemedText type="subtitle">Gamemode</ThemedText>
-        <Dropdown
-          data={gamemodeOptions}
-          placeholderStyle={{ color: "white" }}
-          selectedTextStyle={{ color: "white" }}
-          labelField="label"
-          valueField="value"
-          value={gamemode}
-          onChange={(item) => setTempGamemode(item.value)}
-          style={{ width: 200, marginTop: 20, marginBottom: 20 }}
-        />
-        <ThemedText type="subtitle">Board Size</ThemedText>
-        <Dropdown
-          data={sizeOptions}
-          placeholderStyle={{ color: "white" }}
-          selectedTextStyle={{ color: "white" }}
-          labelField="label"
-          valueField="value"
-          value={size}
-          onChange={(item) => setTempSize(item.value)}
-          style={{ width: 200, marginTop: 20, marginBottom: 20 }}
-          disable={gamemode !== "FreePlay"}
-        />
+          <ThemedText type="subtitle">Gamemode</ThemedText>
+          <Dropdown
+            data={gamemodeOptions}
+            placeholderStyle={{ color: "white" }}
+            selectedTextStyle={{ color: "white" }}
+            labelField="label"
+            valueField="value"
+            value={gamemode}
+            onChange={(item) => setTempGamemode(item.value)}
+            style={{ width: 200, marginTop: 10, marginBottom: 20 }}
+          />
 
-        {/* Apply button */}
-        <TouchableOpacity onPress={handleApply}>
-          <ThemedText>Apply</ThemedText>
-        </TouchableOpacity>
-      </ThemedView>
+          <ThemedText type="subtitle">Board Size</ThemedText>
+          <Dropdown
+            data={sizeOptions}
+            placeholderStyle={{ color: "white" }}
+            selectedTextStyle={{ color: "white" }}
+            labelField="label"
+            valueField="value"
+            value={size}
+            onChange={(item) => setTempSize(item.value)}
+            style={{ width: 200, marginTop: 10, marginBottom: 20 }}
+            disable={gamemode !== "freeplay"}
+          />
+
+          {/* Apply Button */}
+          <TouchableOpacity style={styles.applyButton} onPress={handleApply}>
+            <LinearGradient
+              colors={["#ff7e5f", "#feb47b"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.applyButtonBackground}
+            >
+              <ThemedText style={styles.applyButtonText}>Apply</ThemedText>
+            </LinearGradient>
+          </TouchableOpacity>
+        </ThemedView>
+      </View>
     </Modal>
   );
 };
@@ -248,43 +272,99 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 5,
   },
-  titleContainer: {
-    flexDirection: "row",
-    gap: 8,
-  },
+  // Sort Button
   optionsButton: {
-    marginBottom: 10,
-    borderRadius: 30,
-    borderWidth: 1,
-    borderColor: "black",
-    padding: 5,
-    backgroundColor: "rgba(93, 93, 93, 1)",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 25,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    backgroundColor: "#0a3d91",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 6,
+    elevation: 4,
+    marginBottom: 15,
   },
-  optionsText: {},
+  optionsText: {
+    color: "#fff",
+    fontWeight: "bold",
+    marginLeft: 6,
+  },
+  // Table
+  tableWrapper: {
+    width: "95%",
+    borderRadius: 12,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
+  },
   topRow: {
     flexDirection: "row",
     width: "100%",
+    paddingVertical: 10,
   },
   topRowCell: {
-    borderWidth: 1,
-    borderBlockColor: "black",
     padding: 10,
-    backgroundColor: "rgba(36, 36, 36, 1)",
   },
   topRowCellText: {
     textAlign: "center",
+    fontWeight: "bold",
+    color: "#FFD700",
+    textTransform: "uppercase",
   },
   row: {
     flexDirection: "row",
     width: "100%",
   },
+  rowEven: {
+    backgroundColor: "rgba(62,62,62,0.95)",
+  },
+  rowOdd: {
+    backgroundColor: "rgba(45,45,45,0.95)",
+  },
   cell: {
-    borderWidth: 1,
-    borderBlockColor: "black",
-    padding: 10,
-    backgroundColor: "rgba(62, 62, 62, 1)",
+    padding: 12,
   },
   cellText: {
     textAlign: "center",
+    color: "#fff",
+  },
+  // Modal
+  modalContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.6)",
+  },
+  modalCard: {
+    width: "80%",
+    padding: 20,
+    borderRadius: 16,
+    backgroundColor: "#1e1e1e",
+    alignItems: "center",
+  },
+  // Apply button
+  applyButton: {
+    width: "100%",
+    marginTop: 10,
+    borderRadius: 25,
+    overflow: "hidden",
+  },
+  applyButtonBackground: {
+    paddingVertical: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 25,
+  },
+  applyButtonText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#fff",
   },
 });

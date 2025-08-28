@@ -47,6 +47,7 @@ export default function RootLayout() {
         <Stack.Screen name="freeplay" options={{ title: "Free Play" }} />
         <Stack.Screen name="+not-found" />
         <Stack.Screen name="settings" options={{ title: "Settings" }} />
+        <Stack.Screen name="pvpmenu" options={{ title: "PVP Menu" }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>

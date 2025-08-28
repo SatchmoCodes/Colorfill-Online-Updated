@@ -12,31 +12,17 @@ export const squareGenerator = (
   const colorData = boardColors
     ? [...boardColors]
     : createRandomColorList(numberOfSquares);
-  console.log("poo data", colorData);
   for (let x = 0; x < numberOfSquares; x++) {
     const color = colorData[x] as ColorKey;
-    if (x === 0) {
-      squareRow.push({
-        color: color,
-        defaultColor: color,
-        captured: true,
-        landLocked: false,
-        size: squareSize,
-        x: xCoord,
-        y: yCoord,
-      });
-    } else {
-      squareRow.push({
-        color: color,
-        defaultColor: color,
-        captured: false,
-        landLocked: false,
-        size: squareSize,
-        x: xCoord,
-        y: yCoord,
-      });
-    }
-
+    squareRow.push({
+      color: color,
+      defaultColor: color,
+      captured: x === 0,
+      landLocked: false,
+      size: squareSize,
+      x: xCoord,
+      y: yCoord,
+    });
     if (Math.sqrt(numberOfSquares) === xCoord) {
       xCoord = 0;
       yCoord++;

@@ -54,7 +54,7 @@ const LoginScreen = ({}) => {
       handleSignIn(email, password);
     } else {
       const q = query(
-        collection(db, "Users"),
+        collection(db, "users"),
         where("username", "==", emailOrUsername)
       );
       const querySnapshot = await getDocs(q);

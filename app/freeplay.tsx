@@ -32,7 +32,7 @@ export interface Square {
 }
 
 export type ColorKey = 0 | 1 | 2 | 3 | 4;
-export type BoardSize = "Small" | "Medium" | "Large";
+export type BoardSize = "small" | "medium" | "large";
 
 interface GameBoardProps {
   boardState: Square[][];
@@ -55,13 +55,13 @@ interface ColorRowButtons {
 }
 
 const boardConfig = {
-  Small: 64,
-  Medium: 100,
-  Large: 144,
+  small: 64,
+  medium: 100,
+  large: 144,
 };
 
 export default function Freeplay() {
-  const [boardSize, setBoardSize] = useState<BoardSize>("Small");
+  const [boardSize, setBoardSize] = useState<BoardSize>("small");
   const [boardState, setBoardState] = useState(() => {
     const boardData = squareGenerator(
       64,
@@ -109,8 +109,6 @@ export default function Freeplay() {
         setUser(user);
       }
     });
-
-    // Clean up the subscription when the component unmounts
     return unsubscribe;
   }, [auth]);
 
@@ -236,14 +234,14 @@ export default function Freeplay() {
     const boardData = boardState.flatMap((row) =>
       row.map((x) => x.defaultColor)
     );
-    await addDoc(collection(db, "Scores"), {
+    await addDoc(collection(db, "scores"), {
       boardId: uuid.v4(),
       score: updatedScore,
       size: boardSize,
       boardData: boardData,
       createdBy: user?.displayName,
       uid: user?.uid,
-      gamemode: "FreePlay",
+      gamemode: "freeplay",
       highScore: true,
       createdAt: serverTimestamp(),
     });
@@ -253,7 +251,7 @@ export default function Freeplay() {
     const screenWidth =
       Platform.OS === "web"
         ? Dimensions.get("window").width * 0.32
-        : Dimensions.get("window").width;
+        : Dimensions.get("window").width - 40;
 
     const columns = Math.sqrt(squareCount);
 

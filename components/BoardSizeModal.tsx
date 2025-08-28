@@ -21,7 +21,7 @@ interface ModalProps {
   newBoardProcess: (size: BoardSize) => void;
 }
 
-const boardSizeOptions: BoardSize[] = ["Small", "Medium", "Large"];
+const boardSizeOptions: BoardSize[] = ["small", "medium", "large"];
 
 export default function BoardSizeModal(props: ModalProps) {
   const { setBoardSize, setShowBoardSizeModal, newBoardProcess } = props;

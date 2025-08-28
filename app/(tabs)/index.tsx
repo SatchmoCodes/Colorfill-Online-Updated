@@ -6,8 +6,23 @@ import ParallaxScrollView from "@/components/ParallaxScrollView";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { router } from "expo-router";
+import { auth } from "@/firebaseConfig";
+import { CommonActions, useNavigation } from "@react-navigation/core";
 
 export default function HomeScreen() {
+  const navigation = useNavigation();
+
+  const handleSignOut = () => {
+    auth.signOut().then(() => {
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: "login" }], // replace 'HomePage' with the actual route name
+        })
+      );
+    });
+  };
+
   return (
     <ParallaxScrollView
       headerBackgroundColor={{ light: "#A1CEDC", dark: "#1D3D47" }}
@@ -23,7 +38,12 @@ export default function HomeScreen() {
         title="Board of the Day"
         onPress={() => router.push("/boardoftheday")}
       />
+      <Button
+        title="Player vs Player"
+        onPress={() => router.push("/pvpmenu")}
+      />
       <Button title="Login" onPress={() => router.push("/login")}></Button>
+      <Button title="Logout" onPress={() => handleSignOut()}></Button>
     </ParallaxScrollView>
   );
 }

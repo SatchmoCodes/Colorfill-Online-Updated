@@ -68,9 +68,8 @@ const Register = () => {
       updateProfile(response.user, {
         displayName: displayName,
       });
-      const newUser = await addDoc(collection(db, "Users"), {
+      const newUser = await addDoc(collection(db, "users"), {
         email: email,
-        // password: password,
         uid: response.user.uid,
         username: displayName,
         wins: 0,
@@ -79,6 +78,7 @@ const Register = () => {
         winRate: 0,
         currentWinStreak: 0,
         bestWinStreak: 0,
+        boardsCompleted: 0,
         createdAt: serverTimestamp(),
       });
       //   console.log("new user created with name " + newUser.username);
