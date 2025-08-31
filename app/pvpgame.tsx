@@ -194,12 +194,7 @@ export default function PvpGame() {
     const squareOwner = user?.displayName === ownerName ? "owner" : "opponent";
     const neighbors = getAdjacentSquares(currentSquare, board);
     for (const neighbor of neighbors) {
-      if (
-        neighbor &&
-        !neighbor.captured &&
-        neighbor.color === color &&
-        neighbor.squareOwner === turn
-      ) {
+      if (neighbor && !neighbor.captured && neighbor.color === color) {
         neighbor.captured = true;
         neighbor.color = color;
         neighbor.squareOwner = squareOwner;
@@ -227,6 +222,7 @@ export default function PvpGame() {
     if (gameData.exists()) {
       const data = gameData.data();
       const boardData = JSON.parse(data.boardData);
+      console.log("boarddata", boardData[0][1]);
       setBoardState(boardData);
       setOwnerName(data.ownerName);
       setOpponentName(data.opponentName);
@@ -306,8 +302,9 @@ const GameBoard = (props: PVPGameBoard) => {
         {boardState.map((row) => {
           return row.map((square: PVPSquare) => {
             return (
-              <View
+              <TouchableOpacity
                 key={`${square.x}-${square.y}`}
+                onPress={() => console.log("square", square)}
                 style={[
                   styles.square,
                   {
@@ -327,28 +324,25 @@ const GameBoard = (props: PVPGameBoard) => {
     <View
       style={[
         styles.squareGrid,
-        {
-          width: containerSize,
-        },
+        { width: containerSize, transform: [{ rotate: "180deg" }] },
       ]}
     >
-      {boardState.reverse().map((row) => {
-        return row.reverse().map((square: PVPSquare) => {
-          return (
-            <View
-              key={`${square.x}-${square.y}`}
-              style={[
-                styles.square,
-                {
-                  backgroundColor: selectedColorPalette[square.color],
-                  width: squareSize,
-                  height: squareSize,
-                },
-              ]}
-            />
-          );
-        });
-      })}
+      {boardState.map((row) =>
+        row.map((square) => (
+          <View
+            key={`${square.x}-${square.y}`}
+            style={[
+              styles.square,
+              {
+                backgroundColor: selectedColorPalette[square.color],
+                width: squareSize,
+                height: squareSize,
+                transform: [{ rotate: "180deg" }], // flip squares back upright
+              },
+            ]}
+          />
+        ))
+      )}
     </View>
   );
 };

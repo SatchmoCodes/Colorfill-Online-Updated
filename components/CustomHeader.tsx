@@ -1,18 +1,10 @@
 // components/CustomHeader.tsx
-import React from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  useColorScheme,
-} from "react-native";
-import { useThemeColor } from "@/hooks/useThemeColor"; // Assuming you have this
-import { IconSymbol } from "./ui/IconSymbol";
-import { ThemedView } from "./ThemedView";
-import { ThemedText } from "./ThemedText";
 import { useNavigation } from "expo-router";
-import { Colors } from "@/constants/Colors";
+import React from "react";
+import { StyleSheet, TouchableOpacity, useColorScheme } from "react-native";
+import { ThemedText } from "./ThemedText";
+import { ThemedView } from "./ThemedView";
+import { IconSymbol } from "./ui/IconSymbol";
 
 interface CustomHeaderProps {
   title: string;
@@ -59,7 +51,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between", // spread back, title, settings
     paddingHorizontal: 16,
     height: 70,
-    paddingTop: 20,
+    paddingTop: 40,
     backgroundColor: "#0e0e0eff",
   },
   headerTitle: {

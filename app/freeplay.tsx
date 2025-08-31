@@ -7,6 +7,8 @@ import { auth, db } from "@/firebaseConfig";
 import { squareGenerator } from "@/helper/squareGenerator";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
+import { User } from "firebase/auth";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   Dimensions,
@@ -16,10 +18,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { PaletteObj } from "./settings";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { User } from "firebase/auth";
 import uuid from "react-native-uuid";
+import { PaletteObj } from "./settings";
 
 export interface Square {
   color: ColorKey;
@@ -106,6 +106,7 @@ export default function Freeplay() {
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
+        console.log("user", user.displayName);
         setUser(user);
       }
     });
