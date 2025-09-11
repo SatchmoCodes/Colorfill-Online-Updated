@@ -53,7 +53,7 @@ export default function CreateGame() {
 
   const handleCreateGame = async () => {
     const numberOfSquares = boardSizePVPConfig[boardSize];
-    const boardData = pvpSquareGenerator(numberOfSquares, boardType);
+    const boardData = pvpSquareGenerator(numberOfSquares, boardType, fogOfWar);
 
     const randomLetterIndexArr = [];
     const randomNumberIndexArr = [];
@@ -93,11 +93,13 @@ export default function CreateGame() {
         opponentUid: "",
         turn: turnNumber === 0 ? "owner" : "opponent",
         fog: fogOfWar,
+        winner: null,
+        loser: null,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
       const gameId = game.id;
-      router.push({
+      router.replace({
         pathname: "/pvplobby",
         params: { gameId },
       });

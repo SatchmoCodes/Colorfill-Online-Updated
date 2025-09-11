@@ -1,16 +1,8 @@
-import {
-  FlatList,
-  Modal,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from "react-native";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
-import { useEffect, useState } from "react";
-import { Dropdown } from "react-native-element-dropdown";
 import { IconSymbol } from "@/components/ui/IconSymbol";
-import { auth, db } from "@/firebaseConfig";
+import { db } from "@/firebaseConfig";
+import { LinearGradient } from "expo-linear-gradient";
 import {
   collection,
   DocumentData,
@@ -20,7 +12,15 @@ import {
   query,
   where,
 } from "firebase/firestore";
-import { LinearGradient } from "expo-linear-gradient";
+import { useEffect, useState } from "react";
+import {
+  FlatList,
+  Modal,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { Dropdown } from "react-native-element-dropdown";
 
 const gamemodeOptions = [
   { label: "Free Play", value: "freeplay" },

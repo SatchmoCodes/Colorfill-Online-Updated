@@ -1,4 +1,3 @@
-import BoardSizeModal from "@/components/BoardSizeModal";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { colorPaletteOptions } from "@/constants/ColorPaletteOptions";
@@ -6,6 +5,17 @@ import { auth, db } from "@/firebaseConfig";
 import { squareGenerator } from "@/helper/squareGenerator";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
+import { User } from "firebase/auth";
+import {
+  addDoc,
+  collection,
+  getDocs,
+  limit,
+  orderBy,
+  query,
+  serverTimestamp,
+  where,
+} from "firebase/firestore";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -18,19 +28,6 @@ import {
   View,
 } from "react-native";
 import { PaletteObj } from "./settings";
-import {
-  addDoc,
-  collection,
-  getDoc,
-  getDocs,
-  limit,
-  orderBy,
-  query,
-  serverTimestamp,
-  where,
-} from "firebase/firestore";
-import { User } from "firebase/auth";
-import uuid from "react-native-uuid";
 
 export interface Square {
   color: ColorKey;
@@ -230,7 +227,7 @@ export default function BoardoftheDay() {
     const screenWidth =
       Platform.OS === "web"
         ? Dimensions.get("window").width * 0.32
-        : Dimensions.get("window").width - 35;
+        : Dimensions.get("window").width - 40;
 
     const columns = Math.sqrt(squareCount);
 

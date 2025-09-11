@@ -13,6 +13,8 @@ export const colorPaletteOptions = [
     2: "yellow",
     3: "green",
     4: "blue",
+    5: "black",
+    6: "white",
   },
   {
     0: "#001524",
@@ -45,9 +47,9 @@ export const colorPaletteOptions = [
   {
     0: "#a8201a",
     1: "#ec9a29",
-    2: "#0f8b8d",
-    3: "#143642",
-    4: "#dad2d8",
+    2: "#dad2d8",
+    3: "#0f8b8d",
+    4: "#143642",
   },
   {
     0: "#00475b",

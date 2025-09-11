@@ -1,8 +1,8 @@
-import { Modal, StyleSheet, TouchableOpacity } from "react-native";
+import { BoardSize } from "@/app/(protected)/freeplay";
 import React from "react";
-import { ThemedView } from "../ThemedView";
+import { Modal, StyleSheet, TouchableOpacity } from "react-native";
 import { ThemedText } from "../ThemedText";
-import { BoardSize } from "@/app/freeplay";
+import { ThemedView } from "../ThemedView";
 
 interface ModalProps {
   setShowBoardCompleteModal: React.Dispatch<React.SetStateAction<boolean>>;

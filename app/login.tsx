@@ -1,4 +1,4 @@
-import { CommonActions, useNavigation } from "@react-navigation/core";
+import { useNavigation } from "@react-navigation/core";
 import React, { useEffect, useState } from "react";
 import {
   Image,
@@ -27,12 +27,13 @@ const LoginScreen = ({}) => {
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
-        navigation.dispatch(
-          CommonActions.reset({
-            index: 0,
-            routes: [{ name: "(tabs)" }], // replace 'HomePage' with the actual route name
-          })
-        );
+        console.log("retard", user);
+        // navigation.dispatch(
+        //   CommonActions.reset({
+        //     index: 0,
+        //     routes: [{ name: "/(protected)/(tabs)" }], // replace 'HomePage' with the actual route name
+        //   })
+        // );
       }
     });
 

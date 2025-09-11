@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between", // spread back, title, settings
     paddingHorizontal: 16,
-    height: 70,
+    height: 90,
     paddingTop: 40,
     backgroundColor: "#0e0e0eff",
   },

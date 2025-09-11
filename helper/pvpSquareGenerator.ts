@@ -1,5 +1,5 @@
-import { PVPBoardType } from "@/app/creategame";
-import { ColorKey, Square } from "@/app/freeplay";
+import { PlayerType, PVPBoardType } from "@/app/(protected)/creategame";
+import { ColorKey } from "@/app/(protected)/freeplay";
 
 export type SquareOwner = "owner" | "opponent" | null;
 
@@ -9,13 +9,17 @@ export interface PVPSquare {
   squareOwner: SquareOwner;
   defaultColor: ColorKey;
   landLocked: boolean;
+  visibleTo: PlayerType[];
+  revealed: boolean;
+  depth: number;
   x: number;
   y: number;
 }
 
 export const pvpSquareGenerator = (
   numberOfSquares: number,
-  boardType: PVPBoardType
+  boardType: PVPBoardType,
+  isfogOfWar: boolean
 ) => {
   const squareGrid: PVPSquare[][] = [];
   let xCoord = 1;
@@ -44,6 +48,9 @@ export const pvpSquareGenerator = (
       landLocked: false,
       x: xCoord,
       y: yCoord,
+      depth: 0,
+      visibleTo: [],
+      revealed: !isfogOfWar,
     });
     if (Math.sqrt(numberOfSquares) === xCoord) {
       xCoord = 0;
@@ -53,6 +60,16 @@ export const pvpSquareGenerator = (
     }
     xCoord++;
   }
+  squareGrid[0][0] = {
+    ...squareGrid[0][0],
+    visibleTo: ["owner", "opponent"],
+    revealed: true,
+  };
+  squareGrid[squareGrid.length - 1][squareGrid.length - 1] = {
+    ...squareGrid[squareGrid.length - 1][squareGrid.length - 1],
+    visibleTo: ["owner", "opponent"],
+    revealed: true,
+  };
   return squareGrid;
 };
 
@@ -105,7 +122,7 @@ const checkSurroundingSquares = (colorData: number[], length: number) => {
   const ownerRightSquareIndex = 1;
   const ownerDownSquareIndex = Math.sqrt(length);
   const opponentLeftSquareIndex = length - 2;
-  const opponentUpSquareIndex = length - Math.sqrt(length);
+  const opponentUpSquareIndex = length - 1 - Math.sqrt(length);
 
   [ownerRightSquareIndex, ownerDownSquareIndex].forEach((item) => {
     let currentValue = colorData[item];

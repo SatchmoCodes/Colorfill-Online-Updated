@@ -1,4 +1,4 @@
-import { ColorKey, Square } from "@/app/freeplay";
+import { ColorKey, Square } from "@/app/(protected)/freeplay";
 
 export const squareGenerator = (
   numberOfSquares: number,
@@ -22,6 +22,7 @@ export const squareGenerator = (
       size: squareSize,
       x: xCoord,
       y: yCoord,
+      depth: 0,
     });
     if (Math.sqrt(numberOfSquares) === xCoord) {
       xCoord = 0;

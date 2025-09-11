@@ -1,6 +1,7 @@
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { colorPaletteOptions } from "@/constants/ColorPaletteOptions";
+import { useUser } from "@/hooks/useFirebaseUser";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -19,6 +20,8 @@ export type PaletteObj = {
   2: string;
   3: string;
   4: string;
+  5?: string;
+  6?: string;
 };
 
 const PAGE_SIZE = 6; // 2 rows × 3 cols
@@ -37,6 +40,9 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
 }
 
 export default function Settings() {
+  const user = useUser();
+
+  console.log("user", user.displayName);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [selectedColorPalette, setSelectedColorPalette] = useState<PaletteObj>(
     colorPaletteOptions[0]

@@ -9,9 +9,11 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
 import { User } from "firebase/auth";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
+  Animated,
   Dimensions,
+  Easing,
   Platform,
   StyleSheet,
   Text,
@@ -29,6 +31,7 @@ export interface Square {
   size: number;
   x: number;
   y: number;
+  depth: number;
 }
 
 export type ColorKey = 0 | 1 | 2 | 3 | 4;
@@ -39,6 +42,12 @@ interface GameBoardProps {
   selectedColorPalette: PaletteObj;
   boardSize: BoardSize;
   calculateSquareSize: (x: number) => number;
+  boardVersion: number;
+}
+
+interface SquareViewProps {
+  square: Square;
+  color: string;
 }
 
 interface GameEffectButtonProps {
@@ -82,6 +91,7 @@ export default function Freeplay() {
   const [selectedColorPalette, setSelectedColorPalette] = useState(
     colorPaletteOptions[0]
   );
+  const [boardVersion, setBoardVersion] = useState(1);
   const [user, setUser] = useState<User | null>();
 
   useFocusEffect(
@@ -159,7 +169,8 @@ export default function Freeplay() {
     currentSquare: Square,
     board: Square[][],
     color: ColorKey,
-    visited: Set<string>
+    visited: Set<string>,
+    depth: number = 0
   ) {
     const key = `${currentSquare.x},${currentSquare.y}`;
     if (visited.has(key)) return;
@@ -169,8 +180,8 @@ export default function Freeplay() {
     for (const neighbor of neighbors) {
       if (neighbor && !neighbor.captured && neighbor.color === color) {
         neighbor.captured = true;
-        neighbor.color = color;
-        checkAdjacentSquares(neighbor, board, color, visited);
+        neighbor.depth = depth + 1;
+        checkAdjacentSquares(neighbor, board, color, visited, depth + 1);
       }
     }
   }
@@ -227,6 +238,7 @@ export default function Freeplay() {
     setScore(0);
     setActiveColor(boardData[0][0].color);
     setShowBoardSizeModal(false);
+    setBoardVersion((prev) => prev + 1);
   };
 
   async function handleBoardComplete(updatedScore: number) {
@@ -270,6 +282,7 @@ export default function Freeplay() {
         selectedColorPalette={selectedColorPalette}
         boardSize={boardSize}
         calculateSquareSize={calculateSquareSize}
+        boardVersion={boardVersion}
       />
       <GameEffectButtons
         newBoardProcess={newBoardProcess}
@@ -304,8 +317,13 @@ export default function Freeplay() {
 }
 
 const GameBoard = (props: GameBoardProps) => {
-  const { boardState, selectedColorPalette, boardSize, calculateSquareSize } =
-    props;
+  const {
+    boardState,
+    selectedColorPalette,
+    boardSize,
+    boardVersion,
+    calculateSquareSize,
+  } = props;
 
   const columns = Math.sqrt(boardConfig[boardSize]);
   const squareSize = calculateSquareSize(boardConfig[boardSize]);
@@ -324,21 +342,56 @@ const GameBoard = (props: GameBoardProps) => {
       {boardState.map((row) => {
         return row.map((square: Square) => {
           return (
-            <View
-              key={`${square.x}-${square.y}`}
-              style={[
-                styles.square,
-                {
-                  backgroundColor: selectedColorPalette[square.color],
-                  width: square.size,
-                  height: square.size,
-                },
-              ]}
+            <Square
+              key={`${square.x}-${square.y}-${boardVersion}`}
+              color={selectedColorPalette[square.color]}
+              square={square}
             />
           );
         });
       })}
     </View>
+  );
+};
+
+const Square = (props: SquareViewProps) => {
+  const { square, color } = props;
+  const scale = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (square.captured && square.depth !== undefined) {
+      console.log("square here", square.x, square.y);
+      Animated.sequence([
+        Animated.delay(square.depth * 80), // ripple by depth
+        Animated.timing(scale, {
+          toValue: 1.2,
+          duration: 120,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scale, {
+          toValue: 1,
+          duration: 120,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [square.captured]);
+
+  return (
+    <Animated.View
+      style={[
+        styles.square,
+        square.captured && { zIndex: 2 },
+        {
+          backgroundColor: color,
+          width: square.size,
+          height: square.size,
+          transform: [{ scale }],
+        },
+      ]}
+    />
   );
 };
 
@@ -453,7 +506,7 @@ const styles = StyleSheet.create({
   },
   square: {
     borderColor: "black",
-    borderWidth: 1,
+    // borderWidth: 1,
   },
   colorRow: {
     flexDirection: "row",

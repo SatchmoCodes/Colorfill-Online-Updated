@@ -1,10 +1,9 @@
-import { View, StyleSheet, Pressable, TouchableOpacity } from "react-native";
-import React, { useEffect, useState } from "react";
 import { ThemedText } from "@/components/ThemedText";
-import { LinearGradient } from "expo-linear-gradient";
 import { ThemedView } from "@/components/ThemedView";
-import { router } from "expo-router";
-import { DocumentData } from "@google-cloud/firestore";
+import { auth, db } from "@/firebaseConfig";
+import { LinearGradient } from "expo-linear-gradient";
+import { router, useFocusEffect } from "expo-router";
+import { User } from "firebase/auth";
 import {
   collection,
   DocumentReference,
@@ -14,14 +13,14 @@ import {
   updateDoc,
   where,
 } from "firebase/firestore";
-import { auth, db } from "@/firebaseConfig";
+import React, { useCallback, useEffect, useState } from "react";
+import { Pressable, StyleSheet, TouchableOpacity, View } from "react-native";
 import {
   LobbyType,
   PlayerType,
   PVPBoardSize,
   PVPBoardType,
 } from "./creategame";
-import { User } from "firebase/auth";
 
 type GameState = "waiting" | "playing" | "deleting";
 
@@ -53,27 +52,29 @@ const PvpMenu = () => {
   const [gameList, setGameList] = useState<PVPGame[]>([]);
   const [user, setUser] = useState<User | null>();
 
-  useEffect(() => {
-    const cutOffTime = new Date();
-    cutOffTime.setMinutes(cutOffTime.getMinutes() - 10);
+  useFocusEffect(
+    useCallback(() => {
+      const cutOffTime = new Date();
+      cutOffTime.setMinutes(cutOffTime.getMinutes() - 10);
 
-    const q = query(
-      collection(db, "games"),
-      where("lobbyType", "==", "public"),
-      where("status", "==", "waiting"),
-      where("createdAt", ">=", cutOffTime),
-      orderBy("createdAt", "asc")
-    );
-
-    const unsub = onSnapshot(q, (querySnapshot) => {
-      const games = querySnapshot.docs.map(
-        (doc) => ({ id: doc.id, docRef: doc.ref, ...doc.data() } as PVPGame)
+      const q = query(
+        collection(db, "games"),
+        where("lobbyType", "==", "public"),
+        where("status", "==", "waiting"),
+        where("createdAt", ">=", cutOffTime),
+        orderBy("createdAt", "asc")
       );
-      setGameList(games);
-    });
 
-    return () => unsub(); // unsubscribe when component unmounts or navigates away
-  }, []);
+      const unsub = onSnapshot(q, (querySnapshot) => {
+        const games = querySnapshot.docs.map(
+          (doc) => ({ id: doc.id, docRef: doc.ref, ...doc.data() } as PVPGame)
+        );
+        setGameList(games);
+      });
+
+      return () => unsub(); // unsubscribe when component unmounts or navigates away
+    }, [])
+  );
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {

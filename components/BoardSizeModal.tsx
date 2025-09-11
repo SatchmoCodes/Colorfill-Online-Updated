@@ -1,17 +1,13 @@
+import { BoardSize } from "@/app/(protected)/freeplay";
+import React from "react";
 import {
-  View,
-  Text,
   Modal,
+  StyleSheet,
   TouchableOpacity,
   useColorScheme,
 } from "react-native";
-import React, { useState } from "react";
 import { ThemedText } from "./ThemedText";
-import { StyleSheet } from "react-native";
 import { ThemedView } from "./ThemedView";
-import { BoardSize } from "@/app/freeplay";
-import { RadioButton } from "react-native-paper";
-import { useThemeColor } from "@/hooks/useThemeColor";
 import { IconSymbol } from "./ui/IconSymbol";
 
 interface ModalProps {

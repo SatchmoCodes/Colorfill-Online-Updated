@@ -6,6 +6,7 @@ import {
   getReactNativePersistence,
   initializeAuth,
 } from "firebase/auth";
+import { getDatabase } from "firebase/database";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { Platform } from "react-native";
@@ -22,6 +23,7 @@ const firebaseConfig = {
   messagingSenderId: "185336486852",
   appId: "1:185336486852:web:11c097f26bc37c1427e291",
   measurementId: "G-6WKVKQTM8W",
+  databaseURL: "https://colorfill-updated-default-rtdb.firebaseio.com/",
 };
 
 // Initialize Firebase
@@ -33,4 +35,5 @@ export const auth = initializeAuth(app, {
       : getReactNativePersistence(ReactNativeAsyncStorage),
 });
 export const db = getFirestore(app);
+export const rtdb = getDatabase(app);
 export const storage = getStorage(app);
