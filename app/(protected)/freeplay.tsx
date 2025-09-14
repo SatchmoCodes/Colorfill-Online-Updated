@@ -7,6 +7,7 @@ import { auth, db } from "@/firebaseConfig";
 import { squareGenerator } from "@/helper/squareGenerator";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
+import { useLocalSearchParams } from "expo-router";
 import { User } from "firebase/auth";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -70,12 +71,27 @@ const boardConfig = {
 };
 
 export default function Freeplay() {
+  const { boardId, boardData: colorData } = useLocalSearchParams();
+
   const [boardSize, setBoardSize] = useState<BoardSize>("small");
   const [boardState, setBoardState] = useState(() => {
-    const boardData = squareGenerator(
-      64,
-      calculateSquareSize(boardConfig[boardSize])
-    );
+    let boardData = null;
+    if (boardId && colorData) {
+      const colorDataArr = [...colorData]
+        .filter((x) => x !== ",")
+        .map((x) => parseInt(x));
+      console.log("bro how", colorDataArr);
+      boardData = squareGenerator(
+        colorDataArr.length,
+        calculateSquareSize(boardConfig[boardSize]),
+        colorDataArr
+      );
+    } else {
+      boardData = squareGenerator(
+        64,
+        calculateSquareSize(boardConfig[boardSize])
+      );
+    }
     checkAdjacentSquares(
       boardData[0][0],
       boardData,
@@ -116,7 +132,6 @@ export default function Freeplay() {
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
-        console.log("user", user.displayName);
         setUser(user);
       }
     });

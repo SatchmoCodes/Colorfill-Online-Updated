@@ -10,10 +10,10 @@ type ColorKey = 0 | 1 | 2 | 3 | 4;
 
 const boardOptions: Record<number, { size: string; count: number }> = {
   // 0: { size: "Extra Small", count: 25 },
-  1: { size: "Small", count: 64 },
-  2: { size: "Medium", count: 100 },
+  1: { size: "small", count: 64 },
+  2: { size: "medium", count: 100 },
   3: { size: "Large", count: 144 },
-  4: { size: "Extra Large", count: 225 },
+  4: { size: "xlarge", count: 225 },
 };
 
 const sizeOptionsLength = Object.keys(boardOptions).length;

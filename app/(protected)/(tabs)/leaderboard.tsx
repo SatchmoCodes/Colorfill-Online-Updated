@@ -3,6 +3,7 @@ import { ThemedView } from "@/components/ThemedView";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import { db } from "@/firebaseConfig";
 import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
 import {
   collection,
   DocumentData,
@@ -70,7 +71,7 @@ export default function Leaderboard() {
         where("highScore", "==", true),
         orderBy("score", "asc"),
         orderBy("createdAt", "asc"),
-        limit(10)
+        limit(25)
       );
 
       const snapshot = await getDocs(scoreQuery);
@@ -153,17 +154,25 @@ const TopRow = () => {
 };
 
 const Table = ({ tableData }: { tableData: DocumentData[] }) => {
+  console.log("data", tableData);
   return (
     <FlatList
       data={tableData}
       keyExtractor={(item) => item.id}
+      scrollEnabled
       renderItem={({ item, index }) => {
         return (
-          <ThemedView
+          <TouchableOpacity
             style={[
               styles.row,
               index % 2 === 0 ? styles.rowEven : styles.rowOdd,
             ]}
+            onPress={() =>
+              router.push({
+                pathname: "/viewscore",
+                params: { boardId: item.boardId, boardData: item.boardData },
+              })
+            }
           >
             <ThemedView style={[styles.cell, { width: "20%" }]}>
               <ThemedText style={[styles.cellText]}>{index + 1}</ThemedText>
@@ -174,7 +183,7 @@ const Table = ({ tableData }: { tableData: DocumentData[] }) => {
             <ThemedView style={[styles.cell, { width: "25%" }]}>
               <ThemedText style={styles.cellText}>{item.score}</ThemedText>
             </ThemedView>
-          </ThemedView>
+          </TouchableOpacity>
         );
       }}
     />
@@ -295,9 +304,10 @@ const styles = StyleSheet.create({
   },
   // Table
   tableWrapper: {
+    flex: 1,
     width: "95%",
     borderRadius: 12,
-    overflow: "hidden",
+    // overflow: "hidden",
     shadowColor: "#000",
     shadowOpacity: 0.25,
     shadowRadius: 6,
