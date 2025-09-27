@@ -2,23 +2,32 @@ import BoardSizeModal from "@/components/BoardSizeModal";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import BoardCompleteModal from "@/components/ui/BoardCompleteModal";
-import { colorPaletteOptions } from "@/constants/ColorPaletteOptions";
-import { auth, db } from "@/firebaseConfig";
+import { db } from "@/firebaseConfig";
+import {
+  loadColorIndex,
+  loadColorPaletteOptions,
+  loadIsColorPaletteStale,
+  loadIsMosaicMode,
+  saveIsColorPaletteStale,
+} from "@/helper/asyncStorageHelper";
+import { calculateSquareSize } from "@/helper/calculateSquareSize";
+import { getColorPaletteOptions } from "@/helper/getColorPaletteOptions";
 import { squareGenerator } from "@/helper/squareGenerator";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useUser } from "@/hooks/useFirebaseUser";
 import { useFocusEffect } from "@react-navigation/native";
 import { useLocalSearchParams } from "expo-router";
-import { User } from "firebase/auth";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Animated,
-  Dimensions,
   Easing,
+  PixelRatio,
   Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 import uuid from "react-native-uuid";
@@ -36,7 +45,7 @@ export interface Square {
 }
 
 export type ColorKey = 0 | 1 | 2 | 3 | 4;
-export type BoardSize = "small" | "medium" | "large";
+export type BoardSize = "small" | "medium" | "large" | "xlarge";
 
 interface GameBoardProps {
   boardState: Square[][];
@@ -44,11 +53,13 @@ interface GameBoardProps {
   boardSize: BoardSize;
   calculateSquareSize: (x: number) => number;
   boardVersion: number;
+  isMosaic: boolean;
 }
 
 interface SquareViewProps {
   square: Square;
   color: string;
+  // squareSize: number;
 }
 
 interface GameEffectButtonProps {
@@ -66,11 +77,13 @@ interface ColorRowButtons {
 
 const boardConfig = {
   small: 64,
-  medium: 100,
-  large: 144,
+  medium: 144,
+  large: 256,
+  xlarge: 400,
 };
 
 export default function Freeplay() {
+  const user = useUser();
   const { boardId, boardData: colorData } = useLocalSearchParams();
 
   const [boardSize, setBoardSize] = useState<BoardSize>("small");
@@ -80,7 +93,6 @@ export default function Freeplay() {
       const colorDataArr = [...colorData]
         .filter((x) => x !== ",")
         .map((x) => parseInt(x));
-      console.log("bro how", colorDataArr);
       boardData = squareGenerator(
         colorDataArr.length,
         calculateSquareSize(boardConfig[boardSize]),
@@ -104,39 +116,56 @@ export default function Freeplay() {
   const [score, setScore] = useState(0);
   const [showBoardSizeModal, setShowBoardSizeModal] = useState(false);
   const [showBoardCompleteModal, setShowBoardCompleteModal] = useState(false);
-  const [selectedColorPalette, setSelectedColorPalette] = useState(
-    colorPaletteOptions[0]
-  );
+  const [colorPaletteOptions, setColorPaletteOptions] = useState<
+    PaletteObj[] | []
+  >([]);
+  const [selectedColorPalette, setSelectedColorPalette] =
+    useState<PaletteObj | null>(null);
   const [boardVersion, setBoardVersion] = useState(1);
-  const [user, setUser] = useState<User | null>();
+  const [isMosaic, setIsMosaic] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
-      console.log("focusing");
       const loadPalette = async () => {
         try {
-          const colorIndexString =
-            (await AsyncStorage.getItem("color-index")) ?? 0;
-          const colorIndex = Number(colorIndexString);
-          if (Number.isInteger(colorIndex)) {
-            setSelectedColorPalette(colorPaletteOptions[colorIndex]);
+          const savedIndex = (await loadColorIndex()) ?? 0;
+          const isColorPaletteStale = await loadIsColorPaletteStale();
+          if (colorPaletteOptions.length === 0) {
+            if (isColorPaletteStale) {
+              const colorOptions = await getColorPaletteOptions(user);
+              setSelectedColorPalette(
+                colorOptions[savedIndex] ?? colorOptions[0]
+              );
+              setColorPaletteOptions(colorOptions);
+            } else {
+              let colorOptions = await loadColorPaletteOptions();
+              if (!colorOptions) {
+                colorOptions = await getColorPaletteOptions(user);
+              }
+              setSelectedColorPalette(
+                colorOptions[savedIndex] ?? colorOptions[0]
+              );
+              setColorPaletteOptions(colorOptions);
+            }
+          } else {
+            setSelectedColorPalette(colorPaletteOptions[savedIndex]);
           }
         } catch (error) {
           console.log("error setting initial settings", error);
         }
       };
+      const loadMosaicMode = async () => {
+        try {
+          const savedMode = (await loadIsMosaicMode()) ?? false;
+          setIsMosaic(savedMode);
+        } catch (error) {
+          console.log("error loading mosaic mode ", error);
+        }
+      };
       loadPalette();
+      loadMosaicMode();
     }, [])
   );
-
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (user) {
-        setUser(user);
-      }
-    });
-    return unsubscribe;
-  }, [auth]);
 
   const handleColorChange = (color: ColorKey) => {
     const visited = new Set<string>();
@@ -237,6 +266,7 @@ export default function Freeplay() {
 
     setBoardState(resetBoard);
     setActiveColor(resetBoard[0][0].color);
+    setBoardVersion((prev) => prev + 1);
     setScore(0);
   };
 
@@ -273,43 +303,38 @@ export default function Freeplay() {
       highScore: true,
       createdAt: serverTimestamp(),
     });
-  }
-
-  function calculateSquareSize(squareCount: number) {
-    const screenWidth =
-      Platform.OS === "web"
-        ? Dimensions.get("window").width * 0.32
-        : Dimensions.get("window").width - 40;
-
-    const columns = Math.sqrt(squareCount);
-
-    // Optional: add some padding or margin
-    const padding = 24;
-
-    return Math.floor((screenWidth - padding) / columns);
+    await saveIsColorPaletteStale(true);
   }
 
   return (
     <ThemedView style={styles.container}>
-      <ThemedText style={styles.score}>Moves: {score}</ThemedText>
-      <GameBoard
-        boardState={boardState}
-        selectedColorPalette={selectedColorPalette}
-        boardSize={boardSize}
-        calculateSquareSize={calculateSquareSize}
-        boardVersion={boardVersion}
-      />
-      <GameEffectButtons
-        newBoardProcess={newBoardProcess}
-        resetBoardProcess={resetBoardProcess}
-        setShowBoardSizeModal={setShowBoardSizeModal}
-        boardSize={boardSize}
-      />
-      <ColorRowButtons
-        activeColor={activeColor}
-        selectedColorPalette={selectedColorPalette}
-        handleColorChange={handleColorChange}
-      />
+      <ThemedText style={styles.score}>{score}</ThemedText>
+      {!selectedColorPalette ? (
+        <ActivityIndicator />
+      ) : (
+        <>
+          <GameBoard
+            boardState={boardState}
+            selectedColorPalette={selectedColorPalette}
+            boardSize={boardSize}
+            calculateSquareSize={calculateSquareSize}
+            boardVersion={boardVersion}
+            isMosaic={isMosaic}
+          />
+          <GameEffectButtons
+            newBoardProcess={newBoardProcess}
+            resetBoardProcess={resetBoardProcess}
+            setShowBoardSizeModal={setShowBoardSizeModal}
+            boardSize={boardSize}
+          />
+          <ColorRowButtons
+            activeColor={activeColor}
+            selectedColorPalette={selectedColorPalette}
+            handleColorChange={handleColorChange}
+          />
+        </>
+      )}
+
       {showBoardSizeModal && (
         <BoardSizeModal
           boardSize={boardSize}
@@ -331,26 +356,30 @@ export default function Freeplay() {
   );
 }
 
-const GameBoard = (props: GameBoardProps) => {
-  const {
-    boardState,
-    selectedColorPalette,
-    boardSize,
-    boardVersion,
-    calculateSquareSize,
-  } = props;
-
+const GameBoard = ({
+  boardState,
+  selectedColorPalette,
+  boardSize,
+  boardVersion,
+  isMosaic,
+}: GameBoardProps) => {
+  let windowWidth =
+    Platform.OS === "web"
+      ? useWindowDimensions().width * 0.33
+      : useWindowDimensions().width;
   const columns = Math.sqrt(boardConfig[boardSize]);
-  const squareSize = calculateSquareSize(boardConfig[boardSize]);
-  const containerSize = columns * squareSize;
-  console.log("size", squareSize);
+
+  const parentHorizontalPadding = 20;
+  const maxBoardWidth = Math.min(windowWidth - parentHorizontalPadding, 700);
+  const rawTile = Math.floor(maxBoardWidth / columns);
+  const tileSize = PixelRatio.roundToNearestPixel(rawTile);
 
   return (
     <View
       style={[
         styles.squareGrid,
         {
-          width: containerSize,
+          width: maxBoardWidth,
         },
       ]}
     >
@@ -360,6 +389,8 @@ const GameBoard = (props: GameBoardProps) => {
             <Square
               key={`${square.x}-${square.y}-${boardVersion}`}
               color={selectedColorPalette[square.color]}
+              tileSize={tileSize}
+              isMosaic={isMosaic}
               square={square}
             />
           );
@@ -369,15 +400,23 @@ const GameBoard = (props: GameBoardProps) => {
   );
 };
 
-const Square = (props: SquareViewProps) => {
-  const { square, color } = props;
+const Square = ({
+  square,
+  color,
+  tileSize,
+  isMosaic,
+}: {
+  square: Square;
+  color: string;
+  tileSize: number;
+  isMosaic: boolean;
+}) => {
   const scale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     if (square.captured && square.depth !== undefined) {
-      console.log("square here", square.x, square.y);
       Animated.sequence([
-        Animated.delay(square.depth * 80), // ripple by depth
+        Animated.delay(square.depth * 80),
         Animated.timing(scale, {
           toValue: 1.2,
           duration: 120,
@@ -398,13 +437,15 @@ const Square = (props: SquareViewProps) => {
     <Animated.View
       style={[
         styles.square,
-        square.captured && { zIndex: 2 },
         {
+          width: tileSize, // exact size given by the grid calculation
+          height: tileSize,
           backgroundColor: color,
-          width: square.size,
-          height: square.size,
           transform: [{ scale }],
+          borderColor: "black",
+          borderWidth: isMosaic ? 1 : 0,
         },
+        square.captured && { zIndex: 2 },
       ]}
     />
   );
@@ -512,7 +553,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   score: {
-    fontSize: 16,
+    fontSize: 20,
     marginBottom: 10,
   },
   squareGrid: {
@@ -520,7 +561,7 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   square: {
-    borderColor: "black",
+    // borderColor: "black",
     // borderWidth: 1,
   },
   colorRow: {

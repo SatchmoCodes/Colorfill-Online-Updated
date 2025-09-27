@@ -1,11 +1,14 @@
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
-import { colorPaletteOptions } from "@/constants/ColorPaletteOptions";
 import { db } from "@/firebaseConfig";
-import { calculateSquareSize } from "@/helper/calculateSquareSize";
+import {
+  loadColorIndex,
+  loadColorPaletteOptions,
+  loadIsColorPaletteStale,
+} from "@/helper/asyncStorageHelper";
+import { getColorPaletteOptions } from "@/helper/getColorPaletteOptions";
 import { PVPSquare } from "@/helper/pvpSquareGenerator";
-import { useFirebaseUser } from "@/hooks/useFirebaseUser";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useUser } from "@/hooks/useFirebaseUser";
 import { CommonActions } from "@react-navigation/native";
 import {
   useFocusEffect,
@@ -24,10 +27,14 @@ import {
   Animated,
   Easing,
   Modal,
+  PixelRatio,
+  Platform,
   StyleSheet,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
+import { ActivityIndicator } from "react-native-paper";
 import { boardSizePVPConfig, PlayerType, PVPBoardSize } from "./creategame";
 import { ColorKey } from "./freeplay";
 import { PaletteObj } from "./settings";
@@ -47,7 +54,7 @@ interface PVPSquareViewProps {
 
 interface ColorRowProps {
   selectedColorPalette: PaletteObj;
-  activeColor: number;
+  activeColor: number[];
   handleColorChange: (color: ColorKey) => void;
   turn: PlayerType | null;
   currentUserType: PlayerType;
@@ -55,7 +62,7 @@ interface ColorRowProps {
 
 interface FakeColorRowProps {
   selectedColorPalette: PaletteObj;
-  activeColor: number;
+  activeColor: number[];
   turn: PlayerType | null;
   currentUserType: PlayerType;
 }
@@ -65,9 +72,10 @@ interface ScoreSectionProps {
   opponentScore: number;
   ownerName: string;
   opponentName: string;
-  selectedColorPalette: PaletteObj;
-  timeLeft: number;
   currentUserType: PlayerType;
+  ownerSelectedColor: ColorKey;
+  opponentSelectedColor: ColorKey;
+  selectedColorPalette: PaletteObj;
 }
 
 interface EndGameModalProps {
@@ -82,24 +90,27 @@ interface EndGameModalProps {
 
 export default function PvpGame() {
   const { gameId } = useLocalSearchParams();
-  const { user, loading } = useFirebaseUser();
+  const user = useUser();
 
   const [ownerName, setOwnerName] = useState("");
   const [opponentName, setOpponentName] = useState("");
-  const [ownerSelectedColor, setOwnerSelectedColor] = useState(0);
-  const [opponentSelectedColor, setOpponentSelectedColor] = useState(0);
+  const [ownerSelectedColor, setOwnerSelectedColor] = useState<ColorKey>(0);
+  const [opponentSelectedColor, setOpponentSelectedColor] =
+    useState<ColorKey>(0);
   const [turn, setTurn] = useState<PlayerType | null>(null);
   const [boardState, setBoardState] = useState<PVPSquare[][]>([]);
   const [boardSize, setBoardSize] = useState<PVPBoardSize>("small");
-  const [selectedColorPalette, setSelectedColorPalette] = useState(
-    colorPaletteOptions[0]
-  );
+  const [colorPaletteOptions, setColorPaletteOptions] = useState<
+    PaletteObj[] | []
+  >([]);
+  const [selectedColorPalette, setSelectedColorPalette] =
+    useState<PaletteObj | null>(null);
+
   const [isFogOfWar, setIsFogOfWar] = useState(false);
   const [ownerScore, setOwnerScore] = useState(1);
   const [opponentScore, setOpponentScore] = useState(1);
   const [winner, setWinner] = useState<PlayerType | null>(null);
   const [turnDeadline, setTurnDeadline] = useState(16000);
-  const [timeLeft, setTimeLeft] = useState(16);
 
   const [boardLoaded, setBoardLoaded] = useState(false);
   const [docRef, setDocRef] = useState<DocumentReference | null>(null);
@@ -109,13 +120,31 @@ export default function PvpGame() {
 
   useFocusEffect(
     useCallback(() => {
+      console.log("focusing");
       const loadPalette = async () => {
         try {
-          const colorIndexString =
-            (await AsyncStorage.getItem("color-index")) ?? 0;
-          const colorIndex = Number(colorIndexString);
-          if (Number.isInteger(colorIndex)) {
-            setSelectedColorPalette(colorPaletteOptions[colorIndex]);
+          const savedIndex = (await loadColorIndex()) ?? 0;
+          const isColorPaletteStale = await loadIsColorPaletteStale();
+          if (colorPaletteOptions.length === 0) {
+            if (isColorPaletteStale) {
+              const colorOptions = await getColorPaletteOptions(user);
+              setSelectedColorPalette(
+                colorOptions[savedIndex] ?? colorOptions[0]
+              );
+              setColorPaletteOptions(colorOptions);
+            } else {
+              let colorOptions = await loadColorPaletteOptions();
+              if (!colorOptions) {
+                colorOptions = await getColorPaletteOptions(user);
+              }
+              setSelectedColorPalette(
+                colorOptions[savedIndex] ?? colorOptions[0]
+              );
+              setColorPaletteOptions(colorOptions);
+            }
+          } else {
+            console.log("do this be runnin");
+            setSelectedColorPalette(colorPaletteOptions[savedIndex]);
           }
         } catch (error) {
           console.log("error setting initial settings", error);
@@ -126,7 +155,7 @@ export default function PvpGame() {
   );
 
   useEffect(() => {
-    if (!gameId || loading || !user) return;
+    if (!gameId) return;
     const id = gameId as string;
     const unsubscribe = onSnapshot(doc(db, "games", id), (docSnapshot) => {
       if (docSnapshot.exists()) {
@@ -182,7 +211,7 @@ export default function PvpGame() {
       }
     });
     return unsubscribe;
-  }, [gameId, user, loading]);
+  }, [gameId]);
 
   useEffect(() => {
     if (ownerName) {
@@ -196,22 +225,16 @@ export default function PvpGame() {
     }
   }, [opponentName]);
 
-  useEffect(() => {
-    if (!turnDeadline) return;
-    const interval = setInterval(() => {
-      const remaining = turnDeadline - Date.now();
-      const roundedSeconds = Math.max(0, Math.floor(remaining / 1000));
-      setTimeLeft(roundedSeconds);
-      if (remaining <= 0) {
-        handleEndOfTurn();
-      }
-    }, 200);
-
-    return () => clearInterval(interval);
-  }, [turnDeadline]);
-
   const handleEndOfTurn = () => {
-    const randomColor = Math.floor(Math.random() * 5) as ColorKey;
+    const fullColorIndexList = [0, 1, 2, 3, 4] as ColorKey[];
+    const filteredColorIndexList = fullColorIndexList.filter(
+      (x) => x !== ownerSelectedColor && x !== opponentSelectedColor
+    );
+
+    const randomColor =
+      filteredColorIndexList[
+        Math.floor(Math.random() * filteredColorIndexList.length)
+      ];
     const currentUser = user?.displayName;
     const currentUserType = currentUser === ownerName ? "owner" : "opponent";
 
@@ -221,6 +244,7 @@ export default function PvpGame() {
   };
 
   const handleColorChange = async (color: ColorKey) => {
+    console.log("color picked", color);
     if (winner || !turn) return;
     const visited = new Set<string>();
     const currentBoardState = boardState.map((row) =>
@@ -464,55 +488,56 @@ export default function PvpGame() {
 
     return (
       <ThemedView style={styles.container}>
-        <>
-          <ScoreSection
-            ownerName={ownerName}
-            opponentName={opponentName}
-            ownerScore={ownerScore}
-            opponentScore={opponentScore}
-            selectedColorPalette={selectedColorPalette}
-            timeLeft={timeLeft}
-            currentUserType={currentUserType}
-          />
-          <FakeColorRowButtons
-            selectedColorPalette={selectedColorPalette}
-            activeColor={
-              user.displayName === ownerName
-                ? opponentSelectedColor
-                : ownerSelectedColor
-            }
-            turn={turn}
-            currentUserType={currentUserType}
-          />
-          <GameBoard
-            boardState={boardState}
-            boardSize={boardSize}
-            selectedColorPalette={selectedColorPalette}
-            currentUserType={currentUserType}
-          />
-          <ColorRowButtons
-            selectedColorPalette={selectedColorPalette}
-            activeColor={
-              user.displayName === ownerName
-                ? ownerSelectedColor
-                : opponentSelectedColor
-            }
-            turn={turn}
-            handleColorChange={handleColorChange}
-            currentUserType={currentUserType}
-          />
-          {winner && (
-            <EndGameModal
-              winner={winner}
-              setWinner={setWinner}
-              ownerScore={ownerScore}
-              opponentScore={opponentScore}
+        {!selectedColorPalette ? (
+          <ActivityIndicator />
+        ) : (
+          <>
+            <ScoreSection
               ownerName={ownerName}
               opponentName={opponentName}
+              ownerScore={ownerScore}
+              opponentScore={opponentScore}
+              currentUserType={currentUserType}
+              ownerSelectedColor={ownerSelectedColor}
+              opponentSelectedColor={opponentSelectedColor}
+              selectedColorPalette={selectedColorPalette}
+            />
+            <TimerDisplay
+              turnDeadline={turnDeadline}
+              onEndOfTurn={handleEndOfTurn}
+            />
+            <FakeColorRowButtons
+              selectedColorPalette={selectedColorPalette}
+              activeColor={[ownerSelectedColor, opponentSelectedColor]}
+              turn={turn}
               currentUserType={currentUserType}
             />
-          )}
-        </>
+            <GameBoard
+              boardState={boardState}
+              boardSize={boardSize}
+              selectedColorPalette={selectedColorPalette}
+              currentUserType={currentUserType}
+            />
+            <ColorRowButtons
+              selectedColorPalette={selectedColorPalette}
+              activeColor={[ownerSelectedColor, opponentSelectedColor]}
+              turn={turn}
+              handleColorChange={handleColorChange}
+              currentUserType={currentUserType}
+            />
+            {winner && (
+              <EndGameModal
+                winner={winner}
+                setWinner={setWinner}
+                ownerScore={ownerScore}
+                opponentScore={opponentScore}
+                ownerName={ownerName}
+                opponentName={opponentName}
+                currentUserType={currentUserType}
+              />
+            )}
+          </>
+        )}
       </ThemedView>
     );
   }
@@ -524,61 +549,37 @@ const GameBoard = (props: PVPGameBoard) => {
   const { boardState, boardSize, selectedColorPalette, currentUserType } =
     props;
 
+  let windowWidth =
+    Platform.OS === "web"
+      ? useWindowDimensions().width * 0.33
+      : useWindowDimensions().width;
   const columns = Math.sqrt(boardSizePVPConfig[boardSize]);
-  const squareSize = calculateSquareSize(boardSizePVPConfig[boardSize]);
-  const containerSize = columns * squareSize;
+
+  const parentHorizontalPadding = 30;
+  const maxBoardWidth = Math.min(windowWidth - parentHorizontalPadding, 700);
+  const rawTile = Math.floor(maxBoardWidth / columns);
+  const tileSize = PixelRatio.roundToNearestPixel(rawTile);
 
   const getSquareColor = (square: PVPSquare) => {
-    if (square.captured) {
-      if (square.squareOwner === "owner")
-        return selectedColorPalette[5] ?? "black";
-      if (square.squareOwner === "opponent")
-        return selectedColorPalette[6] ?? "white";
-    }
     if (square.visibleTo.includes(currentUserType)) {
       return selectedColorPalette[square.color];
     }
     return "gray";
   };
 
-  if (currentUserType === "owner") {
-    return (
-      <View
-        style={[
-          styles.squareGrid,
-          {
-            width: containerSize,
-          },
-        ]}
-      >
-        {boardState.map((row) => {
-          return row.map((square: PVPSquare) => {
-            return (
-              <Square
-                square={square}
-                color={getSquareColor(square)}
-                squareSize={squareSize}
-                key={`${square.x}-${square.y}`}
-              />
-            );
-          });
-        })}
-      </View>
-    );
-  }
+  const transformStyle =
+    currentUserType === "opponent" ? { transform: [{ rotate: "180deg" }] } : {};
+
   return (
     <View
-      style={[
-        styles.squareGrid,
-        { width: containerSize, transform: [{ rotate: "180deg" }] },
-      ]}
+      style={[styles.squareGrid, { width: maxBoardWidth, ...transformStyle }]}
     >
       {boardState.map((row) =>
         row.map((square) => (
           <Square
             square={square}
             color={getSquareColor(square)}
-            squareSize={squareSize}
+            squareSize={tileSize}
             key={`${square.x}-${square.y}`}
           />
         ))
@@ -671,65 +672,70 @@ const ColorRowButtons = (props: ColorRowProps) => {
         style={[
           styles.colorButton,
           {
-            backgroundColor:
-              activeColor === 0 ? "white" : selectedColorPalette[0],
-            opacity: activeColor === 0 ? 0.05 : 1,
+            backgroundColor: selectedColorPalette[0],
+            opacity: activeColor.includes(0) ? 0.05 : 1,
           },
         ]}
         onPress={() =>
-          activeColor !== 0 && currentUserType === turn && handleColorChange(0)
+          !activeColor.includes(0) &&
+          currentUserType === turn &&
+          handleColorChange(0)
         }
       />
       <TouchableOpacity
         style={[
           styles.colorButton,
           {
-            backgroundColor:
-              activeColor === 1 ? "white" : selectedColorPalette[1],
-            opacity: activeColor === 1 ? 0.05 : 1,
+            backgroundColor: selectedColorPalette[1],
+            opacity: activeColor.includes(1) ? 0.05 : 1,
           },
         ]}
         onPress={() =>
-          activeColor !== 1 && currentUserType === turn && handleColorChange(1)
+          !activeColor.includes(1) &&
+          currentUserType === turn &&
+          handleColorChange(1)
         }
       />
       <TouchableOpacity
         style={[
           styles.colorButton,
           {
-            backgroundColor:
-              activeColor === 2 ? "white" : selectedColorPalette[2],
-            opacity: activeColor === 2 ? 0.05 : 1,
+            backgroundColor: selectedColorPalette[2],
+            opacity: activeColor.includes(2) ? 0.05 : 1,
           },
         ]}
         onPress={() =>
-          activeColor !== 2 && currentUserType === turn && handleColorChange(2)
+          !activeColor.includes(2) &&
+          currentUserType === turn &&
+          handleColorChange(2)
         }
       />
       <TouchableOpacity
         style={[
           styles.colorButton,
           {
-            backgroundColor:
-              activeColor === 3 ? "white" : selectedColorPalette[3],
-            opacity: activeColor === 3 ? 0.05 : 1,
+            backgroundColor: selectedColorPalette[3],
+            opacity: activeColor.includes(3) ? 0.05 : 1,
           },
         ]}
         onPress={() =>
-          activeColor !== 3 && currentUserType === turn && handleColorChange(3)
+          !activeColor.includes(3) &&
+          currentUserType === turn &&
+          handleColorChange(3)
         }
       />
       <TouchableOpacity
         style={[
           styles.colorButton,
           {
-            backgroundColor:
-              activeColor === 4 ? "white" : selectedColorPalette[4],
-            opacity: activeColor === 4 ? 0.05 : 1,
+            backgroundColor: selectedColorPalette[4],
+            opacity: activeColor.includes(4) ? 0.05 : 1,
           },
         ]}
         onPress={() =>
-          activeColor !== 4 && currentUserType === turn && handleColorChange(4)
+          !activeColor.includes(4) &&
+          currentUserType === turn &&
+          handleColorChange(4)
         }
       />
     </View>
@@ -750,9 +756,8 @@ const FakeColorRowButtons = (props: FakeColorRowProps) => {
         style={[
           styles.colorButton,
           {
-            backgroundColor:
-              activeColor === 0 ? "white" : selectedColorPalette[0],
-            opacity: activeColor === 0 ? 0.05 : 1,
+            backgroundColor: selectedColorPalette[0],
+            opacity: activeColor.includes(0) ? 0.05 : 1,
           },
         ]}
       />
@@ -760,9 +765,8 @@ const FakeColorRowButtons = (props: FakeColorRowProps) => {
         style={[
           styles.colorButton,
           {
-            backgroundColor:
-              activeColor === 1 ? "white" : selectedColorPalette[1],
-            opacity: activeColor === 1 ? 0.05 : 1,
+            backgroundColor: selectedColorPalette[1],
+            opacity: activeColor.includes(1) ? 0.05 : 1,
           },
         ]}
       />
@@ -770,9 +774,8 @@ const FakeColorRowButtons = (props: FakeColorRowProps) => {
         style={[
           styles.colorButton,
           {
-            backgroundColor:
-              activeColor === 2 ? "white" : selectedColorPalette[2],
-            opacity: activeColor === 2 ? 0.05 : 1,
+            backgroundColor: selectedColorPalette[2],
+            opacity: activeColor.includes(2) ? 0.05 : 1,
           },
         ]}
       />
@@ -780,9 +783,8 @@ const FakeColorRowButtons = (props: FakeColorRowProps) => {
         style={[
           styles.colorButton,
           {
-            backgroundColor:
-              activeColor === 3 ? "white" : selectedColorPalette[3],
-            opacity: activeColor === 3 ? 0.05 : 1,
+            backgroundColor: selectedColorPalette[3],
+            opacity: activeColor.includes(3) ? 0.05 : 1,
           },
         ]}
       />
@@ -790,9 +792,8 @@ const FakeColorRowButtons = (props: FakeColorRowProps) => {
         style={[
           styles.colorButton,
           {
-            backgroundColor:
-              activeColor === 4 ? "white" : selectedColorPalette[4],
-            opacity: activeColor === 4 ? 0.05 : 1,
+            backgroundColor: selectedColorPalette[4],
+            opacity: activeColor.includes(4) ? 0.05 : 1,
           },
         ]}
       />
@@ -806,9 +807,10 @@ const ScoreSection = (props: ScoreSectionProps) => {
     opponentName,
     ownerScore,
     opponentScore,
-    selectedColorPalette,
-    timeLeft,
     currentUserType,
+    ownerSelectedColor,
+    opponentSelectedColor,
+    selectedColorPalette,
   } = props;
   return (
     <View
@@ -824,7 +826,7 @@ const ScoreSection = (props: ScoreSectionProps) => {
         <View
           style={[
             styles.scoreSquare,
-            { backgroundColor: selectedColorPalette[5] },
+            { backgroundColor: selectedColorPalette[ownerSelectedColor] },
           ]}
         >
           <ThemedText style={styles.scoreSquareText}>{ownerScore}</ThemedText>
@@ -834,14 +836,14 @@ const ScoreSection = (props: ScoreSectionProps) => {
         <ThemedText style={{ textAlign: "center", marginBottom: 20 }}>
           VS
         </ThemedText>
-        <ThemedText style={{ textAlign: "center" }}>{timeLeft}</ThemedText>
+        {/* <ThemedText style={{ textAlign: "center" }}>{timeLeft}</ThemedText> */}
       </View>
       <View style={{ alignItems: "center" }}>
         <ThemedText style={{ textAlign: "center" }}>{opponentName}</ThemedText>
         <View
           style={[
             styles.scoreSquare,
-            { backgroundColor: selectedColorPalette[6] },
+            { backgroundColor: selectedColorPalette[opponentSelectedColor] },
           ]}
         >
           <ThemedText style={styles.scoreSquareText}>
@@ -851,6 +853,39 @@ const ScoreSection = (props: ScoreSectionProps) => {
       </View>
     </View>
   );
+};
+
+const TimerDisplay = ({
+  turnDeadline,
+  onEndOfTurn,
+}: {
+  turnDeadline: number;
+  onEndOfTurn: () => void;
+}) => {
+  const [timeLeft, setTimeLeft] = useState(0);
+
+  useEffect(() => {
+    if (!turnDeadline) return;
+
+    let lastSeconds: number | null = null;
+    const interval = setInterval(() => {
+      const remaining = turnDeadline - Date.now();
+      const roundedSeconds = Math.max(0, Math.floor(remaining / 1000));
+
+      if (roundedSeconds !== lastSeconds) {
+        setTimeLeft(roundedSeconds);
+        lastSeconds = roundedSeconds;
+      }
+
+      if (remaining <= 0) {
+        onEndOfTurn();
+      }
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [turnDeadline]);
+
+  return <ThemedText style={{ fontSize: 20 }}>{timeLeft}</ThemedText>;
 };
 
 const EndGameModal = (props: EndGameModalProps) => {

@@ -23,6 +23,8 @@ import {
 } from "react-native";
 import { Dropdown } from "react-native-element-dropdown";
 
+export type Gamemode = "freeplay" | "progressive" | "boardoftheday" | "pvp";
+
 const gamemodeOptions = [
   { label: "Free Play", value: "freeplay" },
   { label: "Progressive", value: "progressive" },
@@ -43,16 +45,16 @@ interface LeaderboardOptionsModal {
   tempSize: string;
   openLeaderboardOptionsModal: boolean;
   setOpenLeaderboardOptionsModal: React.Dispatch<React.SetStateAction<boolean>>;
-  setGamemode: React.Dispatch<React.SetStateAction<string>>;
+  setGamemode: React.Dispatch<React.SetStateAction<Gamemode>>;
   setSize: React.Dispatch<React.SetStateAction<string>>;
-  setTempGamemode: React.Dispatch<React.SetStateAction<string>>;
+  setTempGamemode: React.Dispatch<React.SetStateAction<Gamemode>>;
   setTempSize: React.Dispatch<React.SetStateAction<string>>;
 }
 
 export default function Leaderboard() {
   const [openLeaderboardOptionsModal, setOpenLeaderboardOptionsModal] =
     useState(false);
-  const [gamemode, setGamemode] = useState("freeplay");
+  const [gamemode, setGamemode] = useState<Gamemode>("freeplay");
   const [size, setSize] = useState("small");
   const [tempGamemode, setTempGamemode] = useState(gamemode);
   const [tempSize, setTempSize] = useState(size);
@@ -205,14 +207,14 @@ const OptionsModal = ({
   const handleApply = () => {
     setOpenLeaderboardOptionsModal(false);
     if (gamemode !== tempGamemode || size !== tempSize) {
-      setGamemode(tempGamemode);
+      setGamemode(tempGamemode as Gamemode);
       setSize(tempSize);
     }
   };
 
   useEffect(() => {
     if (openLeaderboardOptionsModal) {
-      setTempGamemode(gamemode);
+      setTempGamemode(gamemode as Gamemode);
       setTempSize(size);
     }
   }, [openLeaderboardOptionsModal]);

@@ -22,6 +22,7 @@ export const colorPaletteOptions = [
     2: "#ffecd1",
     3: "#ff7d00",
     4: "#78290f",
+    locked: true,
   },
   {
     0: "#000000",
@@ -147,7 +148,7 @@ export const colorPaletteOptions = [
     1: "#EBEBEB",
     2: "#ACACAC",
     3: "#447FBD",
-    4: "#034482",
+    4: "#023769ff",
   },
   {
     0: "#a30f14",

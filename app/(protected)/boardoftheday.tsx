@@ -1,11 +1,16 @@
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
-import { colorPaletteOptions } from "@/constants/ColorPaletteOptions";
-import { auth, db } from "@/firebaseConfig";
+import { db } from "@/firebaseConfig";
+import {
+  loadColorIndex,
+  loadColorPaletteOptions,
+  loadIsColorPaletteStale,
+} from "@/helper/asyncStorageHelper";
+import { calculateSquareSize } from "@/helper/calculateSquareSize";
+import { getColorPaletteOptions } from "@/helper/getColorPaletteOptions";
 import { squareGenerator } from "@/helper/squareGenerator";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useUser } from "@/hooks/useFirebaseUser";
 import { useFocusEffect } from "@react-navigation/native";
-import { User } from "firebase/auth";
 import {
   addDoc,
   collection,
@@ -16,15 +21,19 @@ import {
   serverTimestamp,
   where,
 } from "firebase/firestore";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
   Dimensions,
+  Easing,
   Modal,
+  PixelRatio,
   Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { PaletteObj } from "./settings";
@@ -35,12 +44,13 @@ export interface Square {
   defaultColor: ColorKey;
   landLocked: boolean;
   size: number;
+  depth: number;
   x: number;
   y: number;
 }
 
 export type ColorKey = 0 | 1 | 2 | 3 | 4;
-type BoardOfTheDaySize = "xSmall" | "Small" | "Medium" | "Large" | "xLarge";
+type BoardOfTheDaySize = "small" | "medium" | "large" | "xlarge";
 type LoadingState = "loading" | "loaded" | "complete" | "error";
 
 interface GameBoardProps {
@@ -48,6 +58,12 @@ interface GameBoardProps {
   selectedColorPalette: PaletteObj;
   boardSize: BoardOfTheDaySize;
   calculateSquareSize: (x: number) => number;
+}
+
+interface SquareViewProps {
+  square: Square;
+  color: string;
+  squareSize: number;
 }
 
 interface GameEffectButtonProps {
@@ -68,36 +84,55 @@ interface BoardCompleteProps {
 }
 
 const boardConfig = {
-  xSmall: 25,
-  Small: 64,
-  Medium: 100,
-  Large: 144,
-  xLarge: 225,
+  small: 64,
+  medium: 100,
+  large: 144,
+  xlarge: 225,
 };
 
+const screenSize = Dimensions.get("window").width;
+
 export default function BoardoftheDay() {
-  const [boardSize, setBoardSize] = useState<BoardOfTheDaySize>("Small");
+  const user = useUser();
+  const [boardSize, setBoardSize] = useState<BoardOfTheDaySize>("small");
   const [boardState, setBoardState] = useState<Square[][]>([]);
   const [activeColor, setActiveColor] = useState(boardState[0]?.[0]?.color);
   const [score, setScore] = useState(0);
   const [showBoardCompleteModal, setShowBoardCompleteModal] = useState(false);
+  const [colorPaletteOptions, setColorPaletteOptions] = useState<
+    PaletteObj[] | []
+  >([]);
   const [selectedColorPalette, setSelectedColorPalette] = useState(
     colorPaletteOptions[0]
   );
-  const [user, setUser] = useState<User | null>();
   const [loadingState, setLoadingState] = useState<LoadingState>("loading");
   const [boardId, setBoardId] = useState("");
 
   useFocusEffect(
     useCallback(() => {
-      console.log("focusing");
       const loadPalette = async () => {
         try {
-          const colorIndexString =
-            (await AsyncStorage.getItem("color-index")) ?? 0;
-          const colorIndex = Number(colorIndexString);
-          if (Number.isInteger(colorIndex)) {
-            setSelectedColorPalette(colorPaletteOptions[colorIndex]);
+          const savedIndex = (await loadColorIndex()) ?? 0;
+          const isColorPaletteStale = await loadIsColorPaletteStale();
+          if (colorPaletteOptions.length === 0) {
+            if (isColorPaletteStale) {
+              const colorOptions = await getColorPaletteOptions(user);
+              setSelectedColorPalette(
+                colorOptions[savedIndex] ?? colorOptions[0]
+              );
+              setColorPaletteOptions(colorOptions);
+            } else {
+              let colorOptions = await loadColorPaletteOptions();
+              if (!colorOptions) {
+                colorOptions = await getColorPaletteOptions(user);
+              }
+              setSelectedColorPalette(
+                colorOptions[savedIndex] ?? colorOptions[0]
+              );
+              setColorPaletteOptions(colorOptions);
+            }
+          } else {
+            setSelectedColorPalette(colorPaletteOptions[savedIndex]);
           }
         } catch (error) {
           console.log("error setting initial settings", error);
@@ -106,15 +141,6 @@ export default function BoardoftheDay() {
       loadPalette();
     }, [])
   );
-
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (user) {
-        setUser(user);
-      }
-    });
-    return unsubscribe;
-  }, [auth]);
 
   useEffect(() => {
     if (user) {
@@ -168,7 +194,8 @@ export default function BoardoftheDay() {
     currentSquare: Square,
     board: Square[][],
     color: ColorKey,
-    visited: Set<string>
+    visited: Set<string>,
+    depth: number = 0
   ) {
     const key = `${currentSquare.x},${currentSquare.y}`;
     if (visited.has(key)) return;
@@ -179,7 +206,8 @@ export default function BoardoftheDay() {
       if (neighbor && !neighbor.captured && neighbor.color === color) {
         neighbor.captured = true;
         neighbor.color = color;
-        checkAdjacentSquares(neighbor, board, color, visited);
+        neighbor.depth = depth + 1;
+        checkAdjacentSquares(neighbor, board, color, visited, depth + 1);
       }
     }
   }
@@ -222,23 +250,6 @@ export default function BoardoftheDay() {
     setActiveColor(resetBoard[0][0].color);
     setScore(0);
   };
-
-  function calculateSquareSize(squareCount: number) {
-    const screenWidth =
-      Platform.OS === "web"
-        ? Dimensions.get("window").width * 0.32
-        : Dimensions.get("window").width - 40;
-
-    const columns = Math.sqrt(squareCount);
-
-    // Optional: add some padding or margin
-    const padding = 0;
-
-    console.log("width", screenWidth);
-    console.log("square size", Math.floor((screenWidth - padding) / columns));
-
-    return Math.floor((screenWidth - padding) / columns);
-  }
 
   async function handleScoreSubmission() {
     try {
@@ -290,6 +301,12 @@ export default function BoardoftheDay() {
             calculateSquareSize(boardData.length),
             boardData
           );
+          checkAdjacentSquares(
+            board[0][0],
+            board,
+            board[0][0].color,
+            new Set()
+          );
           setBoardState(board);
           setActiveColor(board[0][0].defaultColor);
           setBoardSize(boardSize);
@@ -313,7 +330,7 @@ export default function BoardoftheDay() {
       )}
       {loadingState === "loaded" && (
         <>
-          <ThemedText style={styles.score}>Moves: {score}</ThemedText>
+          <ThemedText style={styles.score}>{score}</ThemedText>
           <GameBoard
             boardState={boardState}
             selectedColorPalette={selectedColorPalette}
@@ -354,42 +371,86 @@ export default function BoardoftheDay() {
   );
 }
 
-const GameBoard = (props: GameBoardProps) => {
-  const { boardState, selectedColorPalette, boardSize, calculateSquareSize } =
-    props;
-
+const GameBoard = ({
+  boardState,
+  selectedColorPalette,
+  boardSize,
+}: GameBoardProps) => {
+  let windowWidth =
+    Platform.OS === "web"
+      ? useWindowDimensions().width * 0.33
+      : useWindowDimensions().width;
+  console.log("boardConfig", boardConfig, boardSize);
   const columns = Math.sqrt(boardConfig[boardSize]);
-  const squareSize = calculateSquareSize(boardConfig[boardSize]);
-  const containerSize = columns * squareSize;
+  console.log("cols", columns);
+
+  const parentHorizontalPadding = 20;
+  const maxBoardWidth = Math.min(windowWidth - parentHorizontalPadding, 700);
+  const rawTile = Math.floor(maxBoardWidth / columns);
+  const tileSize = PixelRatio.roundToNearestPixel(rawTile);
 
   return (
     <View
       style={[
         styles.squareGrid,
         {
-          width: containerSize,
+          width: maxBoardWidth,
         },
       ]}
     >
       {boardState.map((row) => {
         return row.map((square: Square) => {
-          console.log("size hedre", square.size);
           return (
-            <View
+            <Square
+              square={square}
+              color={selectedColorPalette[square.color]}
+              squareSize={tileSize}
               key={`${square.x}-${square.y}`}
-              style={[
-                styles.square,
-                {
-                  backgroundColor: selectedColorPalette[square.color],
-                  width: square.size,
-                  height: square.size,
-                },
-              ]}
             />
           );
         });
       })}
     </View>
+  );
+};
+
+const Square = (props: SquareViewProps) => {
+  const { square, color, squareSize } = props;
+  const scale = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (square.captured && square.depth !== undefined) {
+      Animated.sequence([
+        Animated.delay(square.depth * 80), // ripple by depth
+        Animated.timing(scale, {
+          toValue: 1.2,
+          duration: 120,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scale, {
+          toValue: 1,
+          duration: 120,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [square.captured]);
+
+  return (
+    <Animated.View
+      style={[
+        styles.square,
+        square.captured && { zIndex: 2 },
+        {
+          backgroundColor: color,
+          width: squareSize,
+          height: squareSize,
+          transform: [{ scale }],
+        },
+      ]}
+    />
   );
 };
 
@@ -526,16 +587,16 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   score: {
-    fontSize: 16,
+    fontSize: 20,
     marginBottom: 10,
   },
   squareGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
+    width: screenSize,
   },
   square: {
-    borderColor: "black",
-    borderWidth: 1,
+    // borderColor: "black",
   },
   colorRow: {
     flexDirection: "row",
