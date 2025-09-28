@@ -1,9 +1,11 @@
 import { PaletteObj } from "@/app/(protected)/settings";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Unlockables } from "./updateCriteriaMap";
 
 const COLOR_INDEX_KEY = "color-index";
 const COLOR_PALETTE_KEY = "color-palettes";
-const COLOR_PALETTE_STALE_KEY = "color-palettes-stale";
+const CRITERIA_MAP_KEY = "criteria-map";
+const CRITERIA_MAP_STALE_KEY = "criteria-map-stale";
 const MOSAIC_MODE_KEY = "mosaic-mode";
 
 export async function saveColorIndex(idx: number) {
@@ -24,12 +26,21 @@ export async function loadColorPaletteOptions(): Promise<PaletteObj[] | null> {
   return saved !== null ? JSON.parse(saved) : null;
 }
 
-export async function saveIsColorPaletteStale(isStale: boolean) {
-  await AsyncStorage.setItem(COLOR_PALETTE_STALE_KEY, JSON.stringify(isStale));
+export async function saveCriteriaMap(mapObj: Unlockables) {
+  await AsyncStorage.setItem(CRITERIA_MAP_KEY, JSON.stringify(mapObj));
 }
 
-export async function loadIsColorPaletteStale(): Promise<boolean | null> {
-  const saved = await AsyncStorage.getItem(COLOR_PALETTE_STALE_KEY);
+export async function loadCriteriaMap(): Promise<Unlockables | null> {
+  const saved = await AsyncStorage.getItem(CRITERIA_MAP_KEY);
+  return saved !== null ? JSON.parse(saved) : null;
+}
+
+export async function saveIsCriteriaMapStale(isStale: boolean) {
+  await AsyncStorage.setItem(CRITERIA_MAP_STALE_KEY, JSON.stringify(isStale));
+}
+
+export async function loadIsCriteriaMapStale(): Promise<boolean | null> {
+  const saved = await AsyncStorage.getItem(CRITERIA_MAP_STALE_KEY);
   return saved !== null ? JSON.parse(saved) : null;
 }
 

@@ -1,6 +1,98 @@
-import { Unlockables } from "./updateCriteriaMap";
+import { db } from "@/firebaseConfig";
+import { User } from "firebase/auth";
+import {
+  collection,
+  getDocs,
+  limit,
+  orderBy,
+  query,
+  where,
+} from "firebase/firestore";
+import { saveColorPaletteOptions } from "./asyncStorageHelper";
 
-const updateColorPaletteOptions = async (criteriaMap: Unlockables) => {
+export const getColorPaletteOptions = async (user: User) => {
+  const userQuery = query(
+    collection(db, "users"),
+    where("uid", "==", user.uid)
+  );
+  const bestSmall = query(
+    collection(db, "scores"),
+    where("uid", "==", user.uid),
+    where("size", "==", "small"),
+    orderBy("score", "asc"),
+    limit(1)
+  );
+
+  const bestMedium = query(
+    collection(db, "scores"),
+    where("uid", "==", user.uid),
+    where("size", "==", "medium"),
+    orderBy("score", "asc"),
+    limit(1)
+  );
+
+  const bestLarge = query(
+    collection(db, "scores"),
+    where("uid", "==", user.uid),
+    where("size", "==", "large"),
+    orderBy("score", "asc"),
+    limit(1)
+  );
+
+  const totalBoardOfTheDays = query(
+    collection(db, "scores"),
+    where("uid", "==", user.uid),
+    where("gamemode", "==", "boardoftheday"),
+    limit(100)
+  );
+  let totalGames = 0;
+  let wins = 0;
+  let boardsCompleted = 0;
+  let bestWinStreak = 0;
+  let bestSmallScore: number | null = null;
+  let bestMediumScore: number | null = null;
+  let bestLargeScore: number | null = null;
+  let numberOfBoardOfTheDaysSolved = 0;
+
+  try {
+    // Run everything at once
+    const [userDocs, smallDocs, mediumDocs, largeDocs, botdDocs] =
+      await Promise.all([
+        getDocs(userQuery),
+        getDocs(bestSmall),
+        getDocs(bestMedium),
+        getDocs(bestLarge),
+        getDocs(totalBoardOfTheDays),
+      ]);
+
+    // Default values
+
+    // Extract user stats
+    if (!userDocs.empty) {
+      const userData = userDocs.docs[0].data();
+      totalGames = userData.totalGames ?? 0;
+      wins = userData.wins ?? 0;
+      boardsCompleted = userData.boardsCompleted ?? 0;
+      bestWinStreak = userData.bestWinStreak ?? 0;
+    }
+
+    // Extract best scores
+    if (!smallDocs.empty) {
+      bestSmallScore = smallDocs.docs[0].data().score;
+    }
+    if (!mediumDocs.empty) {
+      bestMediumScore = mediumDocs.docs[0].data().score;
+    }
+    if (!largeDocs.empty) {
+      bestLargeScore = largeDocs.docs[0].data().score;
+    }
+    if (!botdDocs.empty) {
+      numberOfBoardOfTheDaysSolved = botdDocs.docs.length;
+    }
+  } catch (error) {
+    console.error("Error fetching user data: ", error);
+    throw error;
+  }
   const colorPaletteOptions = [
     {
       0: "red",
@@ -29,7 +121,6 @@ const updateColorPaletteOptions = async (criteriaMap: Unlockables) => {
       2: "#ffd466",
       3: "#4a636d",
       4: "#0a141a",
-      ...criteriaMap["small_1"],
     },
     {
       0: "#401219",
@@ -37,7 +128,6 @@ const updateColorPaletteOptions = async (criteriaMap: Unlockables) => {
       2: "#ABBF63",
       3: "#F37A5E",
       4: "#F33D3C",
-      ...criteriaMap["medium_1"],
     },
     {
       0: "#000F08",
@@ -45,7 +135,6 @@ const updateColorPaletteOptions = async (criteriaMap: Unlockables) => {
       2: "#FFC126",
       3: "#F34213",
       4: "#3E2F5B",
-      ...criteriaMap["large_1"],
     },
     {
       0: "#00475b",
@@ -53,7 +142,6 @@ const updateColorPaletteOptions = async (criteriaMap: Unlockables) => {
       2: "#e5e1e6",
       3: "#888b8d",
       4: "#222223",
-      ...criteriaMap["xlarge_1"],
     },
     {
       0: "#bf0423ff",
@@ -61,7 +149,6 @@ const updateColorPaletteOptions = async (criteriaMap: Unlockables) => {
       2: "#edf2f4",
       3: "#8d99ae",
       4: "#2b2d42",
-      ...criteriaMap["boards_completed_1"],
     },
     {
       0: "#001524",
@@ -69,7 +156,6 @@ const updateColorPaletteOptions = async (criteriaMap: Unlockables) => {
       2: "#ffecd1",
       3: "#ff7d00",
       4: "#78290f",
-      ...criteriaMap["botd_completed_1"],
     },
     {
       0: "#3c1642",
@@ -77,7 +163,6 @@ const updateColorPaletteOptions = async (criteriaMap: Unlockables) => {
       2: "#1dd3b0",
       3: "#71ac1fff",
       4: "#c1f5b4ff",
-      ...criteriaMap["total_games-1"],
     },
     {
       0: "#000000",
@@ -85,7 +170,6 @@ const updateColorPaletteOptions = async (criteriaMap: Unlockables) => {
       2: "#fca311",
       3: "#afafafff",
       4: "#ffffff",
-      ...criteriaMap["wins_1"],
     },
     {
       0: "#222222",
@@ -93,7 +177,6 @@ const updateColorPaletteOptions = async (criteriaMap: Unlockables) => {
       2: "#F5F5F5",
       3: "#F77A36",
       4: "#62516D",
-      ...criteriaMap["winstreak_1"],
     },
     {
       0: "#29270B",
@@ -101,7 +184,6 @@ const updateColorPaletteOptions = async (criteriaMap: Unlockables) => {
       2: "#ED3F09",
       3: "#A28E88",
       4: "#141414",
-      ...criteriaMap["small_2"],
     },
     {
       0: "#a8201a",
@@ -109,7 +191,6 @@ const updateColorPaletteOptions = async (criteriaMap: Unlockables) => {
       2: "#dad2d8",
       3: "#0f8b8d",
       4: "#143642",
-      ...criteriaMap["medium_2"],
     },
     {
       0: "#04151F",
@@ -117,7 +198,6 @@ const updateColorPaletteOptions = async (criteriaMap: Unlockables) => {
       2: "#EFD6AC",
       3: "#C44900",
       4: "#432534",
-      ...criteriaMap["large_2"],
     },
     {
       0: "#721817",
@@ -125,7 +205,6 @@ const updateColorPaletteOptions = async (criteriaMap: Unlockables) => {
       2: "#e0e0e2",
       3: "#0b6e4f",
       4: "#2b4162",
-      ...criteriaMap["xlarge_2"],
     },
     {
       0: "#292A3C",
@@ -133,7 +212,6 @@ const updateColorPaletteOptions = async (criteriaMap: Unlockables) => {
       2: "#FAF8FB",
       3: "#98A9B5",
       4: "#58599A",
-      ...criteriaMap["boards_completed_2"],
     },
     {
       0: "#050038",
@@ -141,7 +219,6 @@ const updateColorPaletteOptions = async (criteriaMap: Unlockables) => {
       2: "#F0F2FC",
       3: "#FFD02f",
       4: "#ECB1B5",
-      ...criteriaMap["botd_copmpleted_2"],
     },
     {
       0: "#CC0000",
@@ -149,7 +226,6 @@ const updateColorPaletteOptions = async (criteriaMap: Unlockables) => {
       2: "#808087",
       3: "#242222ff",
       4: "#002D5C",
-      ...criteriaMap["total_games_2"],
     },
     {
       0: "#FF6700",
@@ -157,7 +233,6 @@ const updateColorPaletteOptions = async (criteriaMap: Unlockables) => {
       2: "#ACACAC",
       3: "#447FBD",
       4: "#034482",
-      ...criteriaMap["wins_2"],
     },
     {
       0: "#9B1D20",
@@ -165,7 +240,6 @@ const updateColorPaletteOptions = async (criteriaMap: Unlockables) => {
       2: "#030302ff",
       3: "#636363",
       4: "#0C090D",
-      ...criteriaMap["winstreak_2"],
     },
     {
       0: "#2f4232",
@@ -173,7 +247,6 @@ const updateColorPaletteOptions = async (criteriaMap: Unlockables) => {
       2: "#d5d3d0",
       3: "#ff9123",
       4: "#5a0203",
-      ...criteriaMap["small_3"],
     },
     {
       0: "#5f0f40",
@@ -181,7 +254,6 @@ const updateColorPaletteOptions = async (criteriaMap: Unlockables) => {
       2: "#f8a354ff",
       3: "#c5540eff",
       4: "#0f4c5c",
-      ...criteriaMap["medium_3"],
     },
     {
       0: "#335c67",
@@ -189,7 +261,6 @@ const updateColorPaletteOptions = async (criteriaMap: Unlockables) => {
       2: "#e09f3e",
       3: "#9e2a2b",
       4: "#540b0e",
-      ...criteriaMap["large_3"],
     },
     {
       0: "#09410dff",
@@ -197,7 +268,6 @@ const updateColorPaletteOptions = async (criteriaMap: Unlockables) => {
       2: "#edf2f4",
       3: "#8d99ae",
       4: "#2b2d42",
-      ...criteriaMap["xlarge_3"],
     },
     {
       0: "#92140c",
@@ -205,7 +275,6 @@ const updateColorPaletteOptions = async (criteriaMap: Unlockables) => {
       2: "#fff8f0",
       3: "#111d4a",
       4: "#1e1e24",
-      ...criteriaMap["boards_completed_3"],
     },
     {
       0: "#334319",
@@ -213,7 +282,6 @@ const updateColorPaletteOptions = async (criteriaMap: Unlockables) => {
       2: "#e1ddad",
       3: "#fed52f",
       4: "#825026",
-      ...criteriaMap["botd_completed_3"],
     },
     {
       0: "#eb5e28",
@@ -221,7 +289,6 @@ const updateColorPaletteOptions = async (criteriaMap: Unlockables) => {
       2: "#aaa397ff",
       3: "#383532ff",
       4: "#1b1a19ff",
-      ...criteriaMap["total_games_3"],
     },
     {
       0: "#30343f",
@@ -229,7 +296,6 @@ const updateColorPaletteOptions = async (criteriaMap: Unlockables) => {
       2: "#baabdfff",
       3: "#364996ff",
       4: "#1e2749",
-      ...criteriaMap["wins_3"],
     },
     {
       0: "#FF4365",
@@ -237,7 +303,6 @@ const updateColorPaletteOptions = async (criteriaMap: Unlockables) => {
       2: "#FFFFF3",
       3: "#00D9C0",
       4: "#030301",
-      ...criteriaMap["winstreak_3"],
     },
     {
       0: "#221D23",
@@ -296,4 +361,14 @@ const updateColorPaletteOptions = async (criteriaMap: Unlockables) => {
     //   4: "",
     // },
   ];
+  await saveColorPaletteOptions(colorPaletteOptions);
+  return colorPaletteOptions;
 };
+
+// const criteriaMap = {
+//   'small_easy': {
+//     locked: bestSmallScore === null || bestSmallScore > 11,
+//       message: "Score 11 or lower on a small board to unlock this color scheme",
+//       progress: bestSmallScore ? `current best: ${bestSmallScore}` : "n/a",
+//   }
+// }

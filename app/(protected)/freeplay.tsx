@@ -6,13 +6,15 @@ import { db } from "@/firebaseConfig";
 import {
   loadColorIndex,
   loadColorPaletteOptions,
-  loadIsColorPaletteStale,
   loadIsMosaicMode,
-  saveIsColorPaletteStale,
+  saveColorPaletteOptions,
+  saveCriteriaMap,
 } from "@/helper/asyncStorageHelper";
 import { calculateSquareSize } from "@/helper/calculateSquareSize";
+import { getUser } from "@/helper/commonQueries";
 import { getColorPaletteOptions } from "@/helper/getColorPaletteOptions";
 import { squareGenerator } from "@/helper/squareGenerator";
+import { Unlockables, updateCriteriaMap } from "@/helper/updateCriteriaMap";
 import { useUser } from "@/hooks/useFirebaseUser";
 import { useFocusEffect } from "@react-navigation/native";
 import { useLocalSearchParams } from "expo-router";
@@ -129,27 +131,12 @@ export default function Freeplay() {
       const loadPalette = async () => {
         try {
           const savedIndex = (await loadColorIndex()) ?? 0;
-          const isColorPaletteStale = await loadIsColorPaletteStale();
-          if (colorPaletteOptions.length === 0) {
-            if (isColorPaletteStale) {
-              const colorOptions = await getColorPaletteOptions(user);
-              setSelectedColorPalette(
-                colorOptions[savedIndex] ?? colorOptions[0]
-              );
-              setColorPaletteOptions(colorOptions);
-            } else {
-              let colorOptions = await loadColorPaletteOptions();
-              if (!colorOptions) {
-                colorOptions = await getColorPaletteOptions(user);
-              }
-              setSelectedColorPalette(
-                colorOptions[savedIndex] ?? colorOptions[0]
-              );
-              setColorPaletteOptions(colorOptions);
-            }
-          } else {
-            setSelectedColorPalette(colorPaletteOptions[savedIndex]);
+          let colorOptions = await loadColorPaletteOptions();
+          if (!colorOptions) {
+            colorOptions = await getColorPaletteOptions({});
           }
+          setSelectedColorPalette(colorOptions[savedIndex] ?? colorOptions[0]);
+          setColorPaletteOptions(colorOptions);
         } catch (error) {
           console.log("error setting initial settings", error);
         }
@@ -292,6 +279,21 @@ export default function Freeplay() {
     const boardData = boardState.flatMap((row) =>
       row.map((x) => x.defaultColor)
     );
+    // const userDoc = await getUser(user.uid)
+    const [userDoc] = await Promise.all([
+      getUser(user.uid),
+      addDoc(collection(db, "scores"), {
+        boardId: uuid.v4(),
+        score: updatedScore,
+        size: boardSize,
+        boardData,
+        createdBy: user?.displayName,
+        uid: user?.uid,
+        gamemode: "freeplay",
+        highScore: true,
+        createdAt: serverTimestamp(),
+      }),
+    ]);
     await addDoc(collection(db, "scores"), {
       boardId: uuid.v4(),
       score: updatedScore,
@@ -303,9 +305,43 @@ export default function Freeplay() {
       highScore: true,
       createdAt: serverTimestamp(),
     });
-    await saveIsColorPaletteStale(true);
-  }
 
+    let criteriaMap: Unlockables | null = null;
+
+    switch (boardSize) {
+      case "small":
+        criteriaMap = await updateCriteriaMap({
+          userDoc,
+          bestSmallScore: updatedScore,
+        });
+        break;
+      case "medium":
+        criteriaMap = await updateCriteriaMap({
+          userDoc,
+          bestMediumScore: updatedScore,
+        });
+        break;
+      case "large":
+        criteriaMap = await updateCriteriaMap({
+          userDoc,
+          bestLargeScore: updatedScore,
+        });
+        break;
+      case "xlarge":
+        criteriaMap = await updateCriteriaMap({
+          userDoc,
+          bestXLargeScore: updatedScore,
+        });
+        break;
+    }
+    if (criteriaMap) {
+      await saveCriteriaMap(criteriaMap);
+      const updatedColorPaletteOptions = await getColorPaletteOptions(
+        criteriaMap
+      );
+      await saveColorPaletteOptions(updatedColorPaletteOptions);
+    }
+  }
   return (
     <ThemedView style={styles.container}>
       <ThemedText style={styles.score}>{score}</ThemedText>

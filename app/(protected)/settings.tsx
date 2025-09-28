@@ -3,7 +3,7 @@ import { ThemedView } from "@/components/ThemedView";
 import {
   loadColorIndex,
   loadColorPaletteOptions,
-  loadIsColorPaletteStale,
+  loadCriteriaMap,
   loadIsMosaicMode,
   saveColorIndex,
   saveIsMosaicMode,
@@ -119,23 +119,23 @@ export default function Settings() {
 
   async function loadInitialSettings() {
     try {
-      const isColorPaletteStale = await loadIsColorPaletteStale();
       const savedIndex = (await loadColorIndex()) ?? 0;
       const isMosaic = (await loadIsMosaicMode()) ?? false;
-      setSelectedIndex(savedIndex);
-      setIsMosaic(isMosaic);
-      if (isColorPaletteStale) {
-        console.log("should be stale");
-        const colorOptions = await getColorPaletteOptions(user);
-        setSelectedColorPalette(colorOptions[savedIndex] ?? colorOptions[0]);
-        setColorPaletteOptions(chunkArray(colorOptions, PAGE_SIZE));
-      } else {
-        let colorOptions = await loadColorPaletteOptions();
-        if (!colorOptions) {
-          colorOptions = await getColorPaletteOptions(user);
+      let colorOptions = await loadColorPaletteOptions();
+      if (!colorOptions) {
+        const currentCriteriaMap = await loadCriteriaMap();
+        if (currentCriteriaMap) {
+          colorOptions = await getColorPaletteOptions(currentCriteriaMap);
+          setSelectedColorPalette(colorOptions[savedIndex] ?? colorOptions[0]);
+          setColorPaletteOptions(chunkArray(colorOptions, PAGE_SIZE));
+          setSelectedIndex(savedIndex);
+          setIsMosaic(isMosaic);
         }
+      } else {
         setSelectedColorPalette(colorOptions[savedIndex] ?? colorOptions[0]);
         setColorPaletteOptions(chunkArray(colorOptions, PAGE_SIZE));
+        setSelectedIndex(savedIndex);
+        setIsMosaic(isMosaic);
       }
     } catch (e) {
       setSelectedIndex(0);
@@ -513,7 +513,6 @@ const ToggleMosaicBorders = (props: MosaicToggleProps) => {
 
 const ColorPaletteProgressModal = (props: ColorPaletteModalProps) => {
   const { progressModalPalette, setProgressModalPalette } = props;
-  console.log("what is this", progressModalPalette);
   return (
     <Modal
       onRequestClose={() => setProgressModalPalette(null)}
