@@ -2,7 +2,6 @@ import { ColorKey, Square } from "@/app/(protected)/freeplay";
 
 export const squareGenerator = (
   numberOfSquares: number,
-  squareSize: number,
   boardColors?: number[]
 ) => {
   const squareGrid: Square[][] = [];
@@ -19,7 +18,6 @@ export const squareGenerator = (
       defaultColor: color,
       captured: x === 0,
       landLocked: false,
-      size: squareSize,
       x: xCoord,
       y: yCoord,
       depth: 0,

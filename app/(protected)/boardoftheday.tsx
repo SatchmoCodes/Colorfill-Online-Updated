@@ -1,24 +1,37 @@
+import ColorPaletteUnlockModal from "@/components/ColorPaletteUnlockModal";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { db } from "@/firebaseConfig";
 import {
   loadColorIndex,
   loadColorPaletteOptions,
-  loadIsColorPaletteStale,
+  loadCurrentBOTD,
+  loadIsMosaicMode,
+  loadSolvedBOTDId,
+  saveColorPaletteOptions,
+  saveCurrentBOTD,
+  saveSolvedBOTDId,
 } from "@/helper/asyncStorageHelper";
-import { calculateSquareSize } from "@/helper/calculateSquareSize";
+import { getUser } from "@/helper/commonQueries";
 import { getColorPaletteOptions } from "@/helper/getColorPaletteOptions";
 import { squareGenerator } from "@/helper/squareGenerator";
+import { updateCriteriaMap } from "@/helper/updateCriteriaMap";
 import { useUser } from "@/hooks/useFirebaseUser";
+import { BoardDoc } from "@/schema/boardDocModel";
 import { useFocusEffect } from "@react-navigation/native";
 import {
   addDoc,
   collection,
+  DocumentData,
   getDocs,
+  increment,
   limit,
   orderBy,
   query,
+  QueryDocumentSnapshot,
   serverTimestamp,
+  SnapshotOptions,
+  updateDoc,
   where,
 } from "firebase/firestore";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -43,27 +56,27 @@ export interface Square {
   captured: boolean;
   defaultColor: ColorKey;
   landLocked: boolean;
-  size: number;
   depth: number;
   x: number;
   y: number;
 }
 
 export type ColorKey = 0 | 1 | 2 | 3 | 4;
-type BoardOfTheDaySize = "small" | "medium" | "large" | "xlarge";
+export type BoardOfTheDaySize = "small" | "medium" | "large" | "xlarge";
 type LoadingState = "loading" | "loaded" | "complete" | "error";
 
 interface GameBoardProps {
   boardState: Square[][];
   selectedColorPalette: PaletteObj;
   boardSize: BoardOfTheDaySize;
-  calculateSquareSize: (x: number) => number;
+  isMosaic: boolean;
 }
 
 interface SquareViewProps {
   square: Square;
   color: string;
   squareSize: number;
+  isMosaic: boolean;
 }
 
 interface GameEffectButtonProps {
@@ -90,6 +103,18 @@ const boardConfig = {
   xlarge: 225,
 };
 
+const boardConverter = {
+  toFirestore(board: BoardDoc): DocumentData {
+    return board;
+  },
+  fromFirestore(
+    snapshot: QueryDocumentSnapshot,
+    options: SnapshotOptions
+  ): BoardDoc {
+    return snapshot.data(options) as BoardDoc;
+  },
+};
+
 const screenSize = Dimensions.get("window").width;
 
 export default function BoardoftheDay() {
@@ -99,52 +124,45 @@ export default function BoardoftheDay() {
   const [activeColor, setActiveColor] = useState(boardState[0]?.[0]?.color);
   const [score, setScore] = useState(0);
   const [showBoardCompleteModal, setShowBoardCompleteModal] = useState(false);
-  const [colorPaletteOptions, setColorPaletteOptions] = useState<
-    PaletteObj[] | []
-  >([]);
-  const [selectedColorPalette, setSelectedColorPalette] = useState(
-    colorPaletteOptions[0]
-  );
+  const [selectedColorPalette, setSelectedColorPalette] =
+    useState<PaletteObj | null>(null);
   const [loadingState, setLoadingState] = useState<LoadingState>("loading");
   const [boardId, setBoardId] = useState("");
+  const [isMosaic, setIsMosaic] = useState(false);
+  const [unlockedColorPalettes, setUnlockedColorPalettes] = useState<
+    PaletteObj[] | []
+  >([]);
 
   useFocusEffect(
     useCallback(() => {
       const loadPalette = async () => {
         try {
           const savedIndex = (await loadColorIndex()) ?? 0;
-          const isColorPaletteStale = await loadIsColorPaletteStale();
-          if (colorPaletteOptions.length === 0) {
-            if (isColorPaletteStale) {
-              const colorOptions = await getColorPaletteOptions(user);
-              setSelectedColorPalette(
-                colorOptions[savedIndex] ?? colorOptions[0]
-              );
-              setColorPaletteOptions(colorOptions);
-            } else {
-              let colorOptions = await loadColorPaletteOptions();
-              if (!colorOptions) {
-                colorOptions = await getColorPaletteOptions(user);
-              }
-              setSelectedColorPalette(
-                colorOptions[savedIndex] ?? colorOptions[0]
-              );
-              setColorPaletteOptions(colorOptions);
-            }
-          } else {
-            setSelectedColorPalette(colorPaletteOptions[savedIndex]);
+          let colorOptions = await loadColorPaletteOptions();
+          if (!colorOptions) {
+            colorOptions = await getColorPaletteOptions({});
           }
+          setSelectedColorPalette(colorOptions[savedIndex] ?? colorOptions[0]);
         } catch (error) {
           console.log("error setting initial settings", error);
         }
       };
+      const loadMosaicMode = async () => {
+        try {
+          const savedMode = (await loadIsMosaicMode()) ?? false;
+          setIsMosaic(savedMode);
+        } catch (error) {
+          console.log("error loading mosaic mode ", error);
+        }
+      };
       loadPalette();
+      loadMosaicMode();
     }, [])
   );
 
   useEffect(() => {
     if (user) {
-      getBoardoftheDay();
+      boardOfTheDayProcess();
     }
   }, [user]);
 
@@ -256,66 +274,188 @@ export default function BoardoftheDay() {
       const boardData = boardState.flatMap((row) =>
         row.map((x) => x.defaultColor)
       );
-      await addDoc(collection(db, "scores"), {
-        boardId: boardId,
-        score: score,
-        size: boardSize,
-        boardData: boardData,
-        createdBy: user?.displayName,
-        uid: user?.uid,
-        gamemode: "boardoftheday",
-        highScore: true,
-        createdAt: serverTimestamp(),
-      });
-      setLoadingState("complete");
+      const createdAt = serverTimestamp();
+      const [userDoc] = await Promise.all([
+        getUser(user.uid),
+        await addDoc(collection(db, "scores"), {
+          boardId: boardId,
+          score: score,
+          size: boardSize,
+          boardData: boardData,
+          createdBy: user?.displayName,
+          uid: user?.uid,
+          gamemode: "boardoftheday",
+          highScore: true,
+          createdAt,
+        }),
+      ]);
+      if (userDoc) {
+        const prevCriteriaMap = await updateCriteriaMap({
+          boardsOfTheDayCompleted: userDoc.data.boardsOfTheDayCompleted,
+        });
+
+        const updatedBOTDCompleted = userDoc?.data.boardsOfTheDayCompleted
+          ? userDoc?.data.boardsOfTheDayCompleted + 1
+          : 0;
+
+        await updateDoc(userDoc.ref, {
+          boardsOfTheDayCompleted: increment(1),
+        });
+
+        const newCriteriaMap = await updateCriteriaMap({
+          boardsCompleted: userDoc.data.boardsCompleted,
+          boardsOfTheDayCompleted: updatedBOTDCompleted,
+          bestSmallScore: userDoc.data.bestSmallScore,
+          bestMediumScore: userDoc.data.bestMediumScore,
+          bestLargeScore: userDoc.data.bestLargeScore,
+          bestXLargeScore: userDoc.data.bestXLargeScore,
+          totalGames: userDoc.data.totalGames,
+          wins: userDoc.data.wins,
+          bestWinStreak: userDoc.data.bestWinStreak,
+        });
+        const updatedColorPaletteOptions = await getColorPaletteOptions(
+          newCriteriaMap
+        );
+        const newlyUnlockedColorPalettes = updatedColorPaletteOptions.filter(
+          (item) => {
+            if ("key" in item) {
+              const prevCriteriaMapItemLocked =
+                prevCriteriaMap[item.key]?.locked ?? true;
+              const newCriteriaMapItemLocked =
+                newCriteriaMap[item.key]?.locked ?? true;
+              return prevCriteriaMapItemLocked !== newCriteriaMapItemLocked;
+            }
+            return false;
+          }
+        );
+        if (newlyUnlockedColorPalettes.length > 0) {
+          setUnlockedColorPalettes(newlyUnlockedColorPalettes);
+        }
+        await saveSolvedBOTDId(boardId);
+        await saveColorPaletteOptions(updatedColorPaletteOptions);
+        setLoadingState("complete");
+      }
     } catch (error) {
       console.log("error submitting score", error);
     }
   }
 
-  async function getBoardoftheDay() {
+  async function boardOfTheDayProcess() {
+    let isProcessingBOTD = false;
+    if (isProcessingBOTD) return;
+    isProcessingBOTD = true;
+
+    try {
+      const currentlySavedBOTD = await loadCurrentBOTD();
+      const currentSolvedBOTDID = await loadSolvedBOTDId();
+
+      // --- 1. Validate saved board ---
+      const validSaved =
+        currentlySavedBOTD &&
+        currentlySavedBOTD.boardId &&
+        currentlySavedBOTD.boardData &&
+        currentlySavedBOTD.size &&
+        currentlySavedBOTD.generatedAt;
+
+      if (!validSaved) {
+        console.warn("Invalid or missing cached BOTD, fetching new one.");
+        await getBoardOfTheDay();
+        return;
+      }
+
+      // --- 2. Time difference check (UTC-safe) ---
+      const generatedAtDate = new Date(
+        currentlySavedBOTD.generatedAt
+      ).getTime();
+      const now = Date.now();
+      const hoursSinceGenerated =
+        Math.abs(now - generatedAtDate) / (1000 * 60 * 60);
+
+      if (isNaN(hoursSinceGenerated)) {
+        console.warn("Invalid generatedAt date, fetching new BOTD.");
+        await getBoardOfTheDay();
+        return;
+      }
+
+      // --- 3. If 24h passed → get a fresh one ---
+      if (hoursSinceGenerated >= 24) {
+        console.log("BOTD expired, fetching new one.");
+        await getBoardOfTheDay();
+        return;
+      }
+
+      // --- 4. If user already solved this board ---
+      if (
+        currentSolvedBOTDID &&
+        currentSolvedBOTDID === currentlySavedBOTD.boardId
+      ) {
+        console.log("User already solved current BOTD.");
+        setLoadingState("complete");
+        return;
+      }
+
+      // --- 5. Otherwise, load the cached board ---
+      const { boardData, size, boardId } = currentlySavedBOTD;
+      const board = squareGenerator(boardData.length, boardData);
+      checkAdjacentSquares(board[0][0], board, board[0][0].color, new Set());
+
+      setBoardState(board);
+      setActiveColor(board[0][0].defaultColor);
+      setBoardSize(size);
+      setBoardId(boardId);
+      setLoadingState("loaded");
+    } catch (error) {
+      console.error("Error in boardOfTheDayProcess:", error);
+      setLoadingState("error");
+    } finally {
+      isProcessingBOTD = false;
+    }
+  }
+
+  async function getBoardOfTheDay() {
     try {
       const q = query(
-        collection(db, "boards"),
+        collection(db, "boards").withConverter(boardConverter),
         orderBy("generatedAt", "desc"),
         limit(1)
       );
 
       const docSnap = await getDocs(q);
-      if (!docSnap.empty) {
-        const boardId = docSnap.docs[0].id;
-        const userHasBOTDScoreQuery = query(
-          collection(db, "scores"),
-          where("uid", "==", user?.uid),
-          where("boardId", "==", boardId)
-        );
-        const existingScore = await getDocs(userHasBOTDScoreQuery);
-        if (!existingScore.empty) {
-          setLoadingState("complete");
-        } else {
-          const boardData = docSnap.docs[0].data().boardData;
-          const boardSize = docSnap.docs[0].data().size;
-
-          const board = squareGenerator(
-            boardData.length,
-            calculateSquareSize(boardData.length),
-            boardData
-          );
-          checkAdjacentSquares(
-            board[0][0],
-            board,
-            board[0][0].color,
-            new Set()
-          );
-          setBoardState(board);
-          setActiveColor(board[0][0].defaultColor);
-          setBoardSize(boardSize);
-          setBoardId(boardId);
-          setLoadingState("loaded");
-        }
+      if (docSnap.empty) {
+        console.warn("No BOTD found in Firestore.");
+        setLoadingState("error");
+        return;
       }
+
+      const doc = docSnap.docs[0].data();
+      await saveCurrentBOTD(doc);
+
+      const boardId = doc.boardId;
+      const userHasBOTDScoreQuery = query(
+        collection(db, "scores"),
+        where("uid", "==", user?.uid),
+        where("boardId", "==", boardId)
+      );
+
+      const existingScore = await getDocs(userHasBOTDScoreQuery);
+      if (!existingScore.empty) {
+        console.log("User already has BOTD score recorded.");
+        await saveSolvedBOTDId(boardId);
+        setLoadingState("complete");
+        return;
+      }
+
+      const { boardData, size } = doc;
+      const board = squareGenerator(boardData.length, boardData);
+      checkAdjacentSquares(board[0][0], board, board[0][0].color, new Set());
+
+      setBoardState(board);
+      setActiveColor(board[0][0].defaultColor);
+      setBoardSize(size);
+      setBoardId(boardId);
+      setLoadingState("loaded");
     } catch (error) {
-      console.log("error getting board of the day", error);
+      console.error("Error getting board of the day:", error);
       setLoadingState("error");
     }
   }
@@ -328,14 +468,14 @@ export default function BoardoftheDay() {
           <ActivityIndicator size={"large"} color={"blue"} />
         </>
       )}
-      {loadingState === "loaded" && (
+      {loadingState === "loaded" && selectedColorPalette && (
         <>
           <ThemedText style={styles.score}>{score}</ThemedText>
           <GameBoard
             boardState={boardState}
             selectedColorPalette={selectedColorPalette}
             boardSize={boardSize}
-            calculateSquareSize={calculateSquareSize}
+            isMosaic={isMosaic}
           />
           <GameEffectButtons resetBoardProcess={resetBoardProcess} />
           <ColorRowButtons
@@ -347,9 +487,13 @@ export default function BoardoftheDay() {
       )}
       {loadingState === "complete" && (
         <>
-          <ThemedText type="subtitle" style={{ textAlign: "center" }}>
-            You completed todays board! Check back tomorrow for the next one!
+          <ThemedText
+            type="subtitle"
+            style={{ textAlign: "center", marginBottom: 20 }}
+          >
+            You completed todays board! Check back later for the next one!
           </ThemedText>
+          <TimeUntilNextBoard />
         </>
       )}
       {loadingState === "error" && (
@@ -367,6 +511,13 @@ export default function BoardoftheDay() {
           resetBoardProcess={resetBoardProcess}
         />
       )}
+      {unlockedColorPalettes.length > 0 && (
+        <ColorPaletteUnlockModal
+          unlockedColorPalettes={unlockedColorPalettes}
+          isMosaic={isMosaic}
+          setUnlockedColorPalettes={setUnlockedColorPalettes}
+        />
+      )}
     </ThemedView>
   );
 }
@@ -375,15 +526,13 @@ const GameBoard = ({
   boardState,
   selectedColorPalette,
   boardSize,
+  isMosaic,
 }: GameBoardProps) => {
   let windowWidth =
     Platform.OS === "web"
       ? useWindowDimensions().width * 0.33
       : useWindowDimensions().width;
-  console.log("boardConfig", boardConfig, boardSize);
   const columns = Math.sqrt(boardConfig[boardSize]);
-  console.log("cols", columns);
-
   const parentHorizontalPadding = 20;
   const maxBoardWidth = Math.min(windowWidth - parentHorizontalPadding, 700);
   const rawTile = Math.floor(maxBoardWidth / columns);
@@ -405,6 +554,7 @@ const GameBoard = ({
               square={square}
               color={selectedColorPalette[square.color]}
               squareSize={tileSize}
+              isMosaic={isMosaic}
               key={`${square.x}-${square.y}`}
             />
           );
@@ -415,7 +565,7 @@ const GameBoard = ({
 };
 
 const Square = (props: SquareViewProps) => {
-  const { square, color, squareSize } = props;
+  const { square, color, squareSize, isMosaic } = props;
   const scale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -447,6 +597,8 @@ const Square = (props: SquareViewProps) => {
           backgroundColor: color,
           width: squareSize,
           height: squareSize,
+          borderColor: "black",
+          borderWidth: isMosaic ? 1 : 0,
           transform: [{ scale }],
         },
       ]}
@@ -577,6 +729,51 @@ const BoardCompleteModal = (props: BoardCompleteProps) => {
       </ThemedView>
     </Modal>
   );
+};
+
+export const TimeUntilNextBoard = () => {
+  const [timeLeft, setTimeLeft] = useState<string>("");
+
+  const getNextBoardTime = () => {
+    const now = new Date();
+
+    // next 8am in local time
+    const next = new Date(now);
+    next.setHours(8, 0, 0, 0);
+
+    // if it's already past 8am, set to tomorrow 8am
+    if (now >= next) {
+      next.setDate(next.getDate() + 1);
+    }
+
+    return next;
+  };
+
+  const formatTimeLeft = (ms: number) => {
+    const totalSeconds = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    const pad = (n: number) => n.toString().padStart(2, "0");
+    return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+  };
+
+  useEffect(() => {
+    const update = () => {
+      const now = new Date();
+      const next = getNextBoardTime();
+      const diff = next.getTime() - now.getTime();
+      setTimeLeft(formatTimeLeft(diff));
+    };
+
+    update(); // initial call
+    const interval = setInterval(update, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return <ThemedText>Next board in {timeLeft}</ThemedText>;
 };
 
 const styles = StyleSheet.create({

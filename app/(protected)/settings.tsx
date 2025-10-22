@@ -1,22 +1,35 @@
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
+import EditProfile from "@/components/ui/EditProfile";
+import { IconSymbol } from "@/components/ui/IconSymbol";
 import {
   loadColorIndex,
   loadColorPaletteOptions,
   loadCriteriaMap,
   loadIsMosaicMode,
+  loadProfileBackgroundColor,
+  loadProfileLetterColor,
   saveColorIndex,
+  saveColorPaletteOptions,
   saveIsMosaicMode,
+  saveProfileBackgroundColor,
+  saveProfileLetterColor,
 } from "@/helper/asyncStorageHelper";
+import { getUser } from "@/helper/commonQueries";
 import { getColorPaletteOptions } from "@/helper/getColorPaletteOptions";
+import { updateCriteriaMap } from "@/helper/updateCriteriaMap";
 import { useUser } from "@/hooks/useFirebaseUser";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
   Dimensions,
   FlatList,
   Modal,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   PixelRatio,
+  Platform,
   StyleSheet,
   Switch,
   TouchableOpacity,
@@ -34,6 +47,7 @@ export type PaletteObj = {
   locked?: boolean;
   message?: string;
   progress?: string;
+  key?: string;
 };
 
 interface ColorPaletteOptionsContainerProps {
@@ -82,6 +96,9 @@ export default function Settings() {
   const [progressModalPalette, setProgressModalPalette] =
     useState<PaletteObj | null>(null);
   const [isMosaic, setIsMosaic] = useState(false);
+  const [openProfile, setOpenProfile] = useState(false);
+  const [profileBackground, setProfileBackground] = useState("#313131ff");
+  const [profileLetter, setProfileLetter] = useState("#ffffff");
 
   const initialPage = Math.floor(selectedIndex / PAGE_SIZE);
 
@@ -122,21 +139,47 @@ export default function Settings() {
       const savedIndex = (await loadColorIndex()) ?? 0;
       const isMosaic = (await loadIsMosaicMode()) ?? false;
       let colorOptions = await loadColorPaletteOptions();
-      if (!colorOptions) {
-        const currentCriteriaMap = await loadCriteriaMap();
-        if (currentCriteriaMap) {
-          colorOptions = await getColorPaletteOptions(currentCriteriaMap);
-          setSelectedColorPalette(colorOptions[savedIndex] ?? colorOptions[0]);
-          setColorPaletteOptions(chunkArray(colorOptions, PAGE_SIZE));
-          setSelectedIndex(savedIndex);
-          setIsMosaic(isMosaic);
-        }
-      } else {
-        setSelectedColorPalette(colorOptions[savedIndex] ?? colorOptions[0]);
-        setColorPaletteOptions(chunkArray(colorOptions, PAGE_SIZE));
-        setSelectedIndex(savedIndex);
-        setIsMosaic(isMosaic);
+      console.log("color options", colorOptions);
+      let profileBackgroundColor = await loadProfileBackgroundColor();
+      let profileLetterColor = await loadProfileLetterColor();
+      // const allColorOptions = await getColorPaletteOptions();
+      if (!colorOptions || !profileBackgroundColor || !profileLetterColor) {
+        console.log(
+          "is this be running",
+          colorOptions,
+          profileBackgroundColor,
+          profileLetterColor
+        );
+        const userDoc = await getUser(user.uid);
+        const currentCriteriaMap =
+          (await loadCriteriaMap()) ??
+          (await updateCriteriaMap({
+            boardsCompleted: userDoc?.data.boardsCompleted,
+            boardsOfTheDayCompleted: userDoc?.data.boardsOfTheDayCompleted,
+            bestSmallScore: userDoc?.data.bestSmallScore,
+            bestMediumScore: userDoc?.data.bestMediumScore,
+            bestLargeScore: userDoc?.data.bestLargeScore,
+            bestXLargeScore: userDoc?.data.bestXLargeScore,
+            totalGames: userDoc?.data.totalGames,
+            wins: userDoc?.data.wins,
+            bestWinStreak: userDoc?.data.bestWinStreak,
+          }));
+        colorOptions = await getColorPaletteOptions(currentCriteriaMap);
+        profileBackgroundColor = userDoc?.data.profileBackground ?? "#313131ff";
+        profileLetterColor = userDoc?.data.profileLetter ?? "#ffffff";
+        await Promise.all([
+          saveColorPaletteOptions(colorOptions),
+          saveProfileBackgroundColor(profileBackgroundColor),
+          saveProfileLetterColor(profileLetterColor),
+        ]);
       }
+      setProfileBackground(profileBackgroundColor);
+      setProfileLetter(profileLetterColor);
+      setSelectedColorPalette(colorOptions[savedIndex] ?? colorOptions[0]);
+      setColorPaletteOptions(chunkArray(colorOptions, PAGE_SIZE));
+      // setColorPaletteOptions(chunkArray(allColorOptions, PAGE_SIZE));
+      setSelectedIndex(savedIndex);
+      setIsMosaic(isMosaic);
     } catch (e) {
       setSelectedIndex(0);
       setSelectedColorPalette(null);
@@ -145,15 +188,29 @@ export default function Settings() {
 
   return (
     <ThemedView style={[styles.container]}>
-      <ThemedText style={styles.optionText} type="subtitle">
-        Selected Color
-      </ThemedText>
+      <TouchableOpacity
+        style={[styles.avatar, { backgroundColor: profileBackground }]}
+        onPress={() => setOpenProfile(true)}
+      >
+        <ThemedText style={[styles.avatarText, { color: profileLetter }]}>
+          {user.displayName?.[0].toUpperCase()}
+        </ThemedText>
+        <View style={styles.iconContainer}>
+          <IconSymbol
+            style={{ textAlign: "center" }}
+            size={14}
+            name="pencil"
+            color={"black"}
+          />
+        </View>
+      </TouchableOpacity>
+      {/* <ThemedText>{user.displayName}</ThemedText> */}
 
       {/* preview of current selection */}
       {!selectedColorPalette ? (
         <ActivityIndicator />
       ) : (
-        <View style={styles.paletteCard}>
+        <View style={[styles.paletteCard, { marginTop: 20 }]}>
           <View style={styles.paletteRow}>
             <View
               style={[
@@ -211,15 +268,22 @@ export default function Settings() {
         </View>
       )}
 
-      <ThemedText
+      {/* <ThemedText
         style={[styles.optionText, { marginTop: 12 }]}
         type="subtitle"
       >
         Color Options
-      </ThemedText>
+      </ThemedText> */}
 
       {colorPaletteOptions.length === 0 ? (
         <ActivityIndicator />
+      ) : Platform.OS === "web" ? (
+        <ColorPaletteOptionsWebView
+          colorPaletteOptions={colorPaletteOptions}
+          isMosaic={isMosaic}
+          selectedIndex={selectedIndex}
+          handleChangeColorPalette={handleChangeColorPalette}
+        />
       ) : (
         <ColorPaletteOptionsContainer
           colorPaletteOptions={colorPaletteOptions}
@@ -239,9 +303,124 @@ export default function Settings() {
           setProgressModalPalette={setProgressModalPalette}
         />
       )}
+      {openProfile && (
+        <EditProfile
+          user={user}
+          profileBackground={profileBackground}
+          profileLetter={profileLetter}
+          setProfileBackground={setProfileBackground}
+          setProfileLetter={setProfileLetter}
+          setOpenProfile={setOpenProfile}
+        />
+      )}
     </ThemedView>
   );
 }
+
+const ColorPaletteOptionsWebView = ({
+  colorPaletteOptions,
+  isMosaic,
+  selectedIndex,
+  handleChangeColorPalette,
+}: {
+  colorPaletteOptions: PaletteObj[][];
+  isMosaic: boolean;
+  selectedIndex: number;
+  handleChangeColorPalette: (paletteIndex: number, isLocked: boolean) => void;
+}) => {
+  const colorOptions = colorPaletteOptions.flat();
+  return (
+    <View
+      style={{ flexDirection: "row", flexWrap: "wrap", gap: 30, width: "80%" }}
+    >
+      {colorOptions.map((palette, paletteIndex) => {
+        const isSelected = selectedIndex === paletteIndex;
+        return (
+          <TouchableOpacity
+            key={palette.key}
+            style={[
+              styles.paletteCard,
+              isSelected && styles.selectedCard,
+              { padding: 10 },
+            ]}
+            onPress={() =>
+              handleChangeColorPalette(paletteIndex, palette.locked ?? false)
+            }
+            activeOpacity={0.7}
+          >
+            {palette.locked && (
+              <ThemedText
+                style={{
+                  position: "absolute",
+                  zIndex: 2,
+                  top: 20,
+                  fontSize: 20,
+                  fontWeight: "bold",
+                }}
+              >
+                ?
+              </ThemedText>
+            )}
+            <View style={styles.paletteRow}>
+              <View
+                style={[
+                  styles.paletteSquare,
+                  {
+                    backgroundColor: palette.locked ? "black" : palette[3],
+                    borderColor: "black",
+                    borderWidth: isMosaic ? 1 : 0,
+                  },
+                ]}
+              />
+              <View
+                style={[
+                  styles.paletteSquare,
+                  {
+                    backgroundColor: palette.locked ? "black" : palette[4],
+                    borderColor: "black",
+                    borderWidth: isMosaic ? 1 : 0,
+                  },
+                ]}
+              />
+            </View>
+            <View style={styles.paletteRow}>
+              <View
+                style={[
+                  styles.paletteSquare,
+                  {
+                    backgroundColor: palette.locked ? "black" : palette[0],
+                    borderColor: "black",
+                    borderWidth: isMosaic ? 1 : 0,
+                  },
+                ]}
+              />
+              <View
+                style={[
+                  styles.paletteSquare,
+                  {
+                    backgroundColor: palette.locked ? "black" : palette[1],
+                    borderColor: "black",
+                    borderWidth: isMosaic ? 1 : 0,
+                  },
+                ]}
+              />
+              <View
+                style={[
+                  styles.paletteSquare,
+                  {
+                    backgroundColor: palette.locked ? "black" : palette[2],
+                    borderColor: "black",
+                    borderWidth: isMosaic ? 1 : 0,
+                  },
+                ]}
+              />
+            </View>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+};
 
 const ColorPaletteOptionsContainer = (
   props: ColorPaletteOptionsContainerProps
@@ -255,6 +434,18 @@ const ColorPaletteOptionsContainer = (
   } = props;
 
   const flatListRef = useRef<FlatList>(null);
+  const scrollX = useRef(new Animated.Value(0)).current;
+
+  const totalPages = colorPaletteOptions.length;
+  const [currentPage, setCurrentPage] = useState(0);
+
+  const handleMomentumScrollEnd = (
+    event: NativeSyntheticEvent<NativeScrollEvent>
+  ) => {
+    const offsetX = event.nativeEvent.contentOffset.x;
+    const page = Math.round(offsetX / SCREEN_WIDTH);
+    setCurrentPage(page);
+  };
 
   useEffect(() => {
     if (flatListRef.current) {
@@ -266,232 +457,279 @@ const ColorPaletteOptionsContainer = (
   }, [initialPage]);
 
   return (
-    <FlatList
-      data={colorPaletteOptions}
-      ref={flatListRef}
-      horizontal
-      pagingEnabled
-      showsHorizontalScrollIndicator={true}
-      decelerationRate="fast"
-      snapToInterval={SCREEN_WIDTH} // full screen per page
-      snapToAlignment="start"
-      getItemLayout={(_, index) => ({
-        length: SCREEN_WIDTH,
-        offset: SCREEN_WIDTH * index,
-        index,
-      })}
-      initialScrollIndex={initialPage}
-      renderItem={({ item: pagePalettes, index: pageIndex }) => (
-        <View style={[{ width: SCREEN_WIDTH }]}>
-          {/* First row */}
-          <View style={styles.row}>
-            {pagePalettes.slice(0, 3).map((palette: PaletteObj, i: number) => {
-              const paletteIndex = pageIndex * PAGE_SIZE + i;
-              const isSelected = paletteIndex === selectedIndex;
-              return (
-                <TouchableOpacity
-                  key={paletteIndex}
-                  style={[
-                    styles.paletteCard,
-                    { width: cardWidth },
-                    isSelected && styles.selectedCard,
-                  ]}
-                  onPress={() =>
-                    handleChangeColorPalette(
-                      paletteIndex,
-                      palette.locked ?? false
-                    )
-                  }
-                  activeOpacity={0.7}
-                >
-                  {palette.locked && (
-                    <ThemedText
-                      style={{
-                        position: "absolute",
-                        zIndex: 2,
-                        top: 20,
-                        fontSize: 20,
-                        fontWeight: "bold",
-                      }}
-                    >
-                      ?
-                    </ThemedText>
-                  )}
-                  <View style={styles.paletteRow}>
-                    <View
-                      style={[
-                        styles.paletteSquare,
-                        {
-                          backgroundColor: palette.locked
-                            ? "black"
-                            : palette[3],
-                          borderColor: "black",
-                          borderWidth: isMosaic ? 1 : 0,
-                        },
-                      ]}
-                    />
-                    <View
-                      style={[
-                        styles.paletteSquare,
-                        {
-                          backgroundColor: palette.locked
-                            ? "black"
-                            : palette[4],
-                          borderColor: "black",
-                          borderWidth: isMosaic ? 1 : 0,
-                        },
-                      ]}
-                    />
-                  </View>
-                  <View style={styles.paletteRow}>
-                    <View
-                      style={[
-                        styles.paletteSquare,
-                        {
-                          backgroundColor: palette.locked
-                            ? "black"
-                            : palette[0],
-                          borderColor: "black",
-                          borderWidth: isMosaic ? 1 : 0,
-                        },
-                      ]}
-                    />
-                    <View
-                      style={[
-                        styles.paletteSquare,
-                        {
-                          backgroundColor: palette.locked
-                            ? "black"
-                            : palette[1],
-                          borderColor: "black",
-                          borderWidth: isMosaic ? 1 : 0,
-                        },
-                      ]}
-                    />
-                    <View
-                      style={[
-                        styles.paletteSquare,
-                        {
-                          backgroundColor: palette.locked
-                            ? "black"
-                            : palette[2],
-                          borderColor: "black",
-                          borderWidth: isMosaic ? 1 : 0,
-                        },
-                      ]}
-                    />
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+    <>
+      {/* Animated pagination dots */}
+      <View style={styles.paginationContainer}>
+        {colorPaletteOptions.map((_, i) => {
+          const inputRange = [
+            (i - 1) * SCREEN_WIDTH,
+            i * SCREEN_WIDTH,
+            (i + 1) * SCREEN_WIDTH,
+          ];
 
-          {/* Second row */}
-          <View style={styles.row}>
-            {pagePalettes.slice(3, 6).map((palette: PaletteObj, i: number) => {
-              const paletteIndex = pageIndex * PAGE_SIZE + (i + 3); // <-- FIXED here
-              const isSelected = paletteIndex === selectedIndex;
-              return (
-                <TouchableOpacity
-                  key={paletteIndex}
-                  style={[
-                    styles.paletteCard,
-                    { width: cardWidth },
-                    isSelected && styles.selectedCard,
-                  ]}
-                  onPress={() =>
-                    handleChangeColorPalette(
-                      paletteIndex,
-                      palette.locked ?? false
-                    )
-                  }
-                  activeOpacity={0.7}
-                >
-                  {palette.locked && (
-                    <ThemedText
-                      style={{
-                        position: "absolute",
-                        zIndex: 2,
-                        top: 20,
-                        fontSize: 20,
-                        fontWeight: "bold",
-                      }}
+          const dotScale = scrollX.interpolate({
+            inputRange,
+            outputRange: [0.7, 1.4, 0.7],
+            extrapolate: "clamp",
+          });
+
+          const dotOpacity = scrollX.interpolate({
+            inputRange,
+            outputRange: [0.3, 1, 0.3],
+            extrapolate: "clamp",
+          });
+
+          return (
+            <Animated.View
+              key={i}
+              style={[
+                styles.dot,
+                {
+                  transform: [{ scale: dotScale }],
+                  opacity: dotOpacity,
+                },
+              ]}
+            />
+          );
+        })}
+      </View>
+      <FlatList
+        data={colorPaletteOptions}
+        ref={flatListRef}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        decelerationRate="fast"
+        snapToInterval={SCREEN_WIDTH} // full screen per page
+        snapToAlignment="start"
+        getItemLayout={(_, index) => ({
+          length: SCREEN_WIDTH,
+          offset: SCREEN_WIDTH * index,
+          index,
+        })}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+          { useNativeDriver: false }
+        )}
+        onMomentumScrollEnd={handleMomentumScrollEnd}
+        initialScrollIndex={initialPage}
+        style={{ maxHeight: 200 }}
+        renderItem={({ item: pagePalettes, index: pageIndex }) => (
+          <View style={[{ width: SCREEN_WIDTH }]}>
+            {/* First row */}
+            <View style={styles.row}>
+              {pagePalettes
+                .slice(0, 3)
+                .map((palette: PaletteObj, i: number) => {
+                  const paletteIndex = pageIndex * PAGE_SIZE + i;
+                  const isSelected = paletteIndex === selectedIndex;
+                  return (
+                    <TouchableOpacity
+                      key={paletteIndex}
+                      style={[
+                        styles.paletteCard,
+                        { width: cardWidth },
+                        isSelected && styles.selectedCard,
+                      ]}
+                      onPress={() =>
+                        handleChangeColorPalette(
+                          paletteIndex,
+                          palette.locked ?? false
+                        )
+                      }
+                      activeOpacity={0.7}
                     >
-                      ?
-                    </ThemedText>
-                  )}
-                  <View style={styles.paletteRow}>
-                    <View
+                      {palette.locked && (
+                        <ThemedText
+                          style={{
+                            position: "absolute",
+                            zIndex: 2,
+                            top: 20,
+                            fontSize: 20,
+                            fontWeight: "bold",
+                          }}
+                        >
+                          ?
+                        </ThemedText>
+                      )}
+                      <View style={styles.paletteRow}>
+                        <View
+                          style={[
+                            styles.paletteSquare,
+                            {
+                              backgroundColor: palette.locked
+                                ? "black"
+                                : palette[3],
+                              borderColor: "black",
+                              borderWidth: isMosaic ? 1 : 0,
+                            },
+                          ]}
+                        />
+                        <View
+                          style={[
+                            styles.paletteSquare,
+                            {
+                              backgroundColor: palette.locked
+                                ? "black"
+                                : palette[4],
+                              borderColor: "black",
+                              borderWidth: isMosaic ? 1 : 0,
+                            },
+                          ]}
+                        />
+                      </View>
+                      <View style={styles.paletteRow}>
+                        <View
+                          style={[
+                            styles.paletteSquare,
+                            {
+                              backgroundColor: palette.locked
+                                ? "black"
+                                : palette[0],
+                              borderColor: "black",
+                              borderWidth: isMosaic ? 1 : 0,
+                            },
+                          ]}
+                        />
+                        <View
+                          style={[
+                            styles.paletteSquare,
+                            {
+                              backgroundColor: palette.locked
+                                ? "black"
+                                : palette[1],
+                              borderColor: "black",
+                              borderWidth: isMosaic ? 1 : 0,
+                            },
+                          ]}
+                        />
+                        <View
+                          style={[
+                            styles.paletteSquare,
+                            {
+                              backgroundColor: palette.locked
+                                ? "black"
+                                : palette[2],
+                              borderColor: "black",
+                              borderWidth: isMosaic ? 1 : 0,
+                            },
+                          ]}
+                        />
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+            </View>
+
+            {/* Second row */}
+            <View style={styles.row}>
+              {pagePalettes
+                .slice(3, 6)
+                .map((palette: PaletteObj, i: number) => {
+                  const paletteIndex = pageIndex * PAGE_SIZE + (i + 3); // <-- FIXED here
+                  const isSelected = paletteIndex === selectedIndex;
+                  return (
+                    <TouchableOpacity
+                      key={paletteIndex}
                       style={[
-                        styles.paletteSquare,
-                        {
-                          backgroundColor: palette.locked
-                            ? "black"
-                            : palette[3],
-                          borderColor: "black",
-                          borderWidth: isMosaic ? 1 : 0,
-                        },
+                        styles.paletteCard,
+                        { width: cardWidth },
+                        isSelected && styles.selectedCard,
                       ]}
-                    />
-                    <View
-                      style={[
-                        styles.paletteSquare,
-                        {
-                          backgroundColor: palette.locked
-                            ? "black"
-                            : palette[4],
-                          borderColor: "black",
-                          borderWidth: isMosaic ? 1 : 0,
-                        },
-                      ]}
-                    />
-                  </View>
-                  <View style={styles.paletteRow}>
-                    <View
-                      style={[
-                        styles.paletteSquare,
-                        {
-                          backgroundColor: palette.locked
-                            ? "black"
-                            : palette[0],
-                          borderColor: "black",
-                          borderWidth: isMosaic ? 1 : 0,
-                        },
-                      ]}
-                    />
-                    <View
-                      style={[
-                        styles.paletteSquare,
-                        {
-                          backgroundColor: palette.locked
-                            ? "black"
-                            : palette[1],
-                          borderColor: "black",
-                          borderWidth: isMosaic ? 1 : 0,
-                        },
-                      ]}
-                    />
-                    <View
-                      style={[
-                        styles.paletteSquare,
-                        {
-                          backgroundColor: palette.locked
-                            ? "black"
-                            : palette[2],
-                          borderColor: "black",
-                          borderWidth: isMosaic ? 1 : 0,
-                        },
-                      ]}
-                    />
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
+                      onPress={() =>
+                        handleChangeColorPalette(
+                          paletteIndex,
+                          palette.locked ?? false
+                        )
+                      }
+                      activeOpacity={0.7}
+                    >
+                      {palette.locked && (
+                        <ThemedText
+                          style={{
+                            position: "absolute",
+                            zIndex: 2,
+                            top: 20,
+                            fontSize: 20,
+                            fontWeight: "bold",
+                          }}
+                        >
+                          ?
+                        </ThemedText>
+                      )}
+                      <View style={styles.paletteRow}>
+                        <View
+                          style={[
+                            styles.paletteSquare,
+                            {
+                              backgroundColor: palette.locked
+                                ? "black"
+                                : palette[3],
+                              borderColor: "black",
+                              borderWidth: isMosaic ? 1 : 0,
+                            },
+                          ]}
+                        />
+                        <View
+                          style={[
+                            styles.paletteSquare,
+                            {
+                              backgroundColor: palette.locked
+                                ? "black"
+                                : palette[4],
+                              borderColor: "black",
+                              borderWidth: isMosaic ? 1 : 0,
+                            },
+                          ]}
+                        />
+                      </View>
+                      <View style={styles.paletteRow}>
+                        <View
+                          style={[
+                            styles.paletteSquare,
+                            {
+                              backgroundColor: palette.locked
+                                ? "black"
+                                : palette[0],
+                              borderColor: "black",
+                              borderWidth: isMosaic ? 1 : 0,
+                            },
+                          ]}
+                        />
+                        <View
+                          style={[
+                            styles.paletteSquare,
+                            {
+                              backgroundColor: palette.locked
+                                ? "black"
+                                : palette[1],
+                              borderColor: "black",
+                              borderWidth: isMosaic ? 1 : 0,
+                            },
+                          ]}
+                        />
+                        <View
+                          style={[
+                            styles.paletteSquare,
+                            {
+                              backgroundColor: palette.locked
+                                ? "black"
+                                : palette[2],
+                              borderColor: "black",
+                              borderWidth: isMosaic ? 1 : 0,
+                            },
+                          ]}
+                        />
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+            </View>
           </View>
-        </View>
-      )}
-      keyExtractor={(_, i) => i.toString()}
-    />
+        )}
+        keyExtractor={(_, i) => i.toString()}
+      />
+    </>
   );
 };
 
@@ -549,7 +787,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
   },
-  optionText: { marginTop: 5, marginBottom: 5, textAlign: "center" },
+  optionText: { marginTop: 10, marginBottom: 10, textAlign: "center" },
   paletteRow: {
     flexDirection: "row",
     justifyContent: "center",
@@ -577,5 +815,43 @@ const styles = StyleSheet.create({
   },
   paletteOption: {
     alignItems: "center",
+  },
+  paginationContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 6,
+  },
+  dot: {
+    height: 8,
+    width: 8,
+    borderRadius: 4,
+    backgroundColor: "#fff",
+    marginHorizontal: 5,
+  },
+  avatar: {
+    position: "relative",
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginHorizontal: 4,
+    borderColor: "black",
+    borderWidth: 1,
+  },
+  avatarText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+  iconContainer: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    backgroundColor: "#f0f0f0ff",
+    width: 16,
+    height: 16,
+    borderRadius: 8,
   },
 });

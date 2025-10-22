@@ -1,6 +1,11 @@
 import { BoardSize } from "@/app/(protected)/freeplay";
 import React from "react";
-import { Modal, StyleSheet, TouchableOpacity } from "react-native";
+import {
+  ActivityIndicator,
+  Modal,
+  StyleSheet,
+  TouchableOpacity,
+} from "react-native";
 import { ThemedText } from "../ThemedText";
 import { ThemedView } from "../ThemedView";
 
@@ -10,6 +15,9 @@ interface ModalProps {
   resetBoardProcess: () => void;
   boardSize: BoardSize;
   score: number;
+  currentBestScore: number;
+  hasGeneratedNewBoard: boolean;
+  loadingSetScore: boolean;
 }
 
 export default function BoardCompleteModal(props: ModalProps) {
@@ -19,6 +27,9 @@ export default function BoardCompleteModal(props: ModalProps) {
     resetBoardProcess,
     boardSize,
     score,
+    currentBestScore,
+    hasGeneratedNewBoard,
+    loadingSetScore,
   } = props;
 
   return (
@@ -28,27 +39,44 @@ export default function BoardCompleteModal(props: ModalProps) {
       animationType="slide"
     >
       <ThemedView style={styles.centeredView}>
-        <ThemedText>You completed the board in {score} turns!</ThemedText>
-        <ThemedView style={{ flexDirection: "row", gap: 10, marginTop: 10 }}>
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() => {
-              newBoardProcess(boardSize);
-              setShowBoardCompleteModal(false);
-            }}
-          >
-            <ThemedText>New Board</ThemedText>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() => {
-              resetBoardProcess();
-              setShowBoardCompleteModal(false);
-            }}
-          >
-            <ThemedText>Retry Board</ThemedText>
-          </TouchableOpacity>
-        </ThemedView>
+        {loadingSetScore ? (
+          <ActivityIndicator />
+        ) : (
+          <>
+            {!hasGeneratedNewBoard && currentBestScore > 0 ? (
+              <ThemedText>
+                {score < currentBestScore
+                  ? `You beat the previous best score in ${score} turns!`
+                  : "You did not beat the previous best score!"}
+              </ThemedText>
+            ) : (
+              <ThemedText>You completed the board in {score} turns!</ThemedText>
+            )}
+
+            <ThemedView
+              style={{ flexDirection: "row", gap: 10, marginTop: 10 }}
+            >
+              <TouchableOpacity
+                style={styles.button}
+                onPress={() => {
+                  newBoardProcess(boardSize);
+                  setShowBoardCompleteModal(false);
+                }}
+              >
+                <ThemedText>New Board</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.button}
+                onPress={() => {
+                  resetBoardProcess();
+                  setShowBoardCompleteModal(false);
+                }}
+              >
+                <ThemedText>Retry Board</ThemedText>
+              </TouchableOpacity>
+            </ThemedView>
+          </>
+        )}
       </ThemedView>
     </Modal>
   );

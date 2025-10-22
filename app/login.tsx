@@ -27,16 +27,9 @@ const LoginScreen = ({}) => {
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
-        console.log("retard", user);
-        // navigation.dispatch(
-        //   CommonActions.reset({
-        //     index: 0,
-        //     routes: [{ name: "/(protected)/(tabs)" }], // replace 'HomePage' with the actual route name
-        //   })
-        // );
+        router.replace("/(protected)/(tabs)");
       }
     });
-
     return unsubscribe;
   }, []);
 

@@ -2,6 +2,10 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { letters, numbers } from "@/constants/LettersAndNumbers";
 import { auth, db } from "@/firebaseConfig";
+import {
+  loadProfileBackgroundColor,
+  loadProfileLetterColor,
+} from "@/helper/asyncStorageHelper";
 import { pvpSquareGenerator } from "@/helper/pvpSquareGenerator";
 import { router } from "expo-router";
 import { User } from "firebase/auth";
@@ -16,12 +20,14 @@ export const boardSizePVPConfig = {
   small: 81,
   medium: 121,
   large: 169,
+  xlarge: 225,
 };
 
 const boardSizeOptions = [
   { label: "Small", value: "small" },
   { label: "Medium", value: "medium" },
   { label: "Large", value: "large" },
+  { label: "Extra Large", value: "xlarge" },
 ];
 
 const boardTypeOptions = [
@@ -31,7 +37,7 @@ const boardTypeOptions = [
 ];
 
 export type LobbyType = "public" | "private";
-export type PVPBoardSize = "small" | "medium" | "large";
+export type PVPBoardSize = "small" | "medium" | "large" | "xlarge";
 export type PVPBoardType = "random" | "mirror" | "partmirror";
 export type PlayerType = "owner" | "opponent";
 
@@ -89,12 +95,17 @@ export default function CreateGame() {
         opponentScore: 1,
         ownerName: user?.displayName,
         ownerUid: user?.uid,
-        opponentName: "",
-        opponentUid: "",
+        opponentName: null,
+        opponentUid: null,
         turn: turnNumber === 0 ? "owner" : "opponent",
         fog: fogOfWar,
         winner: null,
         loser: null,
+        ownerProfileBackground:
+          (await loadProfileBackgroundColor()) ?? "313131ff",
+        ownerProfileLetter: (await loadProfileLetterColor()) ?? "#ffffff",
+        opponentProfileBackground: "",
+        opponentProfileLetter: "",
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });

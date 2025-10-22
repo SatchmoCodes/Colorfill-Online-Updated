@@ -1,32 +1,33 @@
 import { ThemedText } from "@/components/ThemedText";
+import { ThemedView } from "@/components/ThemedView";
 import { router, useLocalSearchParams } from "expo-router";
 import React from "react";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
+import { StyleSheet, TouchableOpacity } from "react-native";
 
 export default function ViewScore() {
-  const { boardId, boardData } = useLocalSearchParams();
+  const { boardId, boardData, bestScore } = useLocalSearchParams();
 
   if (!boardId) {
     return (
-      <View>
+      <ThemedView>
         <ThemedText>No board found...</ThemedText>
-      </View>
+      </ThemedView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <ThemedView style={styles.container}>
       <TouchableOpacity
         onPress={() =>
           router.push({
             pathname: "/freeplay",
-            params: { boardId, boardData },
+            params: { boardId, boardData, bestScore },
           })
         }
       >
         <ThemedText>Play board</ThemedText>
       </TouchableOpacity>
-    </View>
+    </ThemedView>
   );
 }
 

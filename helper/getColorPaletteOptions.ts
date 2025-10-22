@@ -29,6 +29,7 @@ export const getColorPaletteOptions = async (criteriaMap: Unlockables = {}) => {
       2: "#ffd466",
       3: "#4a636d",
       4: "#0a141a",
+      key: "small_1",
       ...criteriaMap["small_1"],
     },
     {
@@ -37,6 +38,7 @@ export const getColorPaletteOptions = async (criteriaMap: Unlockables = {}) => {
       2: "#ABBF63",
       3: "#F37A5E",
       4: "#F33D3C",
+      key: "medium_1",
       ...criteriaMap["medium_1"],
     },
     {
@@ -45,6 +47,7 @@ export const getColorPaletteOptions = async (criteriaMap: Unlockables = {}) => {
       2: "#FFC126",
       3: "#F34213",
       4: "#3E2F5B",
+      key: "large_1",
       ...criteriaMap["large_1"],
     },
     {
@@ -53,6 +56,7 @@ export const getColorPaletteOptions = async (criteriaMap: Unlockables = {}) => {
       2: "#e5e1e6",
       3: "#888b8d",
       4: "#222223",
+      key: "xlarge_1",
       ...criteriaMap["xlarge_1"],
     },
     {
@@ -61,6 +65,7 @@ export const getColorPaletteOptions = async (criteriaMap: Unlockables = {}) => {
       2: "#edf2f4",
       3: "#8d99ae",
       4: "#2b2d42",
+      key: "boards_completed_1",
       ...criteriaMap["boards_completed_1"],
     },
     {
@@ -69,6 +74,7 @@ export const getColorPaletteOptions = async (criteriaMap: Unlockables = {}) => {
       2: "#ffecd1",
       3: "#ff7d00",
       4: "#78290f",
+      key: "botd_completed_1",
       ...criteriaMap["botd_completed_1"],
     },
     {
@@ -77,7 +83,8 @@ export const getColorPaletteOptions = async (criteriaMap: Unlockables = {}) => {
       2: "#1dd3b0",
       3: "#71ac1fff",
       4: "#c1f5b4ff",
-      ...criteriaMap["total_games-1"],
+      key: "total_games_1",
+      ...criteriaMap["total_games_1"],
     },
     {
       0: "#000000",
@@ -85,6 +92,7 @@ export const getColorPaletteOptions = async (criteriaMap: Unlockables = {}) => {
       2: "#fca311",
       3: "#afafafff",
       4: "#ffffff",
+      key: "wins_1",
       ...criteriaMap["wins_1"],
     },
     {
@@ -93,6 +101,7 @@ export const getColorPaletteOptions = async (criteriaMap: Unlockables = {}) => {
       2: "#F5F5F5",
       3: "#F77A36",
       4: "#62516D",
+      key: "winstreak_1",
       ...criteriaMap["winstreak_1"],
     },
     {
@@ -101,6 +110,7 @@ export const getColorPaletteOptions = async (criteriaMap: Unlockables = {}) => {
       2: "#ED3F09",
       3: "#A28E88",
       4: "#141414",
+      key: "small_2",
       ...criteriaMap["small_2"],
     },
     {
@@ -109,6 +119,7 @@ export const getColorPaletteOptions = async (criteriaMap: Unlockables = {}) => {
       2: "#dad2d8",
       3: "#0f8b8d",
       4: "#143642",
+      key: "medium_2",
       ...criteriaMap["medium_2"],
     },
     {
@@ -117,6 +128,7 @@ export const getColorPaletteOptions = async (criteriaMap: Unlockables = {}) => {
       2: "#EFD6AC",
       3: "#C44900",
       4: "#432534",
+      key: "large_2",
       ...criteriaMap["large_2"],
     },
     {
@@ -125,6 +137,7 @@ export const getColorPaletteOptions = async (criteriaMap: Unlockables = {}) => {
       2: "#e0e0e2",
       3: "#0b6e4f",
       4: "#2b4162",
+      key: "xlarge_2",
       ...criteriaMap["xlarge_2"],
     },
     {
@@ -133,6 +146,7 @@ export const getColorPaletteOptions = async (criteriaMap: Unlockables = {}) => {
       2: "#FAF8FB",
       3: "#98A9B5",
       4: "#58599A",
+      key: "boards_completed_2",
       ...criteriaMap["boards_completed_2"],
     },
     {
@@ -141,7 +155,8 @@ export const getColorPaletteOptions = async (criteriaMap: Unlockables = {}) => {
       2: "#F0F2FC",
       3: "#FFD02f",
       4: "#ECB1B5",
-      ...criteriaMap["botd_copmpleted_2"],
+      key: "botd_completed_2",
+      ...criteriaMap["botd_completed_2"],
     },
     {
       0: "#CC0000",
@@ -149,6 +164,7 @@ export const getColorPaletteOptions = async (criteriaMap: Unlockables = {}) => {
       2: "#808087",
       3: "#242222ff",
       4: "#002D5C",
+      key: "total_games_2",
       ...criteriaMap["total_games_2"],
     },
     {
@@ -157,14 +173,16 @@ export const getColorPaletteOptions = async (criteriaMap: Unlockables = {}) => {
       2: "#ACACAC",
       3: "#447FBD",
       4: "#034482",
+      key: "wins_2",
       ...criteriaMap["wins_2"],
     },
     {
       0: "#9B1D20",
       1: "#FE621D",
-      2: "#030302ff",
+      2: "#D8C99B",
       3: "#636363",
       4: "#0C090D",
+      key: "winstreak_2",
       ...criteriaMap["winstreak_2"],
     },
     {
@@ -173,14 +191,16 @@ export const getColorPaletteOptions = async (criteriaMap: Unlockables = {}) => {
       2: "#d5d3d0",
       3: "#ff9123",
       4: "#5a0203",
+      key: "small_3",
       ...criteriaMap["small_3"],
     },
     {
-      0: "#5f0f40",
-      1: "#9a031e",
-      2: "#f8a354ff",
-      3: "#c5540eff",
-      4: "#0f4c5c",
+      0: "#D36135",
+      1: "#7FB069",
+      2: "#ECE4B7",
+      3: "#E6AA68",
+      4: "#02020B",
+      key: "medium_3",
       ...criteriaMap["medium_3"],
     },
     {
@@ -189,14 +209,16 @@ export const getColorPaletteOptions = async (criteriaMap: Unlockables = {}) => {
       2: "#e09f3e",
       3: "#9e2a2b",
       4: "#540b0e",
+      key: "large_3",
       ...criteriaMap["large_3"],
     },
     {
-      0: "#09410dff",
-      1: "#23ef23ff",
-      2: "#edf2f4",
-      3: "#8d99ae",
-      4: "#2b2d42",
+      0: "#412234",
+      1: "#FFC857",
+      2: "#FFFFFF",
+      3: "#BDD9BF",
+      4: "#2E4052",
+      key: "xlarge_3",
       ...criteriaMap["xlarge_3"],
     },
     {
@@ -205,6 +227,7 @@ export const getColorPaletteOptions = async (criteriaMap: Unlockables = {}) => {
       2: "#fff8f0",
       3: "#111d4a",
       4: "#1e1e24",
+      key: "boards_completed_3",
       ...criteriaMap["boards_completed_3"],
     },
     {
@@ -213,6 +236,7 @@ export const getColorPaletteOptions = async (criteriaMap: Unlockables = {}) => {
       2: "#e1ddad",
       3: "#fed52f",
       4: "#825026",
+      key: "botd_completed_3",
       ...criteriaMap["botd_completed_3"],
     },
     {
@@ -221,14 +245,16 @@ export const getColorPaletteOptions = async (criteriaMap: Unlockables = {}) => {
       2: "#aaa397ff",
       3: "#383532ff",
       4: "#1b1a19ff",
+      key: "total_games_3",
       ...criteriaMap["total_games_3"],
     },
     {
-      0: "#30343f",
-      1: "#fafaff",
-      2: "#baabdfff",
-      3: "#364996ff",
-      4: "#1e2749",
+      0: "#A2D729",
+      1: "#FAFFFD",
+      2: "#FA824C",
+      3: "#3C91E6",
+      4: "#342E37",
+      key: "wins_3",
       ...criteriaMap["wins_3"],
     },
     {
@@ -237,6 +263,7 @@ export const getColorPaletteOptions = async (criteriaMap: Unlockables = {}) => {
       2: "#FFFFF3",
       3: "#00D9C0",
       4: "#030301",
+      key: "winstreak_3",
       ...criteriaMap["winstreak_3"],
     },
     {
@@ -268,11 +295,11 @@ export const getColorPaletteOptions = async (criteriaMap: Unlockables = {}) => {
       4: "#000004",
     },
     {
-      0: "#070C0E",
-      1: "#004643",
-      2: "#FAF4D3",
-      3: "#F6BE9A",
-      4: "#D1AC00",
+      0: "#30343f",
+      1: "#fafaff",
+      2: "#baabdfff",
+      3: "#364996ff",
+      4: "#1e2749",
     },
     {
       0: "#0B0A09",

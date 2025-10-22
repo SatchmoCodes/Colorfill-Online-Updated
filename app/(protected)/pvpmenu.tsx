@@ -1,16 +1,24 @@
+import Avatar from "@/components/Avatar";
+import OnlinePlayerList from "@/components/OnlinePlayerList";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
-import { auth, db } from "@/firebaseConfig";
+import { auth, db, rtdb } from "@/firebaseConfig";
+import {
+  loadProfileBackgroundColor,
+  loadProfileLetterColor,
+} from "@/helper/asyncStorageHelper";
+import { useOnlinePlayerList } from "@/hooks/useOnlinePlayerList";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect } from "expo-router";
 import { User } from "firebase/auth";
+import { onDisconnect, ref, set } from "firebase/database";
 import {
   collection,
   DocumentReference,
   onSnapshot,
   orderBy,
   query,
-  updateDoc,
+  runTransaction,
   where,
 } from "firebase/firestore";
 import React, { useCallback, useEffect, useState } from "react";
@@ -44,6 +52,10 @@ interface PVPGame {
   opponentUid: string;
   turn: PlayerType;
   fog: boolean;
+  ownerProfileBackground: string;
+  ownerProfileLetter: string;
+  opponentProfileBackground: string;
+  opponentProfileLetter: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -51,6 +63,10 @@ interface PVPGame {
 const PvpMenu = () => {
   const [gameList, setGameList] = useState<PVPGame[]>([]);
   const [user, setUser] = useState<User | null>();
+
+  const playerList = useOnlinePlayerList();
+
+  console.log("list", playerList);
 
   useFocusEffect(
     useCallback(() => {
@@ -86,23 +102,62 @@ const PvpMenu = () => {
   }, [auth]);
 
   const handleJoinGame = async (docRef: DocumentReference) => {
-    await updateDoc(docRef, {
-      opponentName: user?.displayName,
-      opponentUid: user?.uid,
-    });
-    const gameId = docRef.id;
-    router.push({
-      pathname: "/pvplobby",
-      params: { gameId },
-    });
+    try {
+      await runTransaction(db, async (transaction) => {
+        const docSnap = await transaction.get(docRef);
+
+        if (!docSnap.exists()) throw "Game does not exist";
+
+        const data = docSnap.data();
+
+        if (data.opponentName) throw "Game already has an opponent";
+
+        transaction.update(docRef, {
+          opponentName: user?.displayName,
+          opponentUid: user?.uid,
+          opponentProfileBackground:
+            (await loadProfileBackgroundColor()) ?? "#313131ff",
+          opponentProfileLetter: (await loadProfileLetterColor()) ?? "#ffffff",
+        });
+      });
+
+      // ✅ Transaction succeeded — user officially joined the game.
+      // Now handle presence tracking in Realtime Database.
+      const gamePresenceRef = ref(
+        rtdb,
+        `/gamePresence/${docRef.id}/${user?.uid}`
+      );
+
+      await set(gamePresenceRef, {
+        displayName: user?.displayName,
+        joinedAt: Date.now(),
+        inGame: true,
+      });
+
+      // Automatically remove this player if they disconnect
+      onDisconnect(gamePresenceRef).remove();
+
+      // Move to the game lobby
+      router.push({
+        pathname: "/pvplobby",
+        params: { gameId: docRef.id },
+      });
+    } catch (e) {
+      alert(typeof e === "string" ? e : "Failed to join game.");
+    }
   };
 
   return (
     <ThemedView style={styles.container}>
       <ThemedView style={{ height: "90%" }}>
-        <ThemedText style={{ textAlign: "center" }} type="title">
+        <ThemedText
+          style={{ textAlign: "center", marginBottom: 10 }}
+          type="title"
+        >
           Game List
         </ThemedText>
+        <OnlinePlayerList />
+
         {gameList.map((game) => {
           return (
             <GameCard
@@ -173,17 +228,20 @@ const GameCard = ({
               Players ({game.opponentName ? "2/2" : "1/2"})
             </ThemedText>
             <View style={styles.playerRow}>
-              <View style={styles.avatar}>
-                <ThemedText style={styles.avatarText}>
-                  {game.ownerName[0].toUpperCase()}
-                </ThemedText>
-              </View>
+              <Avatar
+                profileBackground={game.ownerProfileBackground}
+                profileLetter={game.ownerProfileLetter}
+                username={game.ownerName}
+                size="medium"
+                handleAvatarClick={() => console.log("hi")}
+              />
               {game.opponentName && (
-                <View style={styles.avatar}>
-                  <ThemedText style={styles.avatarText}>
-                    {game.opponentName[0].toUpperCase()}
-                  </ThemedText>
-                </View>
+                <Avatar
+                  profileBackground={game.opponentProfileBackground}
+                  profileLetter={game.opponentProfileLetter}
+                  username={game.opponentName}
+                  size="medium"
+                />
               )}
             </View>
           </View>
@@ -247,13 +305,11 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.15)",
     alignItems: "center",
     justifyContent: "center",
     marginHorizontal: 4,
   },
   avatarText: {
-    color: "#fff",
     fontWeight: "bold",
   },
   createButton: {

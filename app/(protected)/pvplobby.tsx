@@ -1,6 +1,7 @@
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
-import { auth, db } from "@/firebaseConfig";
+import { db, rtdb } from "@/firebaseConfig";
+import { useUser } from "@/hooks/useFirebaseUser";
 import {
   router,
   useFocusEffect,
@@ -8,6 +9,7 @@ import {
   useNavigation,
 } from "expo-router";
 import { User } from "firebase/auth";
+import { ref, remove } from "firebase/database";
 import {
   doc,
   DocumentReference,
@@ -18,17 +20,17 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, TouchableOpacity } from "react-native";
 
 interface PlayerRefObject {
-  name: string;
+  name: string | null;
   uid: string;
 }
 
 export default function PvpLobby() {
+  const user = useUser();
   const { gameId } = useLocalSearchParams();
   const navigation = useNavigation();
 
-  const [user, setUser] = useState<User | null>();
   const [ownerName, setOwnerName] = useState("");
-  const [opponentName, setOpponentName] = useState("");
+  const [opponentName, setOpponentName] = useState<string | null>(null);
   const [ownerUid, setOwnerUid] = useState("");
   const [opponentUid, setOpponentUid] = useState("");
   const [docRef, setDocRef] = useState<DocumentReference | null>(null);
@@ -68,30 +70,21 @@ export default function PvpLobby() {
   );
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (user) {
-        setUser(user);
-      }
-    });
-    return unsubscribe;
-  }, [auth]);
-
-  useEffect(() => {
     if (user && gameId) {
       const gameRef = doc(db, "games", gameId as string);
+      const gamePresenceRef = ref(rtdb, `/gamePresence/${gameId}/${user.uid}`);
 
       const beforeRemove = navigation.addListener("beforeRemove", async (e) => {
         const targetRoute = (e.data?.action as any)?.payload?.name;
-        console.log("whiat", targetRoute);
 
         // Prevent leave handling if navigating into the actual game
         if (["settings", "pvpgame"].includes(targetRoute)) {
           return;
         }
 
-        console.log("beforeRemove fired → player leaving lobby");
         const leavingUser = user;
         await handlePlayerLeave(gameRef, leavingUser);
+        remove(gamePresenceRef);
       });
 
       return () => {
@@ -169,7 +162,7 @@ export default function PvpLobby() {
         <ThemedText>{opponentName}</ThemedText>
       </ThemedView>
       <ThemedView>
-        {user?.displayName === ownerName && (
+        {user?.displayName === ownerName && opponentName !== null && (
           <TouchableOpacity onPress={() => handleGameStart()}>
             <ThemedText>Start Game</ThemedText>
           </TouchableOpacity>

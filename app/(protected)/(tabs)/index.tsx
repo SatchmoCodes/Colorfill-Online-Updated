@@ -3,26 +3,18 @@ import { Button, StyleSheet } from "react-native";
 
 import ParallaxScrollView from "@/components/ParallaxScrollView";
 import { auth } from "@/firebaseConfig";
-import { CommonActions, useNavigation } from "@react-navigation/core";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 
 export default function HomeScreen() {
-  const navigation = useNavigation();
-
-  const handleSignOut = () => {
-    auth.signOut().then(() => {
-      navigation.dispatch(
-        CommonActions.reset({
-          index: 0,
-          routes: [{ name: "login" }], // replace 'HomePage' with the actual route name
-        })
-      );
-    });
+  const handleSignOut = async () => {
+    await AsyncStorage.clear();
+    auth.signOut();
   };
 
   return (
     <ParallaxScrollView
-      headerBackgroundColor={{ light: "#A1CEDC", dark: "#1D3D47" }}
+      headerBackgroundColor={{ light: "#1D3D47", dark: "#1D3D47" }}
       headerImage={
         <Image
           source={require("@/assets/images/partial-react-logo.png")}
@@ -39,7 +31,7 @@ export default function HomeScreen() {
         title="Player vs Player"
         onPress={() => router.push("/pvpmenu")}
       />
-      <Button title="Login" onPress={() => router.push("/login")}></Button>
+      {/* <Button title="Login" onPress={() => router.push("/login")}></Button> */}
       <Button title="Logout" onPress={() => handleSignOut()}></Button>
     </ParallaxScrollView>
   );

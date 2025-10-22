@@ -8,13 +8,15 @@ import { IconSymbol } from "./ui/IconSymbol";
 
 interface CustomHeaderProps {
   title: string;
-  onIconPress?: () => void;
+  onIconPress: () => void;
+  isGearIconHidden: boolean;
   // Add other props you might need, like iconName, iconColor, etc.
 }
 
 export default function CustomHeader({
   title,
   onIconPress,
+  isGearIconHidden,
 }: CustomHeaderProps) {
   const navigation = useNavigation();
   const theme = useColorScheme() ?? "light";
@@ -35,7 +37,7 @@ export default function CustomHeader({
       <ThemedText style={[styles.headerTitle]}>{title}</ThemedText>
 
       {/* Settings Icon */}
-      {onIconPress && (
+      {!isGearIconHidden && (
         <TouchableOpacity style={styles.iconContainer} onPress={onIconPress}>
           <IconSymbol name="gear" size={24} color="white" />
         </TouchableOpacity>

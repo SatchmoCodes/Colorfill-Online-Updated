@@ -12,5 +12,11 @@ export interface UserDoc {
   currentWinStreak: number;
   boardsCompleted: number;
   boardsOfTheDayCompleted: number;
+  bestSmallScore: number;
+  bestMediumScore: number;
+  bestLargeScore: number;
+  bestXLargeScore: number;
+  profileBackground: string;
+  profileLetter: string;
   createdAt: Timestamp;
 }

@@ -1,13 +1,18 @@
+import Avatar from "@/components/Avatar";
+import ColorPaletteUnlockModal from "@/components/ColorPaletteUnlockModal";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
-import { db } from "@/firebaseConfig";
+import { db, rtdb } from "@/firebaseConfig";
 import {
   loadColorIndex,
   loadColorPaletteOptions,
-  loadIsColorPaletteStale,
+  loadIsMosaicMode,
+  saveColorPaletteOptions,
 } from "@/helper/asyncStorageHelper";
+import { getUser } from "@/helper/commonQueries";
 import { getColorPaletteOptions } from "@/helper/getColorPaletteOptions";
 import { PVPSquare } from "@/helper/pvpSquareGenerator";
+import { updateCriteriaMap } from "@/helper/updateCriteriaMap";
 import { useUser } from "@/hooks/useFirebaseUser";
 import { CommonActions } from "@react-navigation/native";
 import {
@@ -15,14 +20,23 @@ import {
   useLocalSearchParams,
   useNavigation,
 } from "expo-router";
+import { User } from "firebase/auth";
+import { ref, remove } from "firebase/database";
 import {
   doc,
   DocumentReference,
+  increment,
   onSnapshot,
   serverTimestamp,
   updateDoc,
 } from "firebase/firestore";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  RefObject,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   Animated,
   Easing,
@@ -44,12 +58,15 @@ interface PVPGameBoard {
   boardSize: PVPBoardSize;
   selectedColorPalette: PaletteObj;
   currentUserType: PlayerType;
+  isMosaic: boolean;
 }
 
 interface PVPSquareViewProps {
   square: PVPSquare;
   squareSize: number;
   color: string;
+  isMosaic: boolean;
+  currentUserType: PlayerType;
 }
 
 interface ColorRowProps {
@@ -76,6 +93,23 @@ interface ScoreSectionProps {
   ownerSelectedColor: ColorKey;
   opponentSelectedColor: ColorKey;
   selectedColorPalette: PaletteObj;
+  ownerBackground: string;
+  ownerLetter: string;
+  opponentBackground: string;
+  opponentLetter: string;
+}
+
+interface BeginGameModalProps {
+  visible: boolean;
+  onClose: () => void;
+  onGameStart: () => void;
+  ownerName: string;
+  opponentName: string;
+  ownerBackground: string;
+  ownerLetter: string;
+  opponentBackground: string;
+  opponentLetter: string;
+  scoreToWin: number;
 }
 
 interface EndGameModalProps {
@@ -88,142 +122,192 @@ interface EndGameModalProps {
   currentUserType: PlayerType;
 }
 
+interface PlayerRefObject {
+  name: string;
+  uid: string;
+}
+
+const fogColor = "#151718";
+// const fogColor = "gray";
+
 export default function PvpGame() {
   const { gameId } = useLocalSearchParams();
   const user = useUser();
+  const navigation = useNavigation();
 
   const [ownerName, setOwnerName] = useState("");
   const [opponentName, setOpponentName] = useState("");
+  const [ownerUid, setOwnerUid] = useState("");
+  const [opponentUid, setOpponentUid] = useState("");
   const [ownerSelectedColor, setOwnerSelectedColor] = useState<ColorKey>(0);
   const [opponentSelectedColor, setOpponentSelectedColor] =
     useState<ColorKey>(0);
   const [turn, setTurn] = useState<PlayerType | null>(null);
   const [boardState, setBoardState] = useState<PVPSquare[][]>([]);
   const [boardSize, setBoardSize] = useState<PVPBoardSize>("small");
-  const [colorPaletteOptions, setColorPaletteOptions] = useState<
-    PaletteObj[] | []
-  >([]);
   const [selectedColorPalette, setSelectedColorPalette] =
     useState<PaletteObj | null>(null);
-
+  const [unlockedColorPalettes, setUnlockedColorPalettes] = useState<
+    PaletteObj[] | []
+  >([]);
   const [isFogOfWar, setIsFogOfWar] = useState(false);
   const [ownerScore, setOwnerScore] = useState(1);
   const [opponentScore, setOpponentScore] = useState(1);
   const [winner, setWinner] = useState<PlayerType | null>(null);
   const [turnDeadline, setTurnDeadline] = useState(16000);
-
+  const [isMosaic, setIsMosaic] = useState(false);
   const [boardLoaded, setBoardLoaded] = useState(false);
+  const [ownerBackground, setOwnerBackground] = useState("#313131ff");
+  const [ownerLetter, setOwnerLetter] = useState("#ffffff");
+  const [opponentBackground, setOpponentBackground] = useState("#313131ff");
+  const [opponentLetter, setOpponentLetter] = useState("#ffffff");
   const [docRef, setDocRef] = useState<DocumentReference | null>(null);
+  const [showBeginGameModal, setShowBeginGameModal] = useState(true);
+  const [isGameStarted, setIsGameStarted] = useState(false);
 
-  const ownerNameRef = useRef<string>(null);
-  const opponentNameRef = useRef<string>(null);
+  const ownerRef = useRef<PlayerRefObject>(null);
+  const opponentRef = useRef<PlayerRefObject>(null);
+  const gameCompletedRef = useRef(false);
+
+  const currentUser = user.displayName;
+  const currentUserType = currentUser === ownerName ? "owner" : "opponent";
+
+  const gameRef = doc(db, "games", gameId as string);
 
   useFocusEffect(
     useCallback(() => {
-      console.log("focusing");
       const loadPalette = async () => {
         try {
           const savedIndex = (await loadColorIndex()) ?? 0;
-          const isColorPaletteStale = await loadIsColorPaletteStale();
-          if (colorPaletteOptions.length === 0) {
-            if (isColorPaletteStale) {
-              const colorOptions = await getColorPaletteOptions(user);
-              setSelectedColorPalette(
-                colorOptions[savedIndex] ?? colorOptions[0]
-              );
-              setColorPaletteOptions(colorOptions);
-            } else {
-              let colorOptions = await loadColorPaletteOptions();
-              if (!colorOptions) {
-                colorOptions = await getColorPaletteOptions(user);
-              }
-              setSelectedColorPalette(
-                colorOptions[savedIndex] ?? colorOptions[0]
-              );
-              setColorPaletteOptions(colorOptions);
-            }
-          } else {
-            console.log("do this be runnin");
-            setSelectedColorPalette(colorPaletteOptions[savedIndex]);
+          let colorOptions = await loadColorPaletteOptions();
+          if (!colorOptions) {
+            colorOptions = await getColorPaletteOptions({});
           }
+          setSelectedColorPalette(colorOptions[savedIndex] ?? colorOptions[0]);
         } catch (error) {
           console.log("error setting initial settings", error);
         }
       };
+      const loadMosaicMode = async () => {
+        try {
+          const savedMode = (await loadIsMosaicMode()) ?? false;
+          setIsMosaic(savedMode);
+        } catch (error) {
+          console.log("error loading mosaic mode ", error);
+        }
+      };
       loadPalette();
+      loadMosaicMode();
     }, [])
   );
 
   useEffect(() => {
     if (!gameId) return;
+
     const id = gameId as string;
+
     const unsubscribe = onSnapshot(doc(db, "games", id), (docSnapshot) => {
-      if (docSnapshot.exists()) {
+      (async () => {
+        if (!docSnapshot.exists()) return;
+
         const data = docSnapshot.data();
+        if (!data || gameCompletedRef.current) return;
 
         const currentUser = user?.displayName;
         const currentUserType =
           currentUser === data.ownerName ? "owner" : "opponent";
 
+        // Update board state when the opponent moves
         if (currentUserType === data.turn && boardLoaded) {
-          // opponent must have just moved
           const updatedBoardData = JSON.parse(data.boardData);
           setBoardState(updatedBoardData);
         }
 
+        // Initialize board on first load
         if (!boardLoaded) {
           setBoardSize(data.size);
           setDocRef(docSnapshot.ref);
           setIsFogOfWar(data.fog);
+          setOwnerName(data.ownerName);
+          setOpponentName(data.opponentName);
+          setOwnerBackground(data.ownerProfileBackground);
+          setOwnerLetter(data.ownerProfileLetter);
+          setOpponentBackground(data.opponentProfileBackground);
+          setOpponentLetter(data.opponentProfileLetter);
+          setOwnerUid(data.ownerUid);
+          setOpponentUid(data.opponentUid);
           const result = markAvailableSquares(
             JSON.parse(data.boardData),
             currentUserType,
             data.fog
           );
           setBoardState(result.updatedBoardState);
+          setBoardLoaded(true);
         }
+
+        // General updates
         const turnStart = data.turnStartTime?.toMillis?.() ?? Date.now();
         const deadline = turnStart + 16000;
         setTurn(data.turn);
-        setTurnDeadline(deadline);
-        setOwnerName(data.ownerName);
-        setOpponentName(data.opponentName);
+        // setTurnDeadline(deadline);
         setOwnerSelectedColor(data.ownerSelectedColor);
         setOpponentSelectedColor(data.opponentSelectedColor);
         setBoardSize(data.size);
         setOwnerScore(data.ownerScore);
         setOpponentScore(data.opponentScore);
-        setBoardLoaded(true);
+
+        // ---- Handle game completion logic ----
         const scoreToWinGame =
           (Math.pow(JSON.parse(data.boardData).length, 2) + 1) / 2;
-        if (
-          data.ownerScore >= scoreToWinGame ||
-          (ownerNameRef.current && data.winner === ownerNameRef.current)
-        ) {
-          setWinner("owner");
+
+        const ownerWins =
+          data.ownerScore >= scoreToWinGame || data.winner === "owner";
+
+        const opponentWins =
+          data.opponentScore >= scoreToWinGame || data.winner === "opponent";
+
+        if (!gameCompletedRef.current) {
+          if (ownerWins || opponentWins) {
+            gameCompletedRef.current = true;
+
+            // If the game doc doesn’t already have a winner, update it
+            if (!data.winner) {
+              const winnerName = ownerWins ? data.ownerName : data.opponentName;
+              await updateDoc(doc(db, "games", id), { winner: winnerName });
+            }
+
+            const winnerType = ownerWins ? "owner" : "opponent";
+            setWinner(winnerType);
+
+            // Call your async handler (only once per user)
+            await handleGameComplete(winnerType, {
+              ownerUid: data.ownerUid,
+              opponentUid: data.opponentUid,
+              currentUserType: currentUserType,
+            });
+          }
         }
-        if (
-          data.opponentScore >= scoreToWinGame ||
-          (opponentNameRef.current && data.winner === opponentNameRef.current)
-        ) {
-          setWinner("opponent");
-        }
-      }
+      })().catch((err) => {
+        console.error("Error in snapshot:", err);
+      });
     });
+
     return unsubscribe;
   }, [gameId]);
 
   useEffect(() => {
-    if (ownerName) {
-      ownerNameRef.current = ownerName;
-    }
-  }, [ownerName]);
+    ownerRef.current = {
+      name: ownerName,
+      uid: ownerUid,
+    };
+  }, [ownerName, ownerUid]);
 
   useEffect(() => {
-    if (opponentName) {
-      opponentNameRef.current = opponentName;
-    }
-  }, [opponentName]);
+    opponentRef.current = {
+      name: opponentName,
+      uid: opponentUid,
+    };
+  }, [opponentName, opponentUid]);
 
   const handleEndOfTurn = () => {
     const fullColorIndexList = [0, 1, 2, 3, 4] as ColorKey[];
@@ -243,8 +327,30 @@ export default function PvpGame() {
     }
   };
 
+  useEffect(() => {
+    if (user && gameId) {
+      const gamePresenceRef = ref(rtdb, `/gamePresence/${gameId}/${user.uid}`);
+
+      const beforeRemove = navigation.addListener("beforeRemove", async (e) => {
+        const targetRoute = (e.data?.action as any)?.payload?.name;
+
+        // Prevent leave handling if navigating into the actual game
+        if (["settings", "pvpgame"].includes(targetRoute)) {
+          return;
+        }
+
+        const leavingUser = user;
+        await handlePlayerLeave(gameRef, leavingUser.displayName ?? ""); //displayName is mapped to username on creation of account
+        remove(gamePresenceRef);
+      });
+
+      return () => {
+        beforeRemove();
+      };
+    }
+  }, [user, gameId]);
+
   const handleColorChange = async (color: ColorKey) => {
-    console.log("color picked", color);
     if (winner || !turn) return;
     const visited = new Set<string>();
     const currentBoardState = boardState.map((row) =>
@@ -308,8 +414,11 @@ export default function PvpGame() {
             loser: opponentName,
           };
         } else {
+          const opponentUpdatedScore =
+            Math.pow(boardState.length, 2) - ownerUpdatedScore;
           updatedData = {
             ...updatedData,
+            opponentScore: opponentUpdatedScore,
             winner: opponentName,
             loser: ownerName,
           };
@@ -332,8 +441,11 @@ export default function PvpGame() {
             loser: ownerName,
           };
         } else {
+          const ownerUpdatedScore =
+            Math.pow(boardState.length, 2) - opponentUpdatedScore;
           updatedData = {
             ...updatedData,
+            ownerScore: ownerUpdatedScore,
             winner: ownerName,
             loser: opponentName,
           };
@@ -482,10 +594,184 @@ export default function PvpGame() {
     }
   }
 
-  if (user) {
-    const currentUser = user.displayName;
-    const currentUserType = currentUser === ownerName ? "owner" : "opponent";
+  const handleGameStart = () => {
+    setIsGameStarted(true);
+    setTurnDeadline(Date.now() + 16000);
+  };
 
+  const handleGameComplete = async (
+    winner: PlayerType,
+    {
+      ownerUid,
+      opponentUid,
+      currentUserType,
+    }: { ownerUid: string; opponentUid: string; currentUserType: PlayerType }
+  ) => {
+    const [ownerUserDoc, opponentUserDoc] = await Promise.all([
+      getUser(ownerUid),
+      getUser(opponentUid),
+    ]);
+
+    if (!ownerUserDoc || !opponentUserDoc) return;
+
+    // Determine which user this client represents
+    const isOwner = currentUserType === "owner";
+
+    const ownerNextStreak =
+      winner === "owner" ? ownerUserDoc.data.currentWinStreak + 1 : 0;
+    const opponentNextStreak =
+      winner === "opponent" ? opponentUserDoc.data.currentWinStreak + 1 : 0;
+
+    const [prevCriteriaMap, newCriteriaMap] = await Promise.all([
+      updateCriteriaMap({
+        wins: isOwner ? ownerUserDoc.data.wins : opponentUserDoc.data.wins,
+        totalGames: isOwner
+          ? ownerUserDoc.data.totalGames
+          : opponentUserDoc.data.totalGames,
+        bestWinStreak: isOwner
+          ? ownerUserDoc.data.bestWinStreak
+          : opponentUserDoc.data.bestWinStreak,
+      }),
+      updateCriteriaMap({
+        boardsCompleted: isOwner
+          ? ownerUserDoc.data.boardsCompleted
+          : opponentUserDoc.data.boardsCompleted,
+        boardsOfTheDayCompleted: isOwner
+          ? ownerUserDoc.data.boardsOfTheDayCompleted
+          : opponentUserDoc.data.boardsOfTheDayCompleted,
+        bestSmallScore: isOwner
+          ? ownerUserDoc.data.bestSmallScore
+          : opponentUserDoc.data.bestSmallScore,
+        bestMediumScore: isOwner
+          ? ownerUserDoc.data.bestMediumScore
+          : opponentUserDoc.data.bestMediumScore,
+        bestLargeScore: isOwner
+          ? ownerUserDoc.data.bestLargeScore
+          : opponentUserDoc.data.bestLargeScore,
+        bestXLargeScore: isOwner
+          ? ownerUserDoc.data.bestXLargeScore
+          : opponentUserDoc.data.bestXLargeScore,
+        totalGames: isOwner
+          ? ownerUserDoc.data.totalGames + 1
+          : opponentUserDoc.data.totalGames + 1,
+        wins: isOwner
+          ? ownerUserDoc.data.wins + (winner === "owner" ? 1 : 0)
+          : opponentUserDoc.data.wins + (winner === "opponent" ? 1 : 0),
+        bestWinStreak: isOwner
+          ? Math.max(ownerUserDoc.data.bestWinStreak, ownerNextStreak)
+          : Math.max(opponentUserDoc.data.bestWinStreak, opponentNextStreak),
+      }),
+    ]);
+
+    const updatedColorPaletteOptions = await getColorPaletteOptions(
+      newCriteriaMap
+    );
+
+    const newlyUnlockedColorPalettes = updatedColorPaletteOptions.filter(
+      (item) => {
+        if ("key" in item) {
+          const prevCriteriaMapItemLocked =
+            prevCriteriaMap[item.key]?.locked ?? true;
+          const newCriteriaMapItemLocked =
+            newCriteriaMap[item.key]?.locked ?? true;
+          return prevCriteriaMapItemLocked !== newCriteriaMapItemLocked;
+        }
+        return false;
+      }
+    );
+
+    if (newlyUnlockedColorPalettes.length > 0) {
+      setUnlockedColorPalettes(newlyUnlockedColorPalettes);
+    }
+
+    await saveColorPaletteOptions(updatedColorPaletteOptions);
+
+    // Only the winner performs the Firestore writes
+    if (winner === currentUserType) {
+      await Promise.all([
+        updateDoc(ownerUserDoc.ref, {
+          wins: winner === "owner" ? increment(1) : ownerUserDoc.data.wins,
+          losses:
+            winner === "opponent" ? increment(1) : ownerUserDoc.data.losses,
+          currentWinStreak: ownerNextStreak,
+          bestWinStreak: Math.max(
+            ownerNextStreak,
+            ownerUserDoc.data.bestWinStreak
+          ),
+          totalGames: increment(1),
+          winRate:
+            Math.round(
+              ((ownerUserDoc.data.wins + (winner === "owner" ? 1 : 0)) /
+                (ownerUserDoc.data.totalGames + 1)) *
+                10000
+            ) / 100,
+        }),
+        updateDoc(opponentUserDoc.ref, {
+          wins:
+            winner === "opponent" ? increment(1) : opponentUserDoc.data.wins,
+          losses:
+            winner === "owner" ? increment(1) : opponentUserDoc.data.losses,
+          currentWinStreak: opponentNextStreak,
+          bestWinStreak: Math.max(
+            opponentNextStreak,
+            opponentUserDoc.data.bestWinStreak
+          ),
+          totalGames: increment(1),
+          winRate:
+            Math.round(
+              ((opponentUserDoc.data.wins + (winner === "opponent" ? 1 : 0)) /
+                (opponentUserDoc.data.totalGames + 1)) *
+                10000
+            ) / 100,
+        }),
+      ]);
+    }
+  };
+
+  async function handlePlayerLeave(
+    gameRef: DocumentReference,
+    leavingUser: string
+  ) {
+    if (
+      !leavingUser ||
+      !opponentRef.current ||
+      !ownerRef.current ||
+      gameCompletedRef.current
+    )
+      return;
+    const { name: leavingOpponentName } = opponentRef.current;
+    const leavingOwnerName = ownerRef.current?.name;
+
+    console.log("this better not run");
+
+    try {
+      if (leavingUser === leavingOwnerName) {
+        if (leavingOpponentName) {
+          await updateDoc(gameRef, {
+            winner: "opponent",
+          });
+        } else {
+          await updateDoc(gameRef, {
+            status: "deleting",
+          });
+        }
+      } else if (leavingUser === leavingOpponentName) {
+        if (leavingOwnerName) {
+          await updateDoc(gameRef, {
+            winner: "owner",
+          });
+        } else {
+          await updateDoc(gameRef, {
+            status: "deleting",
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error updating game on leave:", error);
+    }
+  }
+
+  if (currentUserType) {
     return (
       <ThemedView style={styles.container}>
         {!selectedColorPalette ? (
@@ -501,11 +787,22 @@ export default function PvpGame() {
               ownerSelectedColor={ownerSelectedColor}
               opponentSelectedColor={opponentSelectedColor}
               selectedColorPalette={selectedColorPalette}
+              ownerBackground={ownerBackground}
+              ownerLetter={ownerLetter}
+              opponentBackground={opponentBackground}
+              opponentLetter={opponentLetter}
             />
-            <TimerDisplay
+            {/* <TimerDisplay
               turnDeadline={turnDeadline}
+              isGameStarted={isGameStarted}
+              isGameCompleted={gameCompletedRef.current}
+              gameRef={gameRef}
+              ownerRef={ownerRef}
+              opponentRef={opponentRef}
+              user={user}
               onEndOfTurn={handleEndOfTurn}
-            />
+              handlePlayerLeave={handlePlayerLeave}
+            /> */}
             <FakeColorRowButtons
               selectedColorPalette={selectedColorPalette}
               activeColor={[ownerSelectedColor, opponentSelectedColor]}
@@ -517,6 +814,7 @@ export default function PvpGame() {
               boardSize={boardSize}
               selectedColorPalette={selectedColorPalette}
               currentUserType={currentUserType}
+              isMosaic={isMosaic}
             />
             <ColorRowButtons
               selectedColorPalette={selectedColorPalette}
@@ -525,6 +823,25 @@ export default function PvpGame() {
               handleColorChange={handleColorChange}
               currentUserType={currentUserType}
             />
+            <Modal
+              transparent
+              animationType="fade"
+              visible={showBeginGameModal}
+            >
+              <BeginGameModal
+                visible={showBeginGameModal}
+                onClose={() => setShowBeginGameModal(false)}
+                onGameStart={handleGameStart}
+                ownerName={ownerName}
+                opponentName={opponentName}
+                ownerBackground={ownerBackground}
+                ownerLetter={ownerLetter}
+                opponentBackground={opponentBackground}
+                opponentLetter={opponentLetter}
+                scoreToWin={(Math.pow(boardState.length, 2) + 1) / 2}
+              />
+            </Modal>
+
             {winner && (
               <EndGameModal
                 winner={winner}
@@ -534,6 +851,13 @@ export default function PvpGame() {
                 ownerName={ownerName}
                 opponentName={opponentName}
                 currentUserType={currentUserType}
+              />
+            )}
+            {unlockedColorPalettes.length > 0 && (
+              <ColorPaletteUnlockModal
+                unlockedColorPalettes={unlockedColorPalettes}
+                isMosaic={isMosaic}
+                setUnlockedColorPalettes={setUnlockedColorPalettes}
               />
             )}
           </>
@@ -546,8 +870,13 @@ export default function PvpGame() {
 }
 
 const GameBoard = (props: PVPGameBoard) => {
-  const { boardState, boardSize, selectedColorPalette, currentUserType } =
-    props;
+  const {
+    boardState,
+    boardSize,
+    selectedColorPalette,
+    currentUserType,
+    isMosaic,
+  } = props;
 
   let windowWidth =
     Platform.OS === "web"
@@ -564,7 +893,7 @@ const GameBoard = (props: PVPGameBoard) => {
     if (square.visibleTo.includes(currentUserType)) {
       return selectedColorPalette[square.color];
     }
-    return "gray";
+    return fogColor;
   };
 
   const transformStyle =
@@ -580,6 +909,8 @@ const GameBoard = (props: PVPGameBoard) => {
             square={square}
             color={getSquareColor(square)}
             squareSize={tileSize}
+            isMosaic={isMosaic}
+            currentUserType={currentUserType}
             key={`${square.x}-${square.y}`}
           />
         ))
@@ -589,7 +920,7 @@ const GameBoard = (props: PVPGameBoard) => {
 };
 
 const Square = (props: PVPSquareViewProps) => {
-  const { square, squareSize, color } = props;
+  const { square, squareSize, color, isMosaic, currentUserType } = props;
   const scale = useRef(new Animated.Value(1)).current;
   const revealAnim = useRef(new Animated.Value(0)).current;
 
@@ -631,6 +962,13 @@ const Square = (props: PVPSquareViewProps) => {
         {
           width: squareSize,
           height: squareSize,
+          borderColor: "black",
+          borderWidth:
+            isMosaic &&
+            square.visibleTo.includes(currentUserType) &&
+            square.revealed
+              ? 1
+              : 0,
           transform: [{ scale }],
         },
       ]}
@@ -639,7 +977,8 @@ const Square = (props: PVPSquareViewProps) => {
       <View
         style={{
           ...StyleSheet.absoluteFillObject,
-          backgroundColor: "gray",
+          backgroundColor: fogColor,
+          // borderWidth: 0,
         }}
       />
 
@@ -647,6 +986,7 @@ const Square = (props: PVPSquareViewProps) => {
       <Animated.View
         style={{
           ...StyleSheet.absoluteFillObject,
+
           backgroundColor: color,
           opacity: revealAnim, // animate opacity only
         }}
@@ -811,7 +1151,12 @@ const ScoreSection = (props: ScoreSectionProps) => {
     ownerSelectedColor,
     opponentSelectedColor,
     selectedColorPalette,
+    ownerBackground,
+    ownerLetter,
+    opponentBackground,
+    opponentLetter,
   } = props;
+
   return (
     <View
       style={{
@@ -823,10 +1168,20 @@ const ScoreSection = (props: ScoreSectionProps) => {
     >
       <View style={{ alignItems: "center" }}>
         <ThemedText style={{ textAlign: "center" }}>{ownerName}</ThemedText>
+        <Avatar
+          profileBackground={ownerBackground}
+          profileLetter={ownerLetter}
+          username={ownerName}
+          size="large"
+        />
+
         <View
           style={[
             styles.scoreSquare,
-            { backgroundColor: selectedColorPalette[ownerSelectedColor] },
+            {
+              backgroundColor: selectedColorPalette[ownerSelectedColor],
+              marginTop: 10,
+            },
           ]}
         >
           <ThemedText style={styles.scoreSquareText}>{ownerScore}</ThemedText>
@@ -836,14 +1191,22 @@ const ScoreSection = (props: ScoreSectionProps) => {
         <ThemedText style={{ textAlign: "center", marginBottom: 20 }}>
           VS
         </ThemedText>
-        {/* <ThemedText style={{ textAlign: "center" }}>{timeLeft}</ThemedText> */}
       </View>
       <View style={{ alignItems: "center" }}>
         <ThemedText style={{ textAlign: "center" }}>{opponentName}</ThemedText>
+        <Avatar
+          profileBackground={opponentBackground}
+          profileLetter={opponentLetter}
+          username={opponentName}
+          size="large"
+        />
         <View
           style={[
             styles.scoreSquare,
-            { backgroundColor: selectedColorPalette[opponentSelectedColor] },
+            {
+              backgroundColor: selectedColorPalette[opponentSelectedColor],
+              marginTop: 10,
+            },
           ]}
         >
           <ThemedText style={styles.scoreSquareText}>
@@ -857,15 +1220,32 @@ const ScoreSection = (props: ScoreSectionProps) => {
 
 const TimerDisplay = ({
   turnDeadline,
+  isGameStarted,
+  isGameCompleted,
+  gameRef,
+  ownerRef,
+  opponentRef,
+  user,
   onEndOfTurn,
+  handlePlayerLeave,
 }: {
   turnDeadline: number;
+  isGameStarted: boolean;
+  isGameCompleted: boolean;
+  gameRef: DocumentReference;
+  ownerRef: RefObject<PlayerRefObject | null>;
+  opponentRef: RefObject<PlayerRefObject | null>;
+  user: User;
   onEndOfTurn: () => void;
+  handlePlayerLeave: (gameRef: DocumentReference, username: string) => void;
 }) => {
   const [timeLeft, setTimeLeft] = useState(0);
 
+  const opponent = opponentRef.current;
+  const owner = ownerRef.current;
+
   useEffect(() => {
-    if (!turnDeadline) return;
+    if (!turnDeadline || !isGameStarted) return;
 
     let lastSeconds: number | null = null;
     const interval = setInterval(() => {
@@ -877,15 +1257,107 @@ const TimerDisplay = ({
         lastSeconds = roundedSeconds;
       }
 
-      if (remaining <= 0) {
+      if (remaining <= 0 && !isGameCompleted) {
         onEndOfTurn();
+      }
+      if (remaining <= -15000 && !isGameCompleted && opponent && owner) {
+        if (user.displayName === owner.name) {
+          handlePlayerLeave(gameRef, opponent.name);
+        }
+        if (user.displayName === opponent.name) {
+          handlePlayerLeave(gameRef, owner.name);
+        }
       }
     }, 100);
 
     return () => clearInterval(interval);
-  }, [turnDeadline]);
+  }, [turnDeadline, isGameStarted, isGameCompleted, onEndOfTurn]);
 
   return <ThemedText style={{ fontSize: 20 }}>{timeLeft}</ThemedText>;
+};
+
+const BeginGameModal = ({
+  visible,
+  onClose,
+  onGameStart,
+  ownerName,
+  opponentName,
+  ownerBackground,
+  ownerLetter,
+  opponentBackground,
+  opponentLetter,
+  scoreToWin,
+}: BeginGameModalProps) => {
+  const [timeLeft, setTimeLeft] = useState(3);
+
+  useEffect(() => {
+    if (!visible) return;
+    setTimeLeft(3);
+
+    const interval = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+
+          // ✅ Defer parent updates to avoid “update during render” warning
+          setTimeout(() => {
+            onClose();
+            onGameStart();
+          }, 0);
+
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [visible]);
+
+  return (
+    <ThemedView style={styles.centeredView}>
+      <View style={{ marginBottom: 10 }}>
+        <ThemedText type="subtitle">
+          First to {scoreToWin} wins the game!
+        </ThemedText>
+      </View>
+      <View style={{ flexDirection: "row", gap: 30 }}>
+        <View>
+          <ThemedText style={{ marginBottom: 5 }}>{ownerName}</ThemedText>
+          <Avatar
+            profileBackground={ownerBackground}
+            profileLetter={ownerLetter}
+            username={ownerName}
+            size="large"
+          />
+        </View>
+        <View style={{ justifyContent: "center" }}>
+          <ThemedText>VS</ThemedText>
+        </View>
+
+        <View>
+          <ThemedText style={{ marginBottom: 5 }}>{opponentName}</ThemedText>
+          <Avatar
+            profileBackground={opponentBackground}
+            profileLetter={opponentLetter}
+            username={opponentName}
+            size="large"
+          />
+        </View>
+      </View>
+      {/* <View>
+        <TouchableOpacity
+          onPress={() => {
+            onClose();
+            onGameStart();
+          }}
+        >
+          <ThemedText>Close</ThemedText>
+        </TouchableOpacity>
+      </View> */}
+      <ThemedText>Game Begins in {timeLeft}</ThemedText>
+    </ThemedView>
+  );
 };
 
 const EndGameModal = (props: EndGameModalProps) => {
@@ -904,7 +1376,21 @@ const EndGameModal = (props: EndGameModalProps) => {
 
   return (
     <Modal transparent animationType="fade">
-      <ThemedView style={styles.centeredView}>
+      <ThemedView
+        style={[
+          styles.centeredView,
+          {
+            borderColor: winner === currentUserType ? "green" : "red",
+            borderWidth: 2,
+          },
+        ]}
+      >
+        <ThemedText
+          type="title"
+          style={{ color: winner === currentUserType ? "green" : "red" }}
+        >
+          {winner === currentUserType ? "Victory" : "Defeat"}
+        </ThemedText>
         <ThemedText style={{ textAlign: "center" }} type="title">
           {winnerName} has won the game!
         </ThemedText>
@@ -937,7 +1423,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     padding: 20,
-    // justifyContent: "center",
     paddingTop: 30,
   },
   squareGrid: {
@@ -946,7 +1431,6 @@ const styles = StyleSheet.create({
   },
   square: {
     borderColor: "black",
-    // borderWidth: 1,
   },
   colorRow: {
     flexDirection: "row",
@@ -981,12 +1465,10 @@ const styles = StyleSheet.create({
     },
   },
   centeredView: {
-    // flex: 1,
     justifyContent: "center",
     alignItems: "center",
     margin: "auto",
     gap: 20,
-    // margin: 20,
     borderRadius: 20,
     padding: 35,
     shadowColor: "#000",
@@ -997,5 +1479,21 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 5,
+  },
+  avatar: {
+    position: "relative",
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginHorizontal: 4,
+    borderColor: "black",
+    borderWidth: 1,
+  },
+  avatarText: {
+    color: "#fff",
+    fontWeight: "bold",
   },
 });

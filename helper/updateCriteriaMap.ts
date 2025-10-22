@@ -1,5 +1,4 @@
-import { UserDoc } from "@/schema/userDocModel";
-import { loadCriteriaMap } from "./asyncStorageHelper";
+import { loadCriteriaMap, saveCriteriaMap } from "./asyncStorageHelper";
 
 export type Unlockable = {
   locked: boolean;
@@ -10,186 +9,243 @@ export type Unlockable = {
 export type Unlockables = Record<string, Unlockable>;
 
 export const updateCriteriaMap = async ({
-  userDoc,
+  boardsCompleted = null,
+  boardsOfTheDayCompleted = null,
   bestSmallScore = null,
   bestMediumScore = null,
   bestLargeScore = null,
   bestXLargeScore = null,
+  totalGames = null,
+  wins = null,
+  bestWinStreak = null,
 }: {
-  userDoc: UserDoc | null;
+  boardsCompleted?: number | null;
+  boardsOfTheDayCompleted?: number | null;
   bestSmallScore?: number | null;
   bestMediumScore?: number | null;
   bestLargeScore?: number | null;
   bestXLargeScore?: number | null;
+  totalGames?: number | null;
+  wins?: number | null;
+  bestWinStreak?: number | null;
 }) => {
-  const boardsCompleted = userDoc?.boardsCompleted ?? 0;
-  const boardsOfTheDayCompleted = userDoc?.boardsOfTheDayCompleted ?? 0;
-  const totalGames = userDoc?.totalGames ?? 0;
-  const wins = userDoc?.wins ?? 0;
-  const bestWinStreak = userDoc?.bestWinStreak ?? 0;
-
   const savedCriteriaMap = (await loadCriteriaMap()) ?? {};
 
   const criteriaMap: Unlockables = {
     small_1: {
       locked:
-        savedCriteriaMap["small_1"]?.locked !== false ||
-        bestSmallScore === null ||
-        bestSmallScore > 13,
+        (bestSmallScore === null || bestSmallScore > 13) &&
+        savedCriteriaMap["small_1"]?.locked !== false,
       message: "Score 13 or lower on a small board to unlock this color scheme",
       progress: bestSmallScore ? `current best: ${bestSmallScore}` : "n/a",
     },
     small_2: {
       locked:
-        savedCriteriaMap["small_2"]?.locked !== false ||
-        bestSmallScore === null ||
-        bestSmallScore > 11,
+        (bestSmallScore === null || bestSmallScore > 11) &&
+        savedCriteriaMap["small_2"]?.locked !== false,
+      message: "Score 11 or lower on a small board to unlock this color scheme",
+      progress: bestSmallScore ? `current best: ${bestSmallScore}` : "n/a",
+    },
+    small_3: {
+      locked:
+        (bestSmallScore === null || bestSmallScore > 9) &&
+        savedCriteriaMap["small_3"]?.locked !== false,
       message: "Score 11 or lower on a small board to unlock this color scheme",
       progress: bestSmallScore ? `current best: ${bestSmallScore}` : "n/a",
     },
     medium_1: {
       locked:
-        savedCriteriaMap["medium_1"]?.locked !== false ||
-        bestMediumScore === null ||
-        bestMediumScore > 17,
+        (bestMediumScore === null || bestMediumScore > 17) &&
+        savedCriteriaMap["medium_1"]?.locked !== false,
       message:
         "Score 17 or lower on a medium board to unlock this color scheme",
       progress: bestMediumScore ? `current best: ${bestMediumScore}` : "n/a",
     },
     medium_2: {
       locked:
-        savedCriteriaMap["medium_2"]?.locked !== false ||
-        bestMediumScore === null ||
-        bestMediumScore > 15,
+        (bestMediumScore === null || bestMediumScore > 15) &&
+        savedCriteriaMap["medium_2"]?.locked !== false,
       message:
         "Score 15 or lower on a medium board to unlock this color scheme",
       progress: bestMediumScore ? `current best: ${bestMediumScore}` : "n/a",
     },
+    medium_3: {
+      locked:
+        (bestMediumScore === null || bestMediumScore > 13) &&
+        savedCriteriaMap["medium_3"]?.locked !== false,
+      message:
+        "Score 13 or lower on a medium board to unlock this color scheme",
+      progress: bestMediumScore ? `current best: ${bestMediumScore}` : "n/a",
+    },
     large_1: {
       locked:
-        savedCriteriaMap["large_1"]?.locked !== false ||
-        bestLargeScore === null ||
-        bestLargeScore > 21,
+        (bestLargeScore === null || bestLargeScore > 21) &&
+        savedCriteriaMap["large_1"]?.locked !== false,
       message: "Score 21 or lower on a large board to unlock this color scheme",
       progress: bestLargeScore ? `current best: ${bestLargeScore}` : "n/a",
     },
     large_2: {
       locked:
-        savedCriteriaMap["large_2"]?.locked !== false ||
-        bestLargeScore === null ||
-        bestLargeScore > 19,
+        (bestLargeScore === null || bestLargeScore > 19) &&
+        savedCriteriaMap["large_2"]?.locked !== false,
       message: "Score 19 or lower on a large board to unlock this color scheme",
+      progress: bestLargeScore ? `current best: ${bestLargeScore}` : "n/a",
+    },
+    large_3: {
+      locked:
+        (bestLargeScore === null || bestLargeScore > 17) &&
+        savedCriteriaMap["large_3"]?.locked !== false,
+      message: "Score 17 or lower on a large board to unlock this color scheme",
       progress: bestLargeScore ? `current best: ${bestLargeScore}` : "n/a",
     },
     xlarge_1: {
       locked:
-        savedCriteriaMap["xlarge_1"]?.locked !== false ||
-        bestXLargeScore === null ||
-        bestXLargeScore > 25,
-      message: "Score 25 or lower on a large board to unlock this color scheme",
+        (bestXLargeScore === null || bestXLargeScore > 30) &&
+        savedCriteriaMap["xlarge_1"]?.locked !== false,
+      message: "Score 30 or lower on an XL board to unlock this color scheme",
       progress: bestXLargeScore ? `current best: ${bestXLargeScore}` : "n/a",
     },
     xlarge_2: {
       locked:
-        savedCriteriaMap["xlarge_2"]?.locked !== false ||
-        bestXLargeScore === null ||
-        bestXLargeScore > 23,
-      message: "Score 23 or lower on a large board to unlock this color scheme",
+        (bestXLargeScore === null || bestXLargeScore > 23) &&
+        savedCriteriaMap["xlarge_2"]?.locked !== false,
+      message: "Score 23 or lower on an XL board to unlock this color scheme",
+      progress: bestXLargeScore ? `current best: ${bestXLargeScore}` : "n/a",
+    },
+    xlarge_3: {
+      locked:
+        (bestXLargeScore === null || bestXLargeScore > 21) &&
+        savedCriteriaMap["xlarge_3"]?.locked !== false,
+      message: "Score 21 or lower on an XL board to unlock this color scheme",
       progress: bestXLargeScore ? `current best: ${bestXLargeScore}` : "n/a",
     },
     boards_completed_1: {
       locked:
-        savedCriteriaMap["boards_completed_1"]?.locked !== false ||
-        boardsCompleted < 20,
+        (boardsCompleted === null || boardsCompleted < 20) &&
+        savedCriteriaMap["boards_completed_1"]?.locked !== false,
       message: "Play 20 boards to unlock this color scheme",
-      progress: `${boardsCompleted} / 20`,
+      progress: boardsCompleted === null ? "n/a" : `${boardsCompleted} / 20`,
     },
     boards_completed_2: {
       locked:
-        savedCriteriaMap["boards_completed_2"]?.locked !== false ||
-        boardsCompleted < 100,
+        (boardsCompleted === null || boardsCompleted < 100) &&
+        savedCriteriaMap["boards_completed_2"]?.locked !== false,
       message: "Play 100 boards to unlock this color scheme",
-      progress: `${boardsCompleted} / 100`,
+      progress: boardsCompleted === null ? "n/a" : `${boardsCompleted} / 100`,
     },
     boards_completed_3: {
       locked:
-        savedCriteriaMap["boards_completed_3"]?.locked !== false ||
-        boardsCompleted < 200,
+        (boardsCompleted === null || boardsCompleted < 200) &&
+        savedCriteriaMap["boards_completed_3"]?.locked !== false,
       message: "Play 200 boards to unlock this color scheme",
-      progress: `${boardsCompleted} / 200`,
+      progress: boardsCompleted === null ? "n/a" : `${boardsCompleted} / 200`,
     },
     botd_completed_1: {
       locked:
-        savedCriteriaMap["botd_completed_1"]?.locked !== false ||
-        boardsOfTheDayCompleted < 5,
+        (boardsOfTheDayCompleted === null || boardsOfTheDayCompleted < 5) &&
+        savedCriteriaMap["botd_completed_1"]?.locked !== false,
       message: "Complete 5 boards of the day to unlock this color scheme",
-      progress: `${boardsOfTheDayCompleted} / 5`,
+      progress:
+        boardsOfTheDayCompleted === null
+          ? "n/a"
+          : `${boardsOfTheDayCompleted} / 5`,
     },
     botd_completed_2: {
       locked:
-        savedCriteriaMap["botd_completed_2"]?.locked !== false ||
-        boardsOfTheDayCompleted < 20,
+        (boardsOfTheDayCompleted === null || boardsOfTheDayCompleted < 20) &&
+        savedCriteriaMap["botd_completed_2"]?.locked !== false,
       message: "Complete 20 boards of the day to unlock this color scheme",
-      progress: `${boardsOfTheDayCompleted} / 20`,
+      progress:
+        boardsOfTheDayCompleted === null
+          ? "n/a"
+          : `${boardsOfTheDayCompleted} / 20`,
     },
     botd_completed_3: {
       locked:
-        savedCriteriaMap["botd_completed_3"]?.locked !== false ||
-        boardsOfTheDayCompleted < 60,
+        (boardsOfTheDayCompleted === null || boardsOfTheDayCompleted < 60) &&
+        savedCriteriaMap["botd_completed_3"]?.locked !== false,
       message: "Complete 60 boards of the day to unlock this color scheme",
-      progress: `${boardsOfTheDayCompleted} / 60`,
+      progress:
+        boardsOfTheDayCompleted === null
+          ? "n/a"
+          : `${boardsOfTheDayCompleted} / 60`,
     },
     total_games_1: {
       locked:
-        savedCriteriaMap["total_games_1"]?.locked !== false || totalGames < 10,
+        (totalGames === null || totalGames < 10) &&
+        savedCriteriaMap["total_games_1"]?.locked !== false,
       message: "Play 10 player vs player matches to unlock this color scheme",
-      progress: `${totalGames} / 10`,
+      progress: totalGames === null ? "n/a" : `${totalGames} / 10`,
     },
     total_games_2: {
       locked:
-        savedCriteriaMap["total_games_2"]?.locked !== false || totalGames < 25,
+        (totalGames === null || totalGames < 25) &&
+        savedCriteriaMap["total_games_2"]?.locked !== false,
       message: "Play 25 player vs player matches to unlock this color scheme",
-      progress: `${totalGames} / 25`,
+      progress: totalGames === null ? "n/a" : `${totalGames} / 25`,
     },
     total_games_3: {
       locked:
-        savedCriteriaMap["total_games_3"]?.locked !== false || totalGames < 50,
+        (totalGames === null || totalGames < 50) &&
+        savedCriteriaMap["total_games_3"]?.locked !== false,
       message: "Play 50 player vs player matches to unlock this color scheme",
-      progress: `${totalGames} / 50`,
+      progress: totalGames === null ? "n/a" : `${totalGames} / 50`,
     },
     wins_1: {
-      locked: savedCriteriaMap["wins_1"]?.locked !== false || wins < 5,
+      locked:
+        (wins === null || wins < 5) &&
+        savedCriteriaMap["wins_1"]?.locked !== false,
       message: "Win 5 player vs player matches to unlock this color scheme",
-      progress: `${wins} / 5`,
+      progress: wins === null ? "n/a" : `${wins} / 5`,
     },
     wins_2: {
-      locked: savedCriteriaMap["wins_2"]?.locked !== false || wins < 15,
+      locked:
+        (wins === null || wins < 15) &&
+        savedCriteriaMap["wins_2"]?.locked !== false,
       message: "Win 15 player vs player matches to unlock this color scheme",
-      progress: `${wins} / 15`,
+      progress: wins === null ? "n/a" : `${wins} / 15`,
     },
     wins_3: {
-      locked: savedCriteriaMap["wins_3"]?.locked !== false || wins < 30,
+      locked:
+        (wins === null || wins < 30) &&
+        savedCriteriaMap["wins_3"]?.locked !== false,
       message: "Win 30 player vs player matches to unlock this color scheme",
-      progress: `${wins} / 30`,
+      progress: wins === null ? "n/a" : `${wins} / 30`,
     },
     winstreak_1: {
       locked:
-        savedCriteriaMap["winstreak_1"]?.locked !== false || bestWinStreak < 3,
+        (bestWinStreak === null || bestWinStreak < 3) &&
+        savedCriteriaMap["winstreak_1"]?.locked !== false,
       message: "Win 3 matches in a row in player vs player",
-      progress: `current best: ${bestWinStreak}`,
+      progress:
+        bestWinStreak === null ? "n/a" : `current best: ${bestWinStreak}`,
     },
     winstreak_2: {
       locked:
-        savedCriteriaMap["winstreak_2"]?.locked !== false || bestWinStreak < 6,
+        (bestWinStreak === null || bestWinStreak < 6) &&
+        savedCriteriaMap["winstreak_2"]?.locked !== false,
       message: "Win 6 matches in a row in player vs player",
-      progress: `current best: ${bestWinStreak}`,
+      progress:
+        bestWinStreak === null ? "n/a" : `current best: ${bestWinStreak}`,
     },
     winstreak_3: {
       locked:
-        savedCriteriaMap["winstreak_3"]?.locked !== false || bestWinStreak < 9,
+        (bestWinStreak === null || bestWinStreak < 9) &&
+        savedCriteriaMap["winstreak_3"]?.locked !== false,
       message: "Win 9 matches in a row in player vs player",
-      progress: `current best: ${bestWinStreak}`,
+      progress:
+        bestWinStreak === null ? "n/a" : `current best: ${bestWinStreak}`,
     },
   };
+
+  // const falsifiedCriteriaMap = Object.fromEntries(
+  //   Object.entries(criteriaMap).map(([key, value]) => {
+  //     return [key, { ...value, locked: true }];
+  //   })
+  // );
+
+  // return falsifiedCriteriaMap;
+  await saveCriteriaMap(criteriaMap);
+
   return criteriaMap;
 };

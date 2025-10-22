@@ -79,6 +79,11 @@ const Register = () => {
         currentWinStreak: 0,
         bestWinStreak: 0,
         boardsCompleted: 0,
+        boardsOfTheDayCompleted: 0,
+        bestSmallScore: 0,
+        bestMediumScore: 0,
+        bestLargeScore: 0,
+        bestXLargeScore: 0,
         createdAt: serverTimestamp(),
       });
       //   console.log("new user created with name " + newUser.username);

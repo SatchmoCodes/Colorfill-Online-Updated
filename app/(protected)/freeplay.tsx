@@ -1,4 +1,5 @@
 import BoardSizeModal from "@/components/BoardSizeModal";
+import ColorPaletteUnlockModal from "@/components/ColorPaletteUnlockModal";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import BoardCompleteModal from "@/components/ui/BoardCompleteModal";
@@ -8,17 +9,25 @@ import {
   loadColorPaletteOptions,
   loadIsMosaicMode,
   saveColorPaletteOptions,
-  saveCriteriaMap,
 } from "@/helper/asyncStorageHelper";
-import { calculateSquareSize } from "@/helper/calculateSquareSize";
 import { getUser } from "@/helper/commonQueries";
 import { getColorPaletteOptions } from "@/helper/getColorPaletteOptions";
 import { squareGenerator } from "@/helper/squareGenerator";
-import { Unlockables, updateCriteriaMap } from "@/helper/updateCriteriaMap";
+import { updateCriteriaMap } from "@/helper/updateCriteriaMap";
 import { useUser } from "@/hooks/useFirebaseUser";
 import { useFocusEffect } from "@react-navigation/native";
 import { useLocalSearchParams } from "expo-router";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import {
+  addDoc,
+  collection,
+  getDocs,
+  increment,
+  orderBy,
+  query,
+  serverTimestamp,
+  updateDoc,
+  where,
+} from "firebase/firestore";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -40,7 +49,6 @@ export interface Square {
   captured: boolean;
   defaultColor: ColorKey;
   landLocked: boolean;
-  size: number;
   x: number;
   y: number;
   depth: number;
@@ -53,7 +61,6 @@ interface GameBoardProps {
   boardState: Square[][];
   selectedColorPalette: PaletteObj;
   boardSize: BoardSize;
-  calculateSquareSize: (x: number) => number;
   boardVersion: number;
   isMosaic: boolean;
 }
@@ -84,27 +91,36 @@ const boardConfig = {
   xlarge: 400,
 };
 
+const scoreFieldMap = {
+  small: "bestSmallScore",
+  medium: "bestMediumScore",
+  large: "bestLargeScore",
+  xlarge: "bestXLargeScore",
+} as const;
+
 export default function Freeplay() {
   const user = useUser();
-  const { boardId, boardData: colorData } = useLocalSearchParams();
+  const { boardId, boardData: colorData, bestScore } = useLocalSearchParams();
 
-  const [boardSize, setBoardSize] = useState<BoardSize>("small");
+  const [boardSize, setBoardSize] = useState<BoardSize>(() => {
+    if (boardId && colorData) {
+      const size = Object.keys(boardConfig).find((key) => {
+        const colorDataLength = [...colorData].filter((x) => x !== ",").length;
+        return boardConfig[key as BoardSize] === colorDataLength; // must return boolean
+      }) as BoardSize | undefined;
+      return size ?? "small";
+    }
+    return "small";
+  });
   const [boardState, setBoardState] = useState(() => {
     let boardData = null;
     if (boardId && colorData) {
       const colorDataArr = [...colorData]
         .filter((x) => x !== ",")
         .map((x) => parseInt(x));
-      boardData = squareGenerator(
-        colorDataArr.length,
-        calculateSquareSize(boardConfig[boardSize]),
-        colorDataArr
-      );
+      boardData = squareGenerator(colorDataArr.length, colorDataArr);
     } else {
-      boardData = squareGenerator(
-        64,
-        calculateSquareSize(boardConfig[boardSize])
-      );
+      boardData = squareGenerator(64);
     }
     checkAdjacentSquares(
       boardData[0][0],
@@ -118,17 +134,24 @@ export default function Freeplay() {
   const [score, setScore] = useState(0);
   const [showBoardSizeModal, setShowBoardSizeModal] = useState(false);
   const [showBoardCompleteModal, setShowBoardCompleteModal] = useState(false);
-  const [colorPaletteOptions, setColorPaletteOptions] = useState<
-    PaletteObj[] | []
-  >([]);
   const [selectedColorPalette, setSelectedColorPalette] =
     useState<PaletteObj | null>(null);
+  const [unlockedColorPalettes, setUnlockedColorPalettes] = useState<
+    PaletteObj[] | []
+  >([]);
   const [boardVersion, setBoardVersion] = useState(1);
   const [isMosaic, setIsMosaic] = useState(false);
+  const [hasGeneratedNewBoard, setHasGeneratedNewBoard] = useState(false);
+  const [currentBestScore, setCurrentBestScore] = useState(
+    parseInt(!Array.isArray(bestScore) ? bestScore : "0")
+  );
+  const [loadingSetScore, setLoadingSetScore] = useState(false);
+  const [hasCreatedScore, setHasCreatedScore] = useState(false); //state variable for board loaded from leaderboard in case user resets board before actually solving
 
   useFocusEffect(
     useCallback(() => {
       const loadPalette = async () => {
+        // await AsyncStorage.clear();
         try {
           const savedIndex = (await loadColorIndex()) ?? 0;
           let colorOptions = await loadColorPaletteOptions();
@@ -136,7 +159,6 @@ export default function Freeplay() {
             colorOptions = await getColorPaletteOptions({});
           }
           setSelectedColorPalette(colorOptions[savedIndex] ?? colorOptions[0]);
-          setColorPaletteOptions(colorOptions);
         } catch (error) {
           console.log("error setting initial settings", error);
         }
@@ -250,16 +272,19 @@ export default function Freeplay() {
       resetBoard[0][0].color,
       new Set()
     );
+    if (!hasGeneratedNewBoard && hasCreatedScore && boardId) {
+      setCurrentBestScore(score < currentBestScore ? score : currentBestScore);
+    }
 
     setBoardState(resetBoard);
     setActiveColor(resetBoard[0][0].color);
     setBoardVersion((prev) => prev + 1);
+    setUnlockedColorPalettes([]);
     setScore(0);
   };
 
   const newBoardProcess = (size: BoardSize) => {
-    const squareSize = calculateSquareSize(boardConfig[size]);
-    const boardData = squareGenerator(boardConfig[size], squareSize);
+    const boardData = squareGenerator(boardConfig[size]);
     checkAdjacentSquares(
       boardData[0][0],
       boardData,
@@ -271,15 +296,42 @@ export default function Freeplay() {
     setActiveColor(boardData[0][0].color);
     setShowBoardSizeModal(false);
     setBoardVersion((prev) => prev + 1);
+    setUnlockedColorPalettes([]);
+    setHasGeneratedNewBoard(true);
   };
 
   async function handleBoardComplete(updatedScore: number) {
     console.log("no remaining squares!");
+    setLoadingSetScore(true);
+    setHasCreatedScore(true);
     setShowBoardCompleteModal(true);
     const boardData = boardState.flatMap((row) =>
       row.map((x) => x.defaultColor)
     );
-    // const userDoc = await getUser(user.uid)
+    let currentBoardBestScore = null;
+    if (!hasGeneratedNewBoard && boardId) {
+      const currentBestScoreDocs = await getDocs(
+        query(
+          collection(db, "scores"),
+          where("boardId", "==", boardId),
+          where("highScore", "==", true),
+          orderBy("score", "asc")
+        )
+      );
+      if (!currentBestScoreDocs.empty) {
+        currentBoardBestScore = currentBestScoreDocs.docs[0].data().score;
+        setCurrentBestScore(currentBoardBestScore);
+        if (updatedScore < currentBoardBestScore) {
+          await Promise.all(
+            currentBestScoreDocs.docs.map((doc) => {
+              return updateDoc(doc.ref, {
+                highScore: false,
+              });
+            })
+          );
+        }
+      }
+    }
     const [userDoc] = await Promise.all([
       getUser(user.uid),
       addDoc(collection(db, "scores"), {
@@ -290,61 +342,78 @@ export default function Freeplay() {
         createdBy: user?.displayName,
         uid: user?.uid,
         gamemode: "freeplay",
-        highScore: true,
+        highScore: !currentBoardBestScore
+          ? true
+          : currentBoardBestScore && updatedScore < currentBoardBestScore,
         createdAt: serverTimestamp(),
       }),
     ]);
-    await addDoc(collection(db, "scores"), {
-      boardId: uuid.v4(),
-      score: updatedScore,
-      size: boardSize,
-      boardData: boardData,
-      createdBy: user?.displayName,
-      uid: user?.uid,
-      gamemode: "freeplay",
-      highScore: true,
-      createdAt: serverTimestamp(),
-    });
 
-    let criteriaMap: Unlockables | null = null;
+    if (userDoc) {
+      const scoreField = scoreFieldMap[boardSize];
+      const currentBest = userDoc.data[scoreField];
+      const isBetterScore = currentBest === null || updatedScore < currentBest;
 
-    switch (boardSize) {
-      case "small":
-        criteriaMap = await updateCriteriaMap({
-          userDoc,
-          bestSmallScore: updatedScore,
-        });
-        break;
-      case "medium":
-        criteriaMap = await updateCriteriaMap({
-          userDoc,
-          bestMediumScore: updatedScore,
-        });
-        break;
-      case "large":
-        criteriaMap = await updateCriteriaMap({
-          userDoc,
-          bestLargeScore: updatedScore,
-        });
-        break;
-      case "xlarge":
-        criteriaMap = await updateCriteriaMap({
-          userDoc,
-          bestXLargeScore: updatedScore,
-        });
-        break;
-    }
-    if (criteriaMap) {
-      await saveCriteriaMap(criteriaMap);
-      const updatedColorPaletteOptions = await getColorPaletteOptions(
-        criteriaMap
+      const updatedScoreMap = Object.fromEntries(
+        Object.entries(scoreFieldMap).map(([key, value]) => {
+          if (boardSize === key && isBetterScore) {
+            return [value, updatedScore];
+          }
+          return [value, userDoc.data[value] ?? null]; // always default to null
+        })
       );
+      console.log("what is this", updatedScoreMap);
+      const prevCriteriaMap = await updateCriteriaMap({
+        boardsCompleted: userDoc.data.boardsCompleted,
+        bestSmallScore: userDoc.data.bestSmallScore,
+        bestMediumScore: userDoc.data.bestMediumScore,
+        bestLargeScore: userDoc.data.bestLargeScore,
+        bestXLargeScore: userDoc.data.bestXLargeScore,
+      });
+
+      await updateDoc(userDoc.ref, {
+        boardsCompleted: increment(1),
+        ...(isBetterScore ? { [scoreField]: updatedScore } : {}),
+      });
+
+      const newCriteriaMap = await updateCriteriaMap({
+        boardsCompleted: (userDoc.data.boardsCompleted ?? 0) + 1,
+        boardsOfTheDayCompleted: userDoc.data.boardsOfTheDayCompleted,
+        totalGames: userDoc.data.totalGames,
+        wins: userDoc.data.wins,
+        bestWinStreak: userDoc.data.bestWinStreak,
+        ...updatedScoreMap,
+      });
+      const updatedColorPaletteOptions = await getColorPaletteOptions(
+        newCriteriaMap
+      );
+      const newlyUnlockedColorPalettes = updatedColorPaletteOptions.filter(
+        (item) => {
+          if ("key" in item) {
+            const prevCriteriaMapItemLocked =
+              prevCriteriaMap[item.key]?.locked ?? true;
+            const newCriteriaMapItemLocked =
+              newCriteriaMap[item.key]?.locked ?? true;
+            return prevCriteriaMapItemLocked !== newCriteriaMapItemLocked;
+          }
+          return false;
+        }
+      );
+
+      if (newlyUnlockedColorPalettes.length > 0) {
+        setUnlockedColorPalettes(newlyUnlockedColorPalettes);
+      }
+      console.log("unlocked", newlyUnlockedColorPalettes);
       await saveColorPaletteOptions(updatedColorPaletteOptions);
+      setLoadingSetScore(false);
     }
   }
+
   return (
     <ThemedView style={styles.container}>
-      <ThemedText style={styles.score}>{score}</ThemedText>
+      <ThemedText style={styles.score}>
+        {score} {bestScore && !hasGeneratedNewBoard && `/ ${currentBestScore}`}
+      </ThemedText>
       {!selectedColorPalette ? (
         <ActivityIndicator />
       ) : (
@@ -353,7 +422,6 @@ export default function Freeplay() {
             boardState={boardState}
             selectedColorPalette={selectedColorPalette}
             boardSize={boardSize}
-            calculateSquareSize={calculateSquareSize}
             boardVersion={boardVersion}
             isMosaic={isMosaic}
           />
@@ -386,6 +454,16 @@ export default function Freeplay() {
           resetBoardProcess={resetBoardProcess}
           boardSize={boardSize}
           score={score}
+          currentBestScore={currentBestScore}
+          hasGeneratedNewBoard={hasGeneratedNewBoard}
+          loadingSetScore={loadingSetScore}
+        />
+      )}
+      {unlockedColorPalettes.length > 0 && (
+        <ColorPaletteUnlockModal
+          unlockedColorPalettes={unlockedColorPalettes}
+          isMosaic={isMosaic}
+          setUnlockedColorPalettes={setUnlockedColorPalettes}
         />
       )}
     </ThemedView>

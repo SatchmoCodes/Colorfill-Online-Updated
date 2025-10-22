@@ -1,10 +1,13 @@
 import CustomHeader from "@/components/CustomHeader";
 import { UserContext, useRequiredUser } from "@/hooks/useFirebaseUser";
+import { useUserPresence } from "@/hooks/useUserPresence";
 import { Stack, router } from "expo-router";
 import { ActivityIndicator, View } from "react-native";
 
 export default function ProtectedLayout() {
   const { user, loading } = useRequiredUser();
+
+  useUserPresence(user);
 
   if (loading) {
     return (
@@ -27,6 +30,7 @@ export default function ProtectedLayout() {
             <CustomHeader
               title={options.title ?? route.name}
               onIconPress={() => router.push("/settings")}
+              isGearIconHidden={route.name === "settings"}
             />
           ),
         }}
