@@ -39,6 +39,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "495c2cc3-7384-4eaa-a937-648fad614abb"
+      }
+    },
+    "owner": "satchmocodes"
   }
 }

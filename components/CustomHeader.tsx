@@ -1,5 +1,5 @@
 // components/CustomHeader.tsx
-import { useNavigation } from "expo-router";
+import { router, useNavigation } from "expo-router";
 import React from "react";
 import { StyleSheet, TouchableOpacity, useColorScheme } from "react-native";
 import { ThemedText } from "./ThemedText";
@@ -8,15 +8,15 @@ import { IconSymbol } from "./ui/IconSymbol";
 
 interface CustomHeaderProps {
   title: string;
-  onIconPress: () => void;
   isGearIconHidden: boolean;
+  isPlayerIconHidden: boolean;
   // Add other props you might need, like iconName, iconColor, etc.
 }
 
 export default function CustomHeader({
   title,
-  onIconPress,
   isGearIconHidden,
+  isPlayerIconHidden,
 }: CustomHeaderProps) {
   const navigation = useNavigation();
   const theme = useColorScheme() ?? "light";
@@ -36,9 +36,21 @@ export default function CustomHeader({
       {/* Title */}
       <ThemedText style={[styles.headerTitle]}>{title}</ThemedText>
 
+      {!isPlayerIconHidden && (
+        <TouchableOpacity
+          style={styles.iconContainer}
+          onPress={() => router.push("/(protected)/playerlist")}
+        >
+          <IconSymbol name="person" size={24} color="white" />
+        </TouchableOpacity>
+      )}
+
       {/* Settings Icon */}
       {!isGearIconHidden && (
-        <TouchableOpacity style={styles.iconContainer} onPress={onIconPress}>
+        <TouchableOpacity
+          style={styles.iconContainer}
+          onPress={() => router.push("/(protected)/settings")}
+        >
           <IconSymbol name="gear" size={24} color="white" />
         </TouchableOpacity>
       )}

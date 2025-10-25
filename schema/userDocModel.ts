@@ -18,5 +18,6 @@ export interface UserDoc {
   bestXLargeScore: number;
   profileBackground: string;
   profileLetter: string;
+  expoPushToken: string | null;
   createdAt: Timestamp;
 }

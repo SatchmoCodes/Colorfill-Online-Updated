@@ -21,11 +21,9 @@ export const useOnlinePlayerList = () => {
     const unsubscribe = onValue(usersRef, (snapshot) => {
       if (!snapshot.exists()) return [];
       const users = snapshot.val();
-      console.log("users here", users);
       const onlineCount = Object.entries(users as PlayerList)
         .filter(([key, u]) => u.online)
         .map(([key, u]) => ({ ...u, id: key }));
-      console.log("bruh wtf", onlineCount);
       setPlayerList(onlineCount);
     });
 

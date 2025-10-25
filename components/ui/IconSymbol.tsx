@@ -26,6 +26,7 @@ const MAPPING = {
   gear: "settings",
   backward: "arrow-back",
   pencil: "edit",
+  person: "person",
 } as IconMapping;
 
 /**

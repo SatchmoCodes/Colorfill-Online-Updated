@@ -6,13 +6,14 @@ const sizeMap = {
   small: 30,
   medium: 40,
   large: 50,
+  xlarge: 60,
 };
 
 interface AvatarProps {
   profileBackground: string;
   profileLetter: string;
   username: string;
-  size: "small" | "medium" | "large";
+  size: "small" | "medium" | "large" | "xlarge";
   handleAvatarClick?: () => void;
 }
 
