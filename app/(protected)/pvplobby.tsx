@@ -1,9 +1,11 @@
+import CustomHeader from "@/components/CustomHeader";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { db, rtdb } from "@/firebaseConfig";
 import { useUser } from "@/hooks/useFirebaseUser";
 import {
   router,
+  Stack,
   useFocusEffect,
   useLocalSearchParams,
   useNavigation,
@@ -26,7 +28,7 @@ interface PlayerRefObject {
 
 export default function PvpLobby() {
   const user = useUser();
-  const { gameId } = useLocalSearchParams();
+  const { gameId } = useLocalSearchParams<{ gameId: string }>();
   const navigation = useNavigation();
 
   const [ownerName, setOwnerName] = useState("");
@@ -153,22 +155,37 @@ export default function PvpLobby() {
     }
   }
 
+  console.log("game id here", docRef, user.displayName === ownerName);
+
   return (
-    <ThemedView style={styles.container}>
-      <ThemedText>pvplobby</ThemedText>
-      <ThemedView style={{ flexDirection: "row", gap: 20 }}>
-        <ThemedText>{ownerName}</ThemedText>
-        <ThemedText>Vs</ThemedText>
-        <ThemedText>{opponentName}</ThemedText>
+    <>
+      <Stack.Screen
+        options={{
+          header: () => (
+            <CustomHeader
+              title="PVP Lobby"
+              routeName="pvplobby"
+              docRef={user.displayName === ownerName ? docRef : null}
+            />
+          ),
+        }}
+      />
+      <ThemedView style={styles.container}>
+        <ThemedText>pvplobby</ThemedText>
+        <ThemedView style={{ flexDirection: "row", gap: 20 }}>
+          <ThemedText>{ownerName}</ThemedText>
+          <ThemedText>Vs</ThemedText>
+          <ThemedText>{opponentName}</ThemedText>
+        </ThemedView>
+        <ThemedView>
+          {user?.displayName === ownerName && opponentName !== null && (
+            <TouchableOpacity onPress={() => handleGameStart()}>
+              <ThemedText>Start Game</ThemedText>
+            </TouchableOpacity>
+          )}
+        </ThemedView>
       </ThemedView>
-      <ThemedView>
-        {user?.displayName === ownerName && opponentName !== null && (
-          <TouchableOpacity onPress={() => handleGameStart()}>
-            <ThemedText>Start Game</ThemedText>
-          </TouchableOpacity>
-        )}
-      </ThemedView>
-    </ThemedView>
+    </>
   );
 }
 

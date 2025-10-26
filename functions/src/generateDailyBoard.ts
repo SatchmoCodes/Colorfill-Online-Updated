@@ -1,6 +1,5 @@
 import * as crypto from "crypto";
 import { setGlobalOptions } from "firebase-functions";
-const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 admin.initializeApp();
 const { onSchedule } = require("firebase-functions/v2/scheduler");

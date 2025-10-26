@@ -1,5 +1,6 @@
 // components/CustomHeader.tsx
 import { router, useNavigation } from "expo-router";
+import { DocumentReference } from "firebase/firestore";
 import React from "react";
 import { StyleSheet, TouchableOpacity, useColorScheme } from "react-native";
 import { ThemedText } from "./ThemedText";
@@ -8,18 +9,20 @@ import { IconSymbol } from "./ui/IconSymbol";
 
 interface CustomHeaderProps {
   title: string;
-  isGearIconHidden: boolean;
-  isPlayerIconHidden: boolean;
+  routeName: string;
+  docRef?: DocumentReference | null;
   // Add other props you might need, like iconName, iconColor, etc.
 }
 
 export default function CustomHeader({
   title,
-  isGearIconHidden,
-  isPlayerIconHidden,
+  routeName,
+  docRef = null,
 }: CustomHeaderProps) {
   const navigation = useNavigation();
   const theme = useColorScheme() ?? "light";
+  const isGearIconHidden = ["settings", "playerlist"].includes(routeName);
+  const isPlayerIconHidden = ["settings", "playerlist"].includes(routeName);
 
   return (
     <ThemedView style={styles.headerContainer}>
@@ -39,7 +42,12 @@ export default function CustomHeader({
       {!isPlayerIconHidden && (
         <TouchableOpacity
           style={styles.iconContainer}
-          onPress={() => router.push("/(protected)/playerlist")}
+          onPress={() =>
+            router.push({
+              pathname: "/(protected)/playerlist",
+              params: { docRef: JSON.stringify(docRef) },
+            })
+          }
         >
           <IconSymbol name="person" size={24} color="white" />
         </TouchableOpacity>

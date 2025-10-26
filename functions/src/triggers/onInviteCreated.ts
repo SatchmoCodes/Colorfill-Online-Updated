@@ -12,12 +12,20 @@ export const onInviteCreated = onDocumentCreated(
     const invite = event.data?.data();
     if (!invite) return;
 
-    const recipientDoc = await admin
+    const users = await admin
       .firestore()
       .collection("users")
-      .doc(invite.recipientUid)
+      .where("uid", "==", invite.recipientUid)
+      .limit(1)
       .get();
+
+    const recipientDoc = users.docs[0];
+
     const token = recipientDoc.data()?.expoPushToken;
+
+    console.log("Invite recipient UID:", invite.recipientUid);
+    console.log("Recipient doc exists?", recipientDoc.exists);
+    console.log("Recipient data:", recipientDoc.data());
 
     if (!token) {
       console.log("No Expo token for recipient:", invite.recipientUid);
@@ -27,7 +35,8 @@ export const onInviteCreated = onDocumentCreated(
     await sendPushNotification(
       token,
       "New Game Invite!",
-      `${invite.senderName} invited you to play!`
+      `${invite.senderName} invited you to play!`,
+      invite.gameId
     );
   }
 );

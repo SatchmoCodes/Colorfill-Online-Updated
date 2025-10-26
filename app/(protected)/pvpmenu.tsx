@@ -2,26 +2,22 @@ import Avatar from "@/components/Avatar";
 import OnlinePlayerList from "@/components/OnlinePlayerList";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
-import { auth, db, rtdb } from "@/firebaseConfig";
-import {
-  loadProfileBackgroundColor,
-  loadProfileLetterColor,
-} from "@/helper/asyncStorageHelper";
+import { db } from "@/firebaseConfig";
+import { handleJoinGame } from "@/helper/handleJoinGame";
+import { useUser } from "@/hooks/useFirebaseUser";
 import { useOnlinePlayerList } from "@/hooks/useOnlinePlayerList";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect } from "expo-router";
 import { User } from "firebase/auth";
-import { onDisconnect, ref, set } from "firebase/database";
 import {
   collection,
   DocumentReference,
   onSnapshot,
   orderBy,
   query,
-  runTransaction,
   where,
 } from "firebase/firestore";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import { Pressable, StyleSheet, TouchableOpacity, View } from "react-native";
 import {
   LobbyType,
@@ -61,8 +57,8 @@ interface PVPGame {
 }
 
 const PvpMenu = () => {
+  const user = useUser();
   const [gameList, setGameList] = useState<PVPGame[]>([]);
-  const [user, setUser] = useState<User | null>();
 
   const playerList = useOnlinePlayerList();
 
@@ -92,61 +88,6 @@ const PvpMenu = () => {
     }, [])
   );
 
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (user) {
-        setUser(user);
-      }
-    });
-    return unsubscribe;
-  }, [auth]);
-
-  const handleJoinGame = async (docRef: DocumentReference) => {
-    try {
-      await runTransaction(db, async (transaction) => {
-        const docSnap = await transaction.get(docRef);
-
-        if (!docSnap.exists()) throw "Game does not exist";
-
-        const data = docSnap.data();
-
-        if (data.opponentName) throw "Game already has an opponent";
-
-        transaction.update(docRef, {
-          opponentName: user?.displayName,
-          opponentUid: user?.uid,
-          opponentProfileBackground:
-            (await loadProfileBackgroundColor()) ?? "#313131ff",
-          opponentProfileLetter: (await loadProfileLetterColor()) ?? "#ffffff",
-        });
-      });
-
-      // ✅ Transaction succeeded — user officially joined the game.
-      // Now handle presence tracking in Realtime Database.
-      const gamePresenceRef = ref(
-        rtdb,
-        `/gamePresence/${docRef.id}/${user?.uid}`
-      );
-
-      await set(gamePresenceRef, {
-        displayName: user?.displayName,
-        joinedAt: Date.now(),
-        inGame: true,
-      });
-
-      // Automatically remove this player if they disconnect
-      onDisconnect(gamePresenceRef).remove();
-
-      // Move to the game lobby
-      router.push({
-        pathname: "/pvplobby",
-        params: { gameId: docRef.id },
-      });
-    } catch (e) {
-      alert(typeof e === "string" ? e : "Failed to join game.");
-    }
-  };
-
   return (
     <ThemedView style={styles.container}>
       <ThemedView style={{ height: "90%" }}>
@@ -162,6 +103,7 @@ const PvpMenu = () => {
           return (
             <GameCard
               game={game}
+              user={user}
               handleJoinGame={handleJoinGame}
               key={game.id}
             />
@@ -190,10 +132,12 @@ const PvpMenu = () => {
 
 const GameCard = ({
   game,
+  user,
   handleJoinGame,
 }: {
   game: PVPGame;
-  handleJoinGame: (docRef: DocumentReference) => void;
+  user: User;
+  handleJoinGame: (docRef: DocumentReference, user: User) => void;
 }) => {
   const [pressed, setPressed] = useState(false);
 
@@ -201,7 +145,10 @@ const GameCard = ({
     <Pressable
       onPressIn={() => setPressed(true)}
       onPressOut={() => setPressed(false)}
-      onPress={() => handleJoinGame(game.docRef)}
+      onPress={() => {
+        console.log("game ref", game.docRef);
+        handleJoinGame(game.docRef, user);
+      }}
       style={{ transform: [{ scale: pressed ? 0.97 : 1 }] }}
     >
       <LinearGradient

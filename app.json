@@ -11,6 +11,10 @@
     "ios": {
       "supportsTablet": true
     },
+    "notification": {
+      "icon": "./assets/icon.png",
+      "color": "#ffffff"
+    },
     "android": {
       "googleServicesFile": "google-services.json",
       "package": "com.colorfillonlineupdated",

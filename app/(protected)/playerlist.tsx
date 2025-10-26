@@ -5,8 +5,8 @@ import { db } from "@/firebaseConfig";
 import { useUser } from "@/hooks/useFirebaseUser";
 import { PlayerList, useOnlinePlayerList } from "@/hooks/useOnlinePlayerList";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
-import { addDoc, collection } from "firebase/firestore";
+import { router, useLocalSearchParams } from "expo-router";
+import { addDoc, collection, DocumentReference } from "firebase/firestore";
 import React, { useState } from "react";
 import {
   Platform,
@@ -16,7 +16,9 @@ import {
 } from "react-native";
 
 export default function Playerlist() {
+  const { docRef } = useLocalSearchParams<{ docRef: string }>();
   const playerList = useOnlinePlayerList();
+  const parsedDocRef = JSON.parse(docRef) as DocumentReference;
 
   // 👇 Track which player's popover is open
   const [openPlayerId, setOpenPlayerId] = useState<string | null>(null);
@@ -32,6 +34,7 @@ export default function Playerlist() {
           key={player.id}
           player={player}
           isOpen={openPlayerId === player.id}
+          docRef={parsedDocRef}
           onToggle={() =>
             setOpenPlayerId(openPlayerId === player.id ? null : player.id)
           }
@@ -44,10 +47,12 @@ export default function Playerlist() {
 const PlayerCard = ({
   player,
   isOpen,
+  docRef,
   onToggle,
 }: {
   player: PlayerList;
   isOpen: boolean;
+  docRef: DocumentReference | null;
   onToggle: () => void;
 }) => {
   const [pressed, setPressed] = useState(false);
@@ -55,8 +60,9 @@ const PlayerCard = ({
 
   const handleInvite = async () => {
     await addDoc(collection(db, "invites"), {
-      recipientUid: player.id,
+      recipientUid: "Lo3oQykmS1YYmdKzxwWfyeeDu4w1",
       senderName: user.displayName,
+      gameId: docRef,
     });
   };
 
@@ -75,10 +81,12 @@ const PlayerCard = ({
       {isOpen && (
         <ThemedView style={styles.optionsPopover}>
           <TouchableOpacity
-            onPress={() => handleInvite()}
+            onPress={() => docRef && handleInvite()}
             style={styles.popoverButton}
           >
-            <ThemedText style={{ color: "gray" }}>Invite to Game</ThemedText>
+            <ThemedText style={{ color: docRef ? "white" : "gray" }}>
+              Invite to Game
+            </ThemedText>
           </TouchableOpacity>
           <TouchableOpacity style={styles.popoverButton}>
             <ThemedText>Add Friend</ThemedText>

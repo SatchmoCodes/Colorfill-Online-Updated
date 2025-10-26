@@ -1,13 +1,38 @@
 import CustomHeader from "@/components/CustomHeader";
 import { UserContext, useRequiredUser } from "@/hooks/useFirebaseUser";
+import { useNotificationResponse } from "@/hooks/useNotificationResponse";
 import { useUserPresence } from "@/hooks/useUserPresence";
+import * as Notifications from "expo-notifications";
 import { Stack } from "expo-router";
+import { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: false,
+  }),
+});
 
 export default function ProtectedLayout() {
   const { user, loading } = useRequiredUser();
 
   useUserPresence(user);
+  useNotificationResponse(user);
+
+  useEffect(() => {
+    const subscription = Notifications.addNotificationReceivedListener(
+      (notification) => {
+        console.log("📩 Notification received:", notification);
+      }
+    );
+
+    return () => subscription.remove();
+  }, []);
+
+  // This controls how notifications are shown when app is running
 
   if (loading) {
     return (
@@ -29,10 +54,7 @@ export default function ProtectedLayout() {
           header: ({ route, options }) => (
             <CustomHeader
               title={options.title ?? route.name}
-              isGearIconHidden={["settings", "playerlist"].includes(route.name)}
-              isPlayerIconHidden={["settings", "playerlist"].includes(
-                route.name
-              )}
+              routeName={route.name}
             />
           ),
         }}
