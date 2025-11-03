@@ -127,7 +127,7 @@ interface PlayerRefObject {
   uid: string;
 }
 
-const fogColor = "#151718";
+const fogColor = "transparent";
 // const fogColor = "gray";
 
 export default function PvpGame() {
@@ -249,7 +249,7 @@ export default function PvpGame() {
         const turnStart = data.turnStartTime?.toMillis?.() ?? Date.now();
         const deadline = turnStart + 16000;
         setTurn(data.turn);
-        // setTurnDeadline(deadline);
+        setTurnDeadline(deadline);
         setOwnerSelectedColor(data.ownerSelectedColor);
         setOpponentSelectedColor(data.opponentSelectedColor);
         setBoardSize(data.size);
@@ -479,11 +479,12 @@ export default function PvpGame() {
     const neighbors = getAdjacentSquares(currentSquare, board);
     for (const neighbor of neighbors) {
       if (neighbor && !neighbor.captured && neighbor.color === color) {
-        neighbor.visibleTo = [...new Set([...neighbor.visibleTo, squareOwner])];
+        neighbor.visibleTo = [
+          ...new Set(["owner" as PlayerType, "opponent" as PlayerType]),
+        ];
         visited.add(key);
         neighbor.captured = true;
         neighbor.squareOwner = squareOwner;
-        neighbor.visibleTo.push("owner", "opponent");
         neighbor.depth = depth + 1;
         capturedCount += 1;
         capturedCount += checkAdjacentSquares(
@@ -742,8 +743,6 @@ export default function PvpGame() {
     const { name: leavingOpponentName } = opponentRef.current;
     const leavingOwnerName = ownerRef.current?.name;
 
-    console.log("this better not run");
-
     try {
       if (leavingUser === leavingOwnerName) {
         if (leavingOpponentName) {
@@ -773,7 +772,7 @@ export default function PvpGame() {
 
   if (currentUserType) {
     return (
-      <ThemedView style={styles.container}>
+      <View style={styles.container}>
         {!selectedColorPalette ? (
           <ActivityIndicator />
         ) : (
@@ -792,7 +791,7 @@ export default function PvpGame() {
               opponentBackground={opponentBackground}
               opponentLetter={opponentLetter}
             />
-            {/* <TimerDisplay
+            <TimerDisplay
               turnDeadline={turnDeadline}
               isGameStarted={isGameStarted}
               isGameCompleted={gameCompletedRef.current}
@@ -802,7 +801,7 @@ export default function PvpGame() {
               user={user}
               onEndOfTurn={handleEndOfTurn}
               handlePlayerLeave={handlePlayerLeave}
-            /> */}
+            />
             <FakeColorRowButtons
               selectedColorPalette={selectedColorPalette}
               activeColor={[ownerSelectedColor, opponentSelectedColor]}
@@ -862,7 +861,7 @@ export default function PvpGame() {
             )}
           </>
         )}
-      </ThemedView>
+      </View>
     );
   }
 
@@ -963,16 +962,16 @@ const Square = (props: PVPSquareViewProps) => {
           width: squareSize,
           height: squareSize,
           borderColor: "black",
-          borderWidth:
-            isMosaic &&
-            square.visibleTo.includes(currentUserType) &&
-            square.revealed
-              ? 1
-              : 0,
           transform: [{ scale }],
         },
       ]}
     >
+      <TouchableOpacity
+        style={{ zIndex: 1000, justifyContent: "center", alignItems: "center" }}
+        onPress={() => console.log("balls", square)}
+      >
+        {/* <ThemedText style={{ fontSize: 25 }}>a</ThemedText> */}
+      </TouchableOpacity>
       {/* Base = unrevealed gray */}
       <View
         style={{
@@ -987,8 +986,16 @@ const Square = (props: PVPSquareViewProps) => {
         style={{
           ...StyleSheet.absoluteFillObject,
 
-          backgroundColor: color,
-          opacity: revealAnim, // animate opacity only
+          backgroundColor: square.visibleTo.includes(currentUserType)
+            ? color
+            : fogColor,
+          opacity: square.visibleTo.includes(currentUserType) ? revealAnim : 1,
+          borderWidth:
+            isMosaic &&
+            square.visibleTo.includes(currentUserType) &&
+            square.revealed
+              ? 1
+              : 0,
         }}
       />
     </Animated.View>
@@ -1323,7 +1330,9 @@ const BeginGameModal = ({
       </View>
       <View style={{ flexDirection: "row", gap: 30 }}>
         <View>
-          <ThemedText style={{ marginBottom: 5 }}>{ownerName}</ThemedText>
+          <ThemedText style={{ marginBottom: 5, textAlign: "center" }}>
+            {ownerName}
+          </ThemedText>
           <Avatar
             profileBackground={ownerBackground}
             profileLetter={ownerLetter}
@@ -1336,7 +1345,9 @@ const BeginGameModal = ({
         </View>
 
         <View>
-          <ThemedText style={{ marginBottom: 5 }}>{opponentName}</ThemedText>
+          <ThemedText style={{ marginBottom: 5, textAlign: "center" }}>
+            {opponentName}
+          </ThemedText>
           <Avatar
             profileBackground={opponentBackground}
             profileLetter={opponentLetter}

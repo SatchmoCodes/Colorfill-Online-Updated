@@ -1,5 +1,4 @@
 import { ThemedText } from "@/components/ThemedText";
-import { ThemedView } from "@/components/ThemedView";
 import { letters, numbers } from "@/constants/LettersAndNumbers";
 import { auth, db } from "@/firebaseConfig";
 import {
@@ -11,7 +10,7 @@ import { router } from "expo-router";
 import { User } from "firebase/auth";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
-import { StyleSheet, TouchableOpacity } from "react-native";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { Dropdown } from "react-native-element-dropdown";
 import { RadioButton } from "react-native-paper";
 import uuid from "react-native-uuid";
@@ -120,14 +119,14 @@ export default function CreateGame() {
   };
 
   return (
-    <ThemedView style={styles.container}>
+    <View style={styles.container}>
       <ThemedText
         style={{ textAlign: "center", marginBottom: 20 }}
         type="title"
       >
         Create Game
       </ThemedText>
-      <ThemedView>
+      <View>
         <ThemedText style={{ textAlign: "center" }} type="subtitle">
           Board Size
         </ThemedText>
@@ -164,14 +163,14 @@ export default function CreateGame() {
           }}
           value={fogOfWar ? "on" : "off"}
         >
-          <ThemedView
+          <View
             style={{ flexDirection: "row", justifyContent: "space-between" }}
           >
             <RadioButton value="on"></RadioButton>
             <ThemedText style={{ marginTop: 5 }}>On</ThemedText>
             <RadioButton value="off"></RadioButton>
             <ThemedText style={{ marginTop: 5 }}>Off</ThemedText>
-          </ThemedView>
+          </View>
         </RadioButton.Group>
         <ThemedText style={{ textAlign: "center" }} type="subtitle">
           Lobby Type
@@ -180,20 +179,20 @@ export default function CreateGame() {
           onValueChange={(value) => setLobbyType(value as LobbyType)}
           value={lobbyType}
         >
-          <ThemedView
+          <View
             style={{ flexDirection: "row", justifyContent: "space-between" }}
           >
             <RadioButton value="public"></RadioButton>
             <ThemedText style={{ marginTop: 5 }}>Public</ThemedText>
             <RadioButton value="private"></RadioButton>
             <ThemedText style={{ marginTop: 5 }}>Private</ThemedText>
-          </ThemedView>
+          </View>
         </RadioButton.Group>
-      </ThemedView>
+      </View>
       <TouchableOpacity onPress={() => handleCreateGame()}>
         <ThemedText>Create Game</ThemedText>
       </TouchableOpacity>
-    </ThemedView>
+    </View>
   );
 }
 

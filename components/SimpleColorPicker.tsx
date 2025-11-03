@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { ScrollView, StyleSheet, TouchableOpacity } from "react-native";
 
-const colors = [
+export const colors = [
   "#880606ff",
   "#fc0b0bff",
   "#e76a04ff",
@@ -22,11 +22,13 @@ const colors = [
 ];
 
 const SimpleColorPicker = ({
+  startingColor,
   onSelectColor,
 }: {
+  startingColor: string;
   onSelectColor: React.Dispatch<React.SetStateAction<string>>;
 }) => {
-  const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [selectedColor, setSelectedColor] = useState<string>(startingColor);
 
   const handleSelectColor = (color: string) => {
     setSelectedColor(color);

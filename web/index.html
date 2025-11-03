@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,maximum-scale=1"
+    />
+    <title>Your App</title>
+    <style>
+      /* 🚫 Override React Native Web’s default off-black background */
+      html,
+      body,
+      #root,
+      #__next {
+        background-color: transparent !important;
+      }
+
+      /* Optional: make sure views don’t inject rgb(1,1,1) */
+      div[class^="css-view"],
+      div[class*=" css-view"] {
+        background-color: red !important;
+      }
+
+      * {
+        padding: 1000;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

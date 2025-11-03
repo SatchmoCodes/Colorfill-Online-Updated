@@ -1,27 +1,32 @@
-import { useColorScheme } from "@/hooks/useColorScheme";
-import {
-  DarkTheme,
-  DefaultTheme,
-  ThemeProvider,
-} from "@react-navigation/native";
-import { useFonts } from "expo-font";
+import { ThemedBackground } from "@/components/ThemedBackground";
+import { useFirebaseUser } from "@/hooks/useFirebaseUser";
 import { Stack } from "expo-router";
-import { StatusBar } from "expo-status-bar";
+import { ActivityIndicator, View } from "react-native";
 
 export default function RootLayout() {
-  const [loaded] = useFonts({
-    SpaceMono: require("@/assets/fonts/SpaceMono-Regular.ttf"),
-  });
-  const colorScheme = useColorScheme();
+  const { user, loading } = useFirebaseUser();
 
-  if (!loaded) return null;
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
 
   return (
-    <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-      <Stack screenOptions={{ headerShown: false }} />
-      {/* <Stack.Screen name="login" options={{ title: "Login" }} />
-      <Stack.Screen name="+not-found" options={{ title: "Not Found" }} /> */}
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <ThemedBackground>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+        }}
+      >
+        {user ? (
+          <Stack.Screen name="(protected)" />
+        ) : (
+          <Stack.Screen name="(auth)" />
+        )}
+      </Stack>
+    </ThemedBackground>
   );
 }

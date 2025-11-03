@@ -5,11 +5,11 @@ import { Timestamp } from "firebase/firestore";
 export interface ScoreDoc {
   boardId: string;
   boardData: ColorKey[];
-  createdBy: "string";
+  createdBy: string;
   uid: string;
   gamemode: Gamemode;
   highScore: boolean;
   score: number;
   size: BoardSize;
-  createdAt: Timestamp;
+  createdAt: Timestamp | number;
 }

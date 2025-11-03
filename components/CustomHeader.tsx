@@ -1,6 +1,5 @@
 // components/CustomHeader.tsx
 import { router, useNavigation } from "expo-router";
-import { DocumentReference } from "firebase/firestore";
 import React from "react";
 import { StyleSheet, TouchableOpacity, useColorScheme } from "react-native";
 import { ThemedText } from "./ThemedText";
@@ -10,14 +9,14 @@ import { IconSymbol } from "./ui/IconSymbol";
 interface CustomHeaderProps {
   title: string;
   routeName: string;
-  docRef?: DocumentReference | null;
+  docId?: string | null;
   // Add other props you might need, like iconName, iconColor, etc.
 }
 
 export default function CustomHeader({
   title,
   routeName,
-  docRef = null,
+  docId = null,
 }: CustomHeaderProps) {
   const navigation = useNavigation();
   const theme = useColorScheme() ?? "light";
@@ -45,7 +44,7 @@ export default function CustomHeader({
           onPress={() =>
             router.push({
               pathname: "/(protected)/playerlist",
-              params: { docRef: JSON.stringify(docRef) },
+              params: { docId },
             })
           }
         >

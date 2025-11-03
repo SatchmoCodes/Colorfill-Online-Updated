@@ -1,12 +1,15 @@
 import ColorPaletteUnlockModal from "@/components/ColorPaletteUnlockModal";
+import SquareCounter, { resetSquareCount } from "@/components/SquareCounter";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { db } from "@/firebaseConfig";
 import {
   loadColorIndex,
   loadColorPaletteOptions,
+  loadCriteriaMap,
   loadCurrentBOTD,
   loadIsMosaicMode,
+  loadShowSquareCounter,
   loadSolvedBOTDId,
   saveColorPaletteOptions,
   saveCurrentBOTD,
@@ -103,6 +106,14 @@ const boardConfig = {
   xlarge: 225,
 };
 
+const squaresRemainingMap: Record<ColorKey, number> = {
+  0: 0,
+  1: 0,
+  2: 0,
+  3: 0,
+  4: 0,
+};
+
 const boardConverter = {
   toFirestore(board: BoardDoc): DocumentData {
     return board;
@@ -120,6 +131,7 @@ const screenSize = Dimensions.get("window").width;
 export default function BoardoftheDay() {
   const user = useUser();
   const [boardSize, setBoardSize] = useState<BoardOfTheDaySize>("small");
+  const [squaresRemaining, setSquaresRemaining] = useState(squaresRemainingMap);
   const [boardState, setBoardState] = useState<Square[][]>([]);
   const [activeColor, setActiveColor] = useState(boardState[0]?.[0]?.color);
   const [score, setScore] = useState(0);
@@ -129,34 +141,31 @@ export default function BoardoftheDay() {
   const [loadingState, setLoadingState] = useState<LoadingState>("loading");
   const [boardId, setBoardId] = useState("");
   const [isMosaic, setIsMosaic] = useState(false);
+  const [showSquareCounter, setShowSquareCounter] = useState(true);
   const [unlockedColorPalettes, setUnlockedColorPalettes] = useState<
     PaletteObj[] | []
   >([]);
 
   useFocusEffect(
     useCallback(() => {
-      const loadPalette = async () => {
+      const loadInitialSettings = async () => {
         try {
           const savedIndex = (await loadColorIndex()) ?? 0;
           let colorOptions = await loadColorPaletteOptions();
           if (!colorOptions) {
             colorOptions = await getColorPaletteOptions({});
           }
+          const savedMosaicMode = (await loadIsMosaicMode()) ?? false;
+          const savedShowSquareCounter =
+            (await loadShowSquareCounter()) ?? true;
+          setIsMosaic(savedMosaicMode);
+          setShowSquareCounter(savedShowSquareCounter);
           setSelectedColorPalette(colorOptions[savedIndex] ?? colorOptions[0]);
         } catch (error) {
           console.log("error setting initial settings", error);
         }
       };
-      const loadMosaicMode = async () => {
-        try {
-          const savedMode = (await loadIsMosaicMode()) ?? false;
-          setIsMosaic(savedMode);
-        } catch (error) {
-          console.log("error loading mosaic mode ", error);
-        }
-      };
-      loadPalette();
-      loadMosaicMode();
+      loadInitialSettings();
     }, [])
   );
 
@@ -169,6 +178,7 @@ export default function BoardoftheDay() {
   const handleColorChange = (color: ColorKey) => {
     const visited = new Set<string>();
     let remainingSquares = false;
+    let capturedCount = 0;
     const currentBoardState = boardState.map((row) =>
       row.map((square) => ({ ...square }))
     );
@@ -177,7 +187,12 @@ export default function BoardoftheDay() {
         if (square.captured) {
           square.color = color;
           if (!square.landLocked) {
-            checkAdjacentSquares(square, currentBoardState, color, visited);
+            capturedCount += checkAdjacentSquares(
+              square,
+              currentBoardState,
+              color,
+              visited
+            );
           }
         }
       });
@@ -203,6 +218,17 @@ export default function BoardoftheDay() {
     setActiveColor(color);
     const updatedScore = score + 1;
     setScore(updatedScore);
+    setSquaresRemaining((prev) => {
+      return Object.fromEntries(
+        Object.entries(prev).map(([key, value]) => {
+          const colorKey = key as unknown as ColorKey;
+          if (key == (color as unknown as string)) {
+            return [colorKey, value - capturedCount];
+          }
+          return [colorKey, value];
+        })
+      ) as Record<ColorKey, number>;
+    });
     if (!remainingSquares) {
       setShowBoardCompleteModal(true);
     }
@@ -216,18 +242,27 @@ export default function BoardoftheDay() {
     depth: number = 0
   ) {
     const key = `${currentSquare.x},${currentSquare.y}`;
-    if (visited.has(key)) return;
+    if (visited.has(key)) return 0;
     visited.add(key);
 
+    let capturedCount = 0;
     const neighbors = getAdjacentSquares(currentSquare, board);
     for (const neighbor of neighbors) {
       if (neighbor && !neighbor.captured && neighbor.color === color) {
         neighbor.captured = true;
         neighbor.color = color;
         neighbor.depth = depth + 1;
-        checkAdjacentSquares(neighbor, board, color, visited, depth + 1);
+        capturedCount += 1;
+        capturedCount += checkAdjacentSquares(
+          neighbor,
+          board,
+          color,
+          visited,
+          depth + 1
+        );
       }
     }
+    return capturedCount;
   }
 
   function getAdjacentSquares(
@@ -257,13 +292,14 @@ export default function BoardoftheDay() {
     resetBoard[0][0].captured = true;
 
     // Re-capture starting square
-    checkAdjacentSquares(
+    const capturedCount = checkAdjacentSquares(
       resetBoard[0][0],
       resetBoard,
       resetBoard[0][0].color,
       new Set()
     );
 
+    resetSquareCount(resetBoard, capturedCount, setSquaresRemaining);
     setBoardState(resetBoard);
     setActiveColor(resetBoard[0][0].color);
     setScore(0);
@@ -290,9 +326,7 @@ export default function BoardoftheDay() {
         }),
       ]);
       if (userDoc) {
-        const prevCriteriaMap = await updateCriteriaMap({
-          boardsOfTheDayCompleted: userDoc.data.boardsOfTheDayCompleted,
-        });
+        const prevCriteriaMap = (await loadCriteriaMap()) ?? {};
 
         const updatedBOTDCompleted = userDoc?.data.boardsOfTheDayCompleted
           ? userDoc?.data.boardsOfTheDayCompleted + 1
@@ -397,8 +431,14 @@ export default function BoardoftheDay() {
       // --- 5. Otherwise, load the cached board ---
       const { boardData, size, boardId } = currentlySavedBOTD;
       const board = squareGenerator(boardData.length, boardData);
-      checkAdjacentSquares(board[0][0], board, board[0][0].color, new Set());
+      const capturedCount = checkAdjacentSquares(
+        board[0][0],
+        board,
+        board[0][0].color,
+        new Set()
+      );
 
+      resetSquareCount(board, capturedCount, setSquaresRemaining);
       setBoardState(board);
       setActiveColor(board[0][0].defaultColor);
       setBoardSize(size);
@@ -447,8 +487,14 @@ export default function BoardoftheDay() {
 
       const { boardData, size } = doc;
       const board = squareGenerator(boardData.length, boardData);
-      checkAdjacentSquares(board[0][0], board, board[0][0].color, new Set());
+      const capturedCount = checkAdjacentSquares(
+        board[0][0],
+        board,
+        board[0][0].color,
+        new Set()
+      );
 
+      resetSquareCount(board, capturedCount, setSquaresRemaining);
       setBoardState(board);
       setActiveColor(board[0][0].defaultColor);
       setBoardSize(size);
@@ -461,7 +507,7 @@ export default function BoardoftheDay() {
   }
 
   return (
-    <ThemedView style={styles.container}>
+    <View style={styles.container}>
       {loadingState === "loading" && (
         <>
           <ThemedText type="subtitle">Fetching todays board...</ThemedText>
@@ -471,6 +517,13 @@ export default function BoardoftheDay() {
       {loadingState === "loaded" && selectedColorPalette && (
         <>
           <ThemedText style={styles.score}>{score}</ThemedText>
+          {showSquareCounter && (
+            <SquareCounter
+              squaresRemaining={squaresRemaining}
+              selectedColorPalette={selectedColorPalette}
+              isMosaic={isMosaic}
+            />
+          )}
           <GameBoard
             boardState={boardState}
             selectedColorPalette={selectedColorPalette}
@@ -518,7 +571,7 @@ export default function BoardoftheDay() {
           setUnlockedColorPalettes={setUnlockedColorPalettes}
         />
       )}
-    </ThemedView>
+    </View>
   );
 }
 

@@ -1,14 +1,25 @@
 import {
   saveProfileBackgroundColor,
+  saveProfileBannerColor,
   saveProfileLetterColor,
 } from "@/helper/asyncStorageHelper";
 import { getUser } from "@/helper/commonQueries";
 import { User } from "firebase/auth";
 
+import { rtdb } from "@/firebaseConfig";
+import { LinearGradient } from "expo-linear-gradient";
+import { ref, update } from "firebase/database";
 import { updateDoc } from "firebase/firestore";
 import React, { useState } from "react";
-import { Modal, StyleSheet, TouchableOpacity, View } from "react-native";
+import {
+  Modal,
+  Platform,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { ActivityIndicator } from "react-native-paper";
+import Avatar from "../Avatar";
 import SimpleColorPicker from "../SimpleColorPicker";
 import { ThemedText } from "../ThemedText";
 import { ThemedView } from "../ThemedView";
@@ -17,40 +28,56 @@ export default function EditProfile({
   user,
   profileBackground,
   profileLetter,
+  profileBanner,
   setProfileBackground,
   setProfileLetter,
+  setProfileBanner,
   setOpenProfile,
 }: {
   user: User;
   profileBackground: string;
   profileLetter: string;
+  profileBanner: string;
   setProfileBackground: React.Dispatch<React.SetStateAction<string>>;
   setProfileLetter: React.Dispatch<React.SetStateAction<string>>;
+  setProfileBanner: React.Dispatch<React.SetStateAction<string>>;
   setOpenProfile: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
   const [originalBackground, setOriginalBackground] =
     useState(profileBackground);
   const [originalLetterColor, setOriginalLetter] = useState(profileLetter);
+  const [originalBannerColor, setOriginalBannerColor] = useState(profileBanner);
   const [iconBackground, setIconBackground] = useState(profileBackground);
   const [letterColor, setLetterColor] = useState(profileLetter);
+  const [bannerColor, setBannerColor] = useState(profileBanner);
   const [isSaving, setIsSaving] = useState(false);
 
   async function updateColor() {
+    const userStatusRef = ref(rtdb, `/onlineUsers/${user.uid}`);
     try {
       setIsSaving(true);
       const userDoc = await getUser(user.uid);
+      const rtdbUpdateData = {
+        profileBackground: iconBackground,
+        profileLetter: letterColor,
+        profileBanner: bannerColor,
+      };
       if (userDoc) {
         await Promise.all([
           updateDoc(userDoc?.ref, {
             profileBackground: iconBackground,
             profileLetter: letterColor,
+            profileBanner: bannerColor,
           }),
+          update(userStatusRef, rtdbUpdateData),
           saveProfileBackgroundColor(iconBackground),
           saveProfileLetterColor(letterColor),
+          saveProfileBannerColor(bannerColor),
         ]);
       }
       setProfileBackground(iconBackground);
       setProfileLetter(letterColor);
+      setProfileBanner(bannerColor);
       setOpenProfile(false);
       alert("Profile saved successfully!");
     } catch (error) {
@@ -72,26 +99,45 @@ export default function EditProfile({
           <ActivityIndicator />
         ) : (
           <>
-            <TouchableOpacity
-              style={[styles.avatar, { backgroundColor: iconBackground }]}
-              onPress={() => setOpenProfile(true)}
+            <LinearGradient
+              colors={[bannerColor, "#000000ff"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[
+                styles.banner,
+                { ...(Platform.OS === "web" && { maxWidth: 350 }) },
+              ]}
             >
-              <ThemedText style={[styles.avatarText, { color: letterColor }]}>
-                {user.displayName?.[0].toUpperCase()}
-              </ThemedText>
-            </TouchableOpacity>
-            <ThemedText style={{ marginBottom: 20 }}>
-              {user.displayName}
-            </ThemedText>
-            <ThemedText>Select background color</ThemedText>
-            <SimpleColorPicker onSelectColor={setIconBackground} />
+              <Avatar
+                profileBackground={iconBackground}
+                profileLetter={letterColor}
+                size="large"
+                username={user.displayName ?? "?"}
+              />
+              <ThemedText type="subtitle">{user.displayName}</ThemedText>
+            </LinearGradient>
+
+            <ThemedText>Select profile color</ThemedText>
+            <SimpleColorPicker
+              startingColor={originalBackground}
+              onSelectColor={setIconBackground}
+            />
             <ThemedText>Select letter color</ThemedText>
-            <SimpleColorPicker onSelectColor={setLetterColor} />
+            <SimpleColorPicker
+              startingColor={originalLetterColor}
+              onSelectColor={setLetterColor}
+            />
+            <ThemedText>Select Banner Background</ThemedText>
+            <SimpleColorPicker
+              startingColor={originalBannerColor}
+              onSelectColor={setBannerColor}
+            />
             <View style={{ flexDirection: "row", gap: 30, marginTop: 20 }}>
               <TouchableOpacity
                 disabled={
                   originalBackground === iconBackground &&
-                  originalLetterColor === letterColor
+                  originalLetterColor === letterColor &&
+                  originalBannerColor === bannerColor
                 }
                 onPress={() => updateColor()}
               >
@@ -130,6 +176,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     minHeight: 300,
     minWidth: 300,
+  },
+  banner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "100%",
+    padding: 30,
+    borderWidth: 1,
+    borderColor: "black",
+    borderRadius: 20,
+    marginBottom: 20,
+    zIndex: 1,
   },
   avatar: {
     position: "relative",

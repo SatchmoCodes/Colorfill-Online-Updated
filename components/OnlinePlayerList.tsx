@@ -1,13 +1,13 @@
 import { useOnlinePlayerList } from "@/hooks/useOnlinePlayerList";
 import React from "react";
+import { View } from "react-native";
 import { ThemedText } from "./ThemedText";
-import { ThemedView } from "./ThemedView";
 
 export default function OnlinePlayerList() {
-  const playerList = useOnlinePlayerList();
+  const { onlinePlayerCount } = useOnlinePlayerList();
 
   return (
-    <ThemedView
+    <View
       style={{
         flexDirection: "row",
         justifyContent: "center",
@@ -16,11 +16,8 @@ export default function OnlinePlayerList() {
       }}
     >
       <ThemedText type="defaultSemiBold" style={{ textAlign: "center" }}>
-        Players Online: {playerList?.length}
+        Players Online: {onlinePlayerCount}
       </ThemedText>
-      {/* <TouchableOpacity onPress={() => router.push("/(protected)/playerlist")}>
-        <ThemedText>View</ThemedText>
-      </TouchableOpacity> */}
-    </ThemedView>
+    </View>
   );
 }

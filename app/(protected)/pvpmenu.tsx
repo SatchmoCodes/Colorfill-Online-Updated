@@ -2,6 +2,7 @@ import Avatar from "@/components/Avatar";
 import OnlinePlayerList from "@/components/OnlinePlayerList";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
+import { IconSymbol } from "@/components/ui/IconSymbol";
 import { db } from "@/firebaseConfig";
 import { handleJoinGame } from "@/helper/handleJoinGame";
 import { useUser } from "@/hooks/useFirebaseUser";
@@ -12,13 +13,21 @@ import { User } from "firebase/auth";
 import {
   collection,
   DocumentReference,
+  getDocs,
   onSnapshot,
   orderBy,
   query,
   where,
 } from "firebase/firestore";
 import React, { useCallback, useState } from "react";
-import { Pressable, StyleSheet, TouchableOpacity, View } from "react-native";
+import {
+  Modal,
+  Pressable,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { TextInput } from "react-native-paper";
 import {
   LobbyType,
   PlayerType,
@@ -26,7 +35,7 @@ import {
   PVPBoardType,
 } from "./creategame";
 
-type GameState = "waiting" | "playing" | "deleting";
+export type GameState = "waiting" | "playing" | "deleting";
 
 interface PVPGame {
   id: string;
@@ -59,10 +68,9 @@ interface PVPGame {
 const PvpMenu = () => {
   const user = useUser();
   const [gameList, setGameList] = useState<PVPGame[]>([]);
+  const [openJoinGameModal, setOpenJoinGameModal] = useState(false);
 
   const playerList = useOnlinePlayerList();
-
-  console.log("list", playerList);
 
   useFocusEffect(
     useCallback(() => {
@@ -89,8 +97,8 @@ const PvpMenu = () => {
   );
 
   return (
-    <ThemedView style={styles.container}>
-      <ThemedView style={{ height: "90%" }}>
+    <View style={styles.container}>
+      <View style={{ height: "90%" }}>
         <ThemedText
           style={{ textAlign: "center", marginBottom: 10 }}
           type="title"
@@ -109,8 +117,15 @@ const PvpMenu = () => {
             />
           );
         })}
-      </ThemedView>
-      <ThemedView style={{ alignItems: "center", height: "10%" }}>
+      </View>
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+          height: "10%",
+        }}
+      >
         <TouchableOpacity
           style={styles.createButton}
           activeOpacity={0.8}
@@ -125,8 +140,28 @@ const PvpMenu = () => {
             <ThemedText style={styles.createButtonText}>Create Game</ThemedText>
           </LinearGradient>
         </TouchableOpacity>
-      </ThemedView>
-    </ThemedView>
+        <TouchableOpacity
+          style={styles.createButton}
+          activeOpacity={0.8}
+          onPress={() => setOpenJoinGameModal(true)}
+        >
+          <LinearGradient
+            colors={["#ff7e5f", "#feb47b"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.createButtonBackground}
+          >
+            <ThemedText style={styles.createButtonText}>Join Game</ThemedText>
+          </LinearGradient>
+        </TouchableOpacity>
+      </View>
+      {openJoinGameModal && (
+        <JoinGameModal
+          user={user}
+          setOpenJoinGameModal={setOpenJoinGameModal}
+        />
+      )}
+    </View>
   );
 };
 
@@ -146,7 +181,6 @@ const GameCard = ({
       onPressIn={() => setPressed(true)}
       onPressOut={() => setPressed(false)}
       onPress={() => {
-        console.log("game ref", game.docRef);
         handleJoinGame(game.docRef, user);
       }}
       style={{ transform: [{ scale: pressed ? 0.97 : 1 }] }}
@@ -198,6 +232,68 @@ const GameCard = ({
   );
 };
 
+const JoinGameModal = ({
+  user,
+  setOpenJoinGameModal,
+}: {
+  user: User;
+  setOpenJoinGameModal: React.Dispatch<React.SetStateAction<boolean>>;
+}) => {
+  const [code, setCode] = useState("");
+
+  async function verifyCode() {
+    const q = query(collection(db, "games"), where("code", "==", code));
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+      const docRef = querySnapshot.docs[0].ref;
+      handleJoinGame(docRef, user);
+    } else {
+      alert("Game not found");
+    }
+  }
+  return (
+    <Modal
+      transparent
+      onRequestClose={() => setOpenJoinGameModal(false)}
+      animationType="slide"
+    >
+      <ThemedView style={styles.centeredView}>
+        <TouchableOpacity
+          style={{ position: "absolute", top: 5, right: 5 }}
+          onPress={() => setOpenJoinGameModal(false)}
+        >
+          <IconSymbol size={28} name="clear.fill" color={"white"} />
+        </TouchableOpacity>
+        <ThemedText type="subtitle">Enter Code</ThemedText>
+        <TextInput
+          value={code}
+          maxLength={6}
+          onChangeText={(text) => setCode(text)}
+          autoCapitalize="characters"
+          style={styles.input}
+        />
+        <TouchableOpacity
+          onPress={() => code.length === 6 && verifyCode()}
+          style={styles.createButton}
+          activeOpacity={0.8}
+        >
+          <LinearGradient
+            colors={["#ff7e5f", "#feb47b"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[
+              styles.createButtonBackground,
+              { opacity: code.length < 6 ? 0.5 : 1 },
+            ]}
+          >
+            <ThemedText style={styles.createButtonText}>Join</ThemedText>
+          </LinearGradient>
+        </TouchableOpacity>
+      </ThemedView>
+    </Modal>
+  );
+};
+
 export default PvpMenu;
 
 const styles = StyleSheet.create({
@@ -205,7 +301,7 @@ const styles = StyleSheet.create({
     flex: 1,
     // alignItems: "center",
     width: "100%",
-    padding: 10,
+    padding: 30,
     position: "relative",
     zIndex: 1,
   },
@@ -262,7 +358,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   createButton: {
-    width: "80%",
+    width: "45%",
     borderRadius: 25,
     overflow: "hidden",
     shadowColor: "#000",
@@ -282,5 +378,34 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     color: "#fff",
+  },
+  centeredView: {
+    justifyContent: "center",
+    alignItems: "center",
+    margin: "auto",
+    borderRadius: 20,
+    padding: 35,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 2,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  input: {
+    backgroundColor: "white",
+    paddingHorizontal: 15,
+    // paddingVertical: 10,
+    borderRadius: 10,
+    marginTop: 5,
+    borderWidth: 1,
+    width: "50%",
+    maxWidth: 600,
+    minWidth: 300,
+    marginLeft: "auto",
+    marginRight: "auto",
+    marginBottom: 10,
   },
 });

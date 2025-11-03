@@ -56,8 +56,6 @@ const PVPQueryOptions = [
 
 const botdDateOptions = buildBOTDDateOptions();
 
-console.log("what is this", botdDateOptions);
-
 const today = new Date();
 
 interface LeaderboardOptionsModal {
@@ -336,7 +334,7 @@ export default function Leaderboard() {
   };
 
   return (
-    <ThemedView style={styles.container}>
+    <View style={styles.container}>
       <ThemedText style={{ marginTop: 20, marginBottom: 20 }} type="title">
         Leaderboard
       </ThemedText>
@@ -397,7 +395,7 @@ export default function Leaderboard() {
           getQueryResults={getQueryResults}
         />
       )}
-    </ThemedView>
+    </View>
   );
 }
 
@@ -430,7 +428,8 @@ const SelectedParameters = ({
     <View
       style={{
         width: "100%",
-        margin: "auto",
+        marginLeft: "auto",
+        marginRight: "auto",
         marginBottom: 10,
         justifyContent: "space-evenly",
         flexDirection: "row",
@@ -522,8 +521,10 @@ const Table = ({
                 pathname: "/viewscore",
                 params: {
                   boardId: item.boardId,
+                  boardSize: item.size,
                   boardData: item.boardData,
                   bestScore: item.score,
+                  createdBy: item.createdBy,
                 },
               })
             }
@@ -835,10 +836,10 @@ const styles = StyleSheet.create({
   topRow: {
     flexDirection: "row",
     width: "100%",
-    paddingVertical: 10,
   },
   topRowCell: {
     padding: 10,
+    backgroundColor: "transparent",
   },
   topRowCellText: {
     textAlign: "center",
@@ -857,7 +858,12 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(45,45,45,0.95)",
   },
   cell: {
-    padding: 10,
+    // This is the cell content wrapper
+    paddingVertical: 10,
+    // Add horizontal padding to the cells to match the TopRow
+    paddingHorizontal: 10,
+    // CRITICAL FIX: Make the cell background transparent
+    backgroundColor: "transparent",
   },
   cellText: {
     textAlign: "center",

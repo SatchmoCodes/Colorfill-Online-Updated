@@ -4,22 +4,22 @@
     "slug": "ColorFillOnlineUpdated",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/ColorFill-iOS.png",
     "scheme": "colorfillonlineupdated",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true
     },
-    "notification": {
-      "icon": "./assets/icon.png",
+    "notifications": {
+      "icon": "./assets/images/ColorFill-Android.png",
       "color": "#ffffff"
     },
     "android": {
       "googleServicesFile": "google-services.json",
       "package": "com.colorfillonlineupdated",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/ColorFill-Android.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true
@@ -27,16 +27,16 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/ColorFill-Favicon.png",
+      "indexHtmlPath": "./web/index.html"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
+          "image": "./assets/images/ColorFill-Splash.png",
+          "resizeMode": "cover",
           "backgroundColor": "#ffffff"
         }
       ]

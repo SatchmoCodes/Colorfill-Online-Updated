@@ -1,6 +1,6 @@
 import { db, rtdb } from "@/firebaseConfig";
 import { router } from "expo-router";
-import { User } from "firebase/auth";
+import { getAuth, User } from "firebase/auth";
 import { onDisconnect, ref, set } from "firebase/database";
 import { DocumentReference, runTransaction } from "firebase/firestore";
 import {
@@ -9,7 +9,7 @@ import {
 } from "./asyncStorageHelper";
 
 export const handleJoinGame = async (docRef: DocumentReference, user: User) => {
-  console.log("these here", docRef, user);
+  const auth = getAuth();
   try {
     await runTransaction(db, async (transaction) => {
       const docSnap = await transaction.get(docRef);
@@ -19,6 +19,9 @@ export const handleJoinGame = async (docRef: DocumentReference, user: User) => {
       const data = docSnap.data();
 
       if (data.opponentName) throw "Game already has an opponent";
+      if (data.status === "playing") throw "Game has already been started";
+      if (data.status === "deleting")
+        throw "Game has completed / no longer exists";
 
       transaction.update(docRef, {
         opponentName: user?.displayName,

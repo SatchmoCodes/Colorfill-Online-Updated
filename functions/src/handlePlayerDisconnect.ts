@@ -29,6 +29,8 @@ export const handlePlayerDisconnect = onValueDeleted(
           await gameRef.update({
             ownerName: data.opponentName,
             ownerUid: data.opponentUid,
+            ownerProfileBackground: data.opponentProfileBackground,
+            ownerProfileLetter: data.opponentProfileLetter,
             opponentName: null,
             opponentUid: null,
           });

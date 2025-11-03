@@ -1,8 +1,9 @@
+import { colors } from "@/components/SimpleColorPicker";
 import { auth, db } from "@/firebaseConfig";
-import { CommonActions, useNavigation } from "@react-navigation/native";
+import { router, useNavigation } from "expo-router";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   Image,
   ImageBackground,
@@ -22,21 +23,6 @@ const Register = () => {
 
   const navigation = useNavigation();
 
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (user) {
-        navigation.dispatch(
-          CommonActions.reset({
-            index: 0,
-            routes: [{ name: "(tabs)" }],
-          })
-        );
-      }
-    });
-
-    return unsubscribe;
-  }, []);
-
   const handleSignUp = async () => {
     let cancel = false;
     if (displayName.includes(" ")) {
@@ -44,22 +30,6 @@ const Register = () => {
       alert("username must not include spaces");
     }
     try {
-      //   const q = query(
-      //     collection(db, "Users"),
-      //     where("username", "==", displayName)
-      //   );
-      //   //   const q = query(collection(db, "Users"));
-      //   const querySnapshot = await getDocs(q);
-
-      //   querySnapshot.forEach((doc) => {
-      //     if (doc.data().username.toLowerCase() == displayName.toLowerCase()) {
-      //       alert("username is taken");
-      //       cancel = true;
-      //     }
-      //   });
-
-      //   if (!cancel) return;
-
       const response = await createUserWithEmailAndPassword(
         auth,
         email,
@@ -68,7 +38,7 @@ const Register = () => {
       updateProfile(response.user, {
         displayName: displayName,
       });
-      const newUser = await addDoc(collection(db, "users"), {
+      await addDoc(collection(db, "users"), {
         email: email,
         uid: response.user.uid,
         username: displayName,
@@ -80,13 +50,17 @@ const Register = () => {
         bestWinStreak: 0,
         boardsCompleted: 0,
         boardsOfTheDayCompleted: 0,
-        bestSmallScore: 0,
-        bestMediumScore: 0,
-        bestLargeScore: 0,
-        bestXLargeScore: 0,
+        bestSmallScore: null,
+        bestMediumScore: null,
+        bestLargeScore: null,
+        bestXLargeScore: null,
+        profileBackground: colors[Math.floor(Math.random() * colors.length)],
+        profileBanner: colors[Math.floor(Math.random() * colors.length)],
+        profileLetter: colors[Math.floor(Math.random() * colors.length)],
+        expoPushToken: null,
         createdAt: serverTimestamp(),
       });
-      //   console.log("new user created with name " + newUser.username);
+      router.replace("/(protected)/(tabs)");
     } catch (error) {
       alert(error);
     }
@@ -94,58 +68,61 @@ const Register = () => {
 
   return (
     <ImageBackground
-      source={require("../assets/images/ColorFill-Splash.png")}
+      source={require("@/assets/images/ColorFill-Splash.png")}
       style={styles.backgroundImage}
     >
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        contentContainerStyle={{ alignItems: "center" }}
-      >
+      <View style={styles.container}>
         <View style={styles.top}>
           <Image
             style={styles.colorImage}
-            source={require("../assets/images/ColorFill.png")}
+            source={require("@/assets/images/ColorFill.png")}
             resizeMode="contain"
           ></Image>
         </View>
-        <View style={styles.bottom}>
-          <View style={styles.inputContainer}>
-            <TextInput
-              placeholder="Email"
-              placeholderTextColor="black"
-              value={email}
-              onChangeText={(text) => setEmail(text)}
-              style={styles.input}
-            />
-            <TextInput
-              placeholder="Username"
-              placeholderTextColor="black"
-              value={displayName}
-              onChangeText={(text) => setDisplayName(text)}
-              style={styles.input}
-              maxLength={15}
-            />
-            <TextInput
-              placeholder="Password"
-              placeholderTextColor="black"
-              value={password}
-              onChangeText={(text) => setPassword(text)}
-              style={styles.input}
-              secureTextEntry
-            />
-          </View>
 
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              onPress={handleSignUp}
-              style={[styles.button, styles.buttonOutline]}
-            >
-              <Text style={styles.buttonOutlineText}>Register</Text>
-            </TouchableOpacity>
+        <KeyboardAvoidingView
+          style={styles.bottomKAV}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          contentContainerStyle={{ alignItems: "center" }}
+        >
+          <View style={styles.bottom}>
+            <View style={styles.inputContainer}>
+              <TextInput
+                placeholder="Email"
+                placeholderTextColor="black"
+                value={email}
+                onChangeText={(text) => setEmail(text)}
+                style={styles.input}
+              />
+              <TextInput
+                placeholder="Username"
+                placeholderTextColor="black"
+                value={displayName}
+                onChangeText={(text) => setDisplayName(text)}
+                style={styles.input}
+                maxLength={15}
+              />
+              <TextInput
+                placeholder="Password"
+                placeholderTextColor="black"
+                value={password}
+                onChangeText={(text) => setPassword(text)}
+                style={styles.input}
+                secureTextEntry
+              />
+            </View>
+
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                onPress={handleSignUp}
+                style={[styles.button, styles.buttonOutline]}
+              >
+                <Text style={styles.buttonOutlineText}>Register</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
+      </View>
     </ImageBackground>
   );
 };
@@ -155,24 +132,33 @@ export default Register;
 const styles = StyleSheet.create({
   backgroundImage: {
     flex: 1,
-    resizeMode: "contain",
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
     justifyContent: "center",
   },
   container: {
     flex: 1,
-    justifyContent: "center",
+    justifyContent: "flex-start", // Start content from the top
     alignItems: "center",
+    backgroundColor: "transparent",
   },
   top: {
-    height: "20%",
+    height: "20%", // Fixed height for the logo
     width: "100%",
+    zIndex: 10, // Ensure logo is on top if anything else moves under it,
+    marginTop: 20,
   },
   colorImage: {
     maxWidth: "100%",
     height: "100%",
   },
+  bottomKAV: {
+    flex: 1,
+    width: "100%",
+  },
   bottom: {
-    height: "80%",
+    flex: 1,
     width: "100%",
     justifyContent: "center",
     alignItems: "center",

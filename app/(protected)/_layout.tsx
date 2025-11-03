@@ -1,10 +1,10 @@
 import CustomHeader from "@/components/CustomHeader";
+import { ThemedBackground } from "@/components/ThemedBackground";
 import { UserContext, useRequiredUser } from "@/hooks/useFirebaseUser";
 import { useNotificationResponse } from "@/hooks/useNotificationResponse";
 import { useUserPresence } from "@/hooks/useUserPresence";
 import * as Notifications from "expo-notifications";
 import { Stack } from "expo-router";
-import { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
 
 Notifications.setNotificationHandler({
@@ -22,18 +22,6 @@ export default function ProtectedLayout() {
   useUserPresence(user);
   useNotificationResponse(user);
 
-  useEffect(() => {
-    const subscription = Notifications.addNotificationReceivedListener(
-      (notification) => {
-        console.log("📩 Notification received:", notification);
-      }
-    );
-
-    return () => subscription.remove();
-  }, []);
-
-  // This controls how notifications are shown when app is running
-
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
@@ -49,24 +37,84 @@ export default function ProtectedLayout() {
 
   return (
     <UserContext.Provider value={user}>
-      <Stack
-        screenOptions={{
-          header: ({ route, options }) => (
-            <CustomHeader
-              title={options.title ?? route.name}
-              routeName={route.name}
-            />
-          ),
-        }}
-      >
-        <Stack.Screen
-          name="(tabs)"
-          options={{ headerShown: true, title: "Home" }}
-        />
-        <Stack.Screen name="freeplay" options={{ title: "Free Play" }} />
-        <Stack.Screen name="pvpmenu" options={{ title: "PVP Menu" }} />
-        <Stack.Screen name="settings" options={{ title: "Settings" }} />
-      </Stack>
+      <ThemedBackground>
+        <Stack
+          screenOptions={{
+            header: ({ route, options }) => (
+              <CustomHeader
+                title={options.title ?? route.name}
+                routeName={route.name}
+              />
+            ),
+            contentStyle: { backgroundColor: "transparent" },
+          }}
+        >
+          <Stack.Screen
+            name="(tabs)"
+            options={{ headerShown: true, title: "Home" }}
+          />
+          <Stack.Screen
+            name="freeplay"
+            options={{
+              title: "Free Play",
+              animation: "fade",
+              contentStyle: { backgroundColor: "transparent" },
+            }}
+          />
+          <Stack.Screen
+            name="pvpmenu"
+            options={{
+              title: "PVP Menu",
+              animation: "fade",
+              contentStyle: { backgroundColor: "transparent" },
+            }}
+          />
+          <Stack.Screen
+            name="settings"
+            options={{ title: "Settings", animation: "fade" }}
+          />
+          <Stack.Screen
+            name="viewprofile"
+            options={{ title: "View Profile", animation: "fade" }}
+          />
+          <Stack.Screen
+            name="playerlist"
+            options={{ title: "Player List", animation: "fade" }}
+          />
+          <Stack.Screen
+            name="viewscore"
+            options={{
+              title: "View Score",
+              animation: "fade",
+              contentStyle: { backgroundColor: "transparent" },
+            }}
+          />
+          <Stack.Screen
+            name="creategame"
+            options={{
+              title: "PVP Create Game",
+              animation: "fade",
+              contentStyle: { backgroundColor: "transparent" },
+            }}
+          />
+          <Stack.Screen
+            name="pvpgame"
+            options={{
+              title: "PVP Game",
+              animation: "fade",
+              contentStyle: { backgroundColor: "transparent" },
+            }}
+          />
+          <Stack.Screen
+            name="boardoftheday"
+            options={{
+              title: "Board of the Day",
+              animation: "fade",
+              contentStyle: { backgroundColor: "transparent" },
+            }}
+          />
+        </Stack>
+      </ThemedBackground>
     </UserContext.Provider>
   );
 }

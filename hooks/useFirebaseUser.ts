@@ -15,7 +15,7 @@ export function useFirebaseUser(redirectIfNoUser: boolean = false) {
       setLoading(false);
 
       if (redirectIfNoUser && !firebaseUser) {
-        router.replace("/login");
+        router.replace("/(auth)/login");
       }
     });
 

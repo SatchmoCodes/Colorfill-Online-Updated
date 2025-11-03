@@ -1,4 +1,3 @@
-import { useNavigation } from "@react-navigation/core";
 import React, { useEffect, useState } from "react";
 import {
   Image,
@@ -19,10 +18,7 @@ import { collection, getDocs, query, where } from "firebase/firestore";
 
 const LoginScreen = ({}) => {
   const [emailOrUsername, setEmailOrUsername] = useState("");
-  const [displayName, setDisplayName] = useState("");
   const [password, setPassword] = useState("");
-
-  const navigation = useNavigation();
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
@@ -71,73 +67,98 @@ const LoginScreen = ({}) => {
 
   return (
     <ImageBackground
-      source={require("../assets/images/ColorFill-Splash.png")}
+      source={require("@/assets/images/ColorFill-Splash.png")}
       style={styles.backgroundImage}
     >
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        contentContainerStyle={{ alignItems: "center" }}
-      >
+      <View style={styles.container}>
         <View style={styles.top}>
           <Image
             style={styles.colorImage}
-            source={require("../assets/images/ColorFill.png")}
+            source={require("@/assets/images/ColorFill.png")}
             resizeMode="contain"
-          ></Image>
+          />
         </View>
-        <View style={styles.bottom}>
-          <View style={styles.inputContainer}>
-            <TextInput
-              placeholder="Email or Username"
-              placeholderTextColor="black"
-              value={emailOrUsername}
-              onChangeText={(text) => setEmailOrUsername(text)}
-              style={styles.input}
-            />
-            <TextInput
-              placeholder="Password"
-              placeholderTextColor="black"
-              value={password}
-              onChangeText={(text) => setPassword(text)}
-              style={styles.input}
-              secureTextEntry
-            />
-            <TouchableOpacity
-              style={{ marginTop: 10 }}
-              //   onPress={() => navigation.navigate('PasswordReset')}
-            >
-              <Text
-                style={{ textAlign: "center", color: "blue", fontSize: 15 }}
-              >
-                Forgot Password?
-              </Text>
-            </TouchableOpacity>
-          </View>
 
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={styles.button}
-              onPress={() => handleLogin()}
-            >
-              <Text style={styles.buttonText}>Login</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button, styles.buttonOutline]}
-              onPress={() => router.push("/register")}
-            >
-              <Text style={styles.buttonOutlineText}>Register Account</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.button}
-              onPress={() => handleGuestLogin()}
-            >
-              <Text style={styles.buttonText}>Sign in Anonymously</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </KeyboardAvoidingView>
+        <KeyboardAvoidingView
+          style={styles.bottomKAV}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+          <LoginInputs
+            // ... (props)
+            emailOrUsername={emailOrUsername}
+            password={password}
+            setEmailOrUsername={setEmailOrUsername}
+            setPassword={setPassword}
+            handleLogin={handleLogin}
+            handleGuestLogin={handleGuestLogin}
+          />
+        </KeyboardAvoidingView>
+      </View>
     </ImageBackground>
+  );
+};
+
+const LoginInputs = ({
+  emailOrUsername,
+  password,
+  setEmailOrUsername,
+  setPassword,
+  handleLogin,
+  handleGuestLogin,
+}: {
+  emailOrUsername: string;
+  password: string;
+  setEmailOrUsername: React.Dispatch<React.SetStateAction<string>>;
+  setPassword: React.Dispatch<React.SetStateAction<string>>;
+  handleLogin: () => void;
+  handleGuestLogin: () => void;
+}) => {
+  return (
+    <View style={styles.bottom}>
+      <View style={styles.inputContainer}>
+        <TextInput
+          placeholder="Email or Username"
+          placeholderTextColor="black"
+          value={emailOrUsername}
+          onChangeText={(text) => setEmailOrUsername(text)}
+          style={styles.input}
+        />
+        <TextInput
+          placeholder="Password"
+          placeholderTextColor="black"
+          value={password}
+          onChangeText={(text) => setPassword(text)}
+          style={styles.input}
+          secureTextEntry
+        />
+        <TouchableOpacity
+          style={{ marginTop: 10 }}
+          //   onPress={() => navigation.navigate('PasswordReset')}
+        >
+          <Text style={{ textAlign: "center", color: "blue", fontSize: 15 }}>
+            Forgot Password?
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity style={styles.button} onPress={() => handleLogin()}>
+          <Text style={styles.buttonText}>Login</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.button, styles.buttonOutline]}
+          onPress={() => router.push("/register")}
+        >
+          <Text style={styles.buttonOutlineText}>Register Account</Text>
+        </TouchableOpacity>
+        {/* <TouchableOpacity
+          style={styles.button}
+          onPress={() => handleGuestLogin()}
+        >
+          <Text style={styles.buttonText}>Sign in Anonymously</Text>
+        </TouchableOpacity> */}
+      </View>
+    </View>
   );
 };
 
@@ -146,31 +167,40 @@ export default LoginScreen;
 const styles = StyleSheet.create({
   backgroundImage: {
     flex: 1,
-    resizeMode: "center",
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
     justifyContent: "center",
   },
   container: {
     flex: 1,
-    justifyContent: "center",
+    justifyContent: "flex-start", // Start content from the top
     alignItems: "center",
     backgroundColor: "transparent",
+    width: "100%",
   },
   top: {
-    height: "20%",
+    height: "20%", // Fixed height for the logo
     width: "100%",
+    zIndex: 10, // Ensure logo is on top if anything else moves under it,
+    marginTop: 20,
   },
   colorImage: {
     maxWidth: "100%",
     height: "100%",
   },
+  bottomKAV: {
+    flex: 1,
+    width: "100%",
+  },
   bottom: {
-    height: "80%",
+    flex: 1,
     width: "100%",
     justifyContent: "center",
     alignItems: "center",
   },
   inputContainer: {
-    width: "80%",
+    // width: "80%",
   },
   input: {
     backgroundColor: "white",

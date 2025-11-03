@@ -244,7 +244,16 @@ export const updateCriteriaMap = async ({
   //   })
   // );
 
+  // const allUnlockedCriteriaMap = Object.fromEntries(
+  //   Object.entries(criteriaMap).map(([key, value]) => [
+  //     key,
+  //     { ...value, locked: false },
+  //   ])
+  // );
+  // return allUnlockedCriteriaMap;
+
   // return falsifiedCriteriaMap;
+
   await saveCriteriaMap(criteriaMap);
 
   return criteriaMap;

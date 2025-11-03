@@ -1,3 +1,4 @@
+import Avatar from "@/components/Avatar";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import EditProfile from "@/components/ui/EditProfile";
@@ -8,16 +9,14 @@ import {
   loadCriteriaMap,
   loadIsMosaicMode,
   loadProfileBackgroundColor,
+  loadProfileBannerColor,
   loadProfileLetterColor,
+  loadShowSquareCounter,
   saveColorIndex,
-  saveColorPaletteOptions,
   saveIsMosaicMode,
-  saveProfileBackgroundColor,
-  saveProfileLetterColor,
+  saveShowSquareCounter,
 } from "@/helper/asyncStorageHelper";
-import { getUser } from "@/helper/commonQueries";
 import { getColorPaletteOptions } from "@/helper/getColorPaletteOptions";
-import { updateCriteriaMap } from "@/helper/updateCriteriaMap";
 import { useUser } from "@/hooks/useFirebaseUser";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -96,9 +95,11 @@ export default function Settings() {
   const [progressModalPalette, setProgressModalPalette] =
     useState<PaletteObj | null>(null);
   const [isMosaic, setIsMosaic] = useState(false);
+  const [showSquareCounter, setShowSquareCounter] = useState(false);
   const [openProfile, setOpenProfile] = useState(false);
   const [profileBackground, setProfileBackground] = useState("#313131ff");
   const [profileLetter, setProfileLetter] = useState("#ffffff");
+  const [profileBanner, setProfileBanner] = useState("#0b40b3ff");
 
   const initialPage = Math.floor(selectedIndex / PAGE_SIZE);
 
@@ -134,52 +135,32 @@ export default function Settings() {
     await saveIsMosaicMode(mode);
   };
 
+  const handleToggleShowSquareCounter = async (mode: boolean) => {
+    setShowSquareCounter(mode);
+    await saveShowSquareCounter(mode);
+  };
+
   async function loadInitialSettings() {
     try {
       const savedIndex = (await loadColorIndex()) ?? 0;
       const isMosaic = (await loadIsMosaicMode()) ?? false;
-      let colorOptions = await loadColorPaletteOptions();
-      console.log("color options", colorOptions);
-      let profileBackgroundColor = await loadProfileBackgroundColor();
-      let profileLetterColor = await loadProfileLetterColor();
-      // const allColorOptions = await getColorPaletteOptions();
-      if (!colorOptions || !profileBackgroundColor || !profileLetterColor) {
-        console.log(
-          "is this be running",
-          colorOptions,
-          profileBackgroundColor,
-          profileLetterColor
-        );
-        const userDoc = await getUser(user.uid);
-        const currentCriteriaMap =
-          (await loadCriteriaMap()) ??
-          (await updateCriteriaMap({
-            boardsCompleted: userDoc?.data.boardsCompleted,
-            boardsOfTheDayCompleted: userDoc?.data.boardsOfTheDayCompleted,
-            bestSmallScore: userDoc?.data.bestSmallScore,
-            bestMediumScore: userDoc?.data.bestMediumScore,
-            bestLargeScore: userDoc?.data.bestLargeScore,
-            bestXLargeScore: userDoc?.data.bestXLargeScore,
-            totalGames: userDoc?.data.totalGames,
-            wins: userDoc?.data.wins,
-            bestWinStreak: userDoc?.data.bestWinStreak,
-          }));
-        colorOptions = await getColorPaletteOptions(currentCriteriaMap);
-        profileBackgroundColor = userDoc?.data.profileBackground ?? "#313131ff";
-        profileLetterColor = userDoc?.data.profileLetter ?? "#ffffff";
-        await Promise.all([
-          saveColorPaletteOptions(colorOptions),
-          saveProfileBackgroundColor(profileBackgroundColor),
-          saveProfileLetterColor(profileLetterColor),
-        ]);
-      }
+      const shouldShowSquareCounter = (await loadShowSquareCounter()) ?? true;
+      const currentCriteriaMap = (await loadCriteriaMap()) ?? {};
+      let colorOptions =
+        (await loadColorPaletteOptions()) ??
+        (await getColorPaletteOptions(currentCriteriaMap));
+      let profileBackgroundColor =
+        (await loadProfileBackgroundColor()) ?? "#313131ff";
+      let profileLetterColor = (await loadProfileLetterColor()) ?? "#FFFFFF";
+      let profileBannerColor = (await loadProfileBannerColor()) ?? "#0b40b3ff";
       setProfileBackground(profileBackgroundColor);
       setProfileLetter(profileLetterColor);
-      setSelectedColorPalette(colorOptions[savedIndex] ?? colorOptions[0]);
+      setProfileBanner(profileBannerColor);
+      setSelectedColorPalette(colorOptions?.[savedIndex] ?? colorOptions[0]);
       setColorPaletteOptions(chunkArray(colorOptions, PAGE_SIZE));
-      // setColorPaletteOptions(chunkArray(allColorOptions, PAGE_SIZE));
       setSelectedIndex(savedIndex);
       setIsMosaic(isMosaic);
+      setShowSquareCounter(shouldShowSquareCounter);
     } catch (e) {
       setSelectedIndex(0);
       setSelectedColorPalette(null);
@@ -188,25 +169,26 @@ export default function Settings() {
 
   return (
     <ThemedView style={[styles.container]}>
-      <TouchableOpacity
-        style={[styles.avatar, { backgroundColor: profileBackground }]}
-        onPress={() => setOpenProfile(true)}
-      >
-        <ThemedText style={[styles.avatarText, { color: profileLetter }]}>
-          {user.displayName?.[0].toUpperCase()}
-        </ThemedText>
-        <View style={styles.iconContainer}>
+      <ThemedView style={{ position: "relative" }}>
+        <Avatar
+          profileBackground={profileBackground}
+          profileLetter={profileLetter}
+          size="large"
+          username={user.displayName ?? "?"}
+          handleAvatarClick={() => setOpenProfile(true)}
+        />
+        <TouchableOpacity
+          onPress={() => setOpenProfile(true)}
+          style={styles.iconContainer}
+        >
           <IconSymbol
             style={{ textAlign: "center" }}
             size={14}
             name="pencil"
             color={"black"}
           />
-        </View>
-      </TouchableOpacity>
-      {/* <ThemedText>{user.displayName}</ThemedText> */}
-
-      {/* preview of current selection */}
+        </TouchableOpacity>
+      </ThemedView>
       {!selectedColorPalette ? (
         <ActivityIndicator />
       ) : (
@@ -293,10 +275,28 @@ export default function Settings() {
           handleChangeColorPalette={handleChangeColorPalette}
         />
       )}
-      <ToggleMosaicBorders
-        isMosaic={isMosaic}
-        handleToggleMosaicMode={handleToggleMosaicMode}
-      />
+      <ThemedView>
+        <ThemedText>Square Borders</ThemedText>
+        <Switch
+          trackColor={{ false: "#767577", true: "#81b0ff" }}
+          thumbColor={isMosaic ? "#f5dd4b" : "#f4f3f4"}
+          ios_backgroundColor="#3e3e3e"
+          onValueChange={(e) => handleToggleMosaicMode(e)}
+          style={{ margin: "auto" }}
+          value={isMosaic}
+        />
+      </ThemedView>
+      <ThemedView>
+        <ThemedText>Show Square Counter</ThemedText>
+        <Switch
+          trackColor={{ false: "#767577", true: "#81b0ff" }}
+          thumbColor={showSquareCounter ? "#f5dd4b" : "#f4f3f4"}
+          ios_backgroundColor="#3e3e3e"
+          onValueChange={(e) => handleToggleShowSquareCounter(e)}
+          style={{ margin: "auto" }}
+          value={showSquareCounter}
+        />
+      </ThemedView>
       {progressModalPalette && (
         <ColorPaletteProgressModal
           progressModalPalette={progressModalPalette}
@@ -308,8 +308,10 @@ export default function Settings() {
           user={user}
           profileBackground={profileBackground}
           profileLetter={profileLetter}
+          profileBanner={profileBanner}
           setProfileBackground={setProfileBackground}
           setProfileLetter={setProfileLetter}
+          setProfileBanner={setProfileBanner}
           setOpenProfile={setOpenProfile}
         />
       )}
@@ -733,22 +735,6 @@ const ColorPaletteOptionsContainer = (
   );
 };
 
-const ToggleMosaicBorders = (props: MosaicToggleProps) => {
-  const { isMosaic, handleToggleMosaicMode } = props;
-  return (
-    <>
-      <ThemedText>Square Borders</ThemedText>
-      <Switch
-        trackColor={{ false: "#767577", true: "#81b0ff" }}
-        thumbColor={isMosaic ? "#f5dd4b" : "#f4f3f4"}
-        ios_backgroundColor="#3e3e3e"
-        onValueChange={(e) => handleToggleMosaicMode(e)}
-        value={isMosaic}
-      />
-    </>
-  );
-};
-
 const ColorPaletteProgressModal = (props: ColorPaletteModalProps) => {
   const { progressModalPalette, setProgressModalPalette } = props;
   return (
@@ -848,7 +834,7 @@ const styles = StyleSheet.create({
   iconContainer: {
     position: "absolute",
     bottom: 0,
-    right: 0,
+    right: 5,
     backgroundColor: "#f0f0f0ff",
     width: 16,
     height: 16,

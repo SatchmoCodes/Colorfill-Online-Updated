@@ -20,6 +20,7 @@ export const sendPushNotification = async (
         data: {
           gameId,
         },
+        priority: "high",
       }),
     });
   } catch (error) {

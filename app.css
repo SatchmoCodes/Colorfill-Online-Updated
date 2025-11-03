@@ -1,0 +1,10 @@
+html,
+body,
+#root,
+#__next {
+  background-color: transparent !important;
+}
+
+[aria-hidden="true"] {
+  background-color: transparent !important;
+}

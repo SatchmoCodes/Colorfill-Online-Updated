@@ -18,9 +18,16 @@ export default function ViewProfile() {
   if (!profile) return <ActivityIndicator />;
 
   const getUserData = async (uid: string) => {
-    const userDoc = await getUser(uid);
-    if (userDoc) {
-      setUserDocData(userDoc.data);
+    try {
+      const userDoc = await getUser(uid);
+      if (userDoc) {
+        setUserDocData(userDoc.data);
+      } else {
+        setUserDocData(null);
+      }
+    } catch (error) {
+      console.log("error getting user data ", error);
+      setUserDocData(null);
     }
   };
 
@@ -121,7 +128,9 @@ export default function ViewProfile() {
             {/* Win Rate */}
             <ThemedView style={styles.dataRow}>
               <ThemedText style={styles.dataPoint}>Win Rate:</ThemedText>
-              <ThemedText>{userDocData.winRate ?? "N/A"}</ThemedText>
+              <ThemedText>
+                {userDocData.winRate ? `${userDocData.winRate}%` : "N/A"}
+              </ThemedText>
             </ThemedView>
           </ThemedView>
         )}
