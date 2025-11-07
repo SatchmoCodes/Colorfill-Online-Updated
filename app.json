@@ -11,7 +11,7 @@
     "ios": {
       "supportsTablet": true
     },
-    "notifications": {
+    "notification": {
       "icon": "./assets/images/ColorFill-Android.png",
       "color": "#ffffff"
     },

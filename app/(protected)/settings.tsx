@@ -1,16 +1,11 @@
-import Avatar from "@/components/Avatar";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
-import EditProfile from "@/components/ui/EditProfile";
-import { IconSymbol } from "@/components/ui/IconSymbol";
+import UnlockableProgressModal from "@/components/ui/UnlockableProgressModal";
 import {
   loadColorIndex,
   loadColorPaletteOptions,
   loadCriteriaMap,
   loadIsMosaicMode,
-  loadProfileBackgroundColor,
-  loadProfileBannerColor,
-  loadProfileLetterColor,
   loadShowSquareCounter,
   saveColorIndex,
   saveIsMosaicMode,
@@ -97,11 +92,11 @@ export default function Settings() {
   const [isMosaic, setIsMosaic] = useState(false);
   const [showSquareCounter, setShowSquareCounter] = useState(false);
   const [openProfile, setOpenProfile] = useState(false);
-  const [profileBackground, setProfileBackground] = useState("#313131ff");
-  const [profileLetter, setProfileLetter] = useState("#ffffff");
-  const [profileBanner, setProfileBanner] = useState("#0b40b3ff");
+  const [unlockableProgressMdoal, setUnlockableProgressModal] = useState(false);
 
   const initialPage = Math.floor(selectedIndex / PAGE_SIZE);
+
+  console.log("what is this", colorPaletteOptions);
 
   useEffect(() => {
     loadInitialSettings();
@@ -149,13 +144,6 @@ export default function Settings() {
       let colorOptions =
         (await loadColorPaletteOptions()) ??
         (await getColorPaletteOptions(currentCriteriaMap));
-      let profileBackgroundColor =
-        (await loadProfileBackgroundColor()) ?? "#313131ff";
-      let profileLetterColor = (await loadProfileLetterColor()) ?? "#FFFFFF";
-      let profileBannerColor = (await loadProfileBannerColor()) ?? "#0b40b3ff";
-      setProfileBackground(profileBackgroundColor);
-      setProfileLetter(profileLetterColor);
-      setProfileBanner(profileBannerColor);
       setSelectedColorPalette(colorOptions?.[savedIndex] ?? colorOptions[0]);
       setColorPaletteOptions(chunkArray(colorOptions, PAGE_SIZE));
       setSelectedIndex(savedIndex);
@@ -169,93 +157,76 @@ export default function Settings() {
 
   return (
     <ThemedView style={[styles.container]}>
-      <ThemedView style={{ position: "relative" }}>
-        <Avatar
-          profileBackground={profileBackground}
-          profileLetter={profileLetter}
-          size="large"
-          username={user.displayName ?? "?"}
-          handleAvatarClick={() => setOpenProfile(true)}
-        />
-        <TouchableOpacity
-          onPress={() => setOpenProfile(true)}
-          style={styles.iconContainer}
-        >
-          <IconSymbol
-            style={{ textAlign: "center" }}
-            size={14}
-            name="pencil"
-            color={"black"}
-          />
-        </TouchableOpacity>
-      </ThemedView>
       {!selectedColorPalette ? (
         <ActivityIndicator />
       ) : (
-        <View style={[styles.paletteCard, { marginTop: 20 }]}>
-          <View style={styles.paletteRow}>
-            <View
-              style={[
-                styles.paletteSquare,
-                {
-                  backgroundColor: selectedColorPalette[3],
-                  borderColor: "black",
-                  borderWidth: isMosaic ? 1 : 0,
-                },
-              ]}
-            />
-            <View
-              style={[
-                styles.paletteSquare,
-                {
-                  backgroundColor: selectedColorPalette[4],
-                  borderColor: "black",
-                  borderWidth: isMosaic ? 1 : 0,
-                },
-              ]}
-            />
+        <>
+          <ThemedText type="subtitle">Selected Color</ThemedText>
+          <View style={[styles.paletteCard, { marginTop: 20 }]}>
+            <View style={styles.paletteRow}>
+              <View
+                style={[
+                  styles.paletteSquare,
+                  {
+                    backgroundColor: selectedColorPalette[3],
+                    borderColor: "black",
+                    borderWidth: isMosaic ? 1 : 0,
+                  },
+                ]}
+              />
+              <View
+                style={[
+                  styles.paletteSquare,
+                  {
+                    backgroundColor: selectedColorPalette[4],
+                    borderColor: "black",
+                    borderWidth: isMosaic ? 1 : 0,
+                  },
+                ]}
+              />
+            </View>
+            <View style={styles.paletteRow}>
+              <View
+                style={[
+                  styles.paletteSquare,
+                  {
+                    backgroundColor: selectedColorPalette[0],
+                    borderColor: "black",
+                    borderWidth: isMosaic ? 1 : 0,
+                  },
+                ]}
+              />
+              <View
+                style={[
+                  styles.paletteSquare,
+                  {
+                    backgroundColor: selectedColorPalette[1],
+                    borderColor: "black",
+                    borderWidth: isMosaic ? 1 : 0,
+                  },
+                ]}
+              />
+              <View
+                style={[
+                  styles.paletteSquare,
+                  {
+                    backgroundColor: selectedColorPalette[2],
+                    borderColor: "black",
+                    borderWidth: isMosaic ? 1 : 0,
+                  },
+                ]}
+              />
+            </View>
           </View>
-          <View style={styles.paletteRow}>
-            <View
-              style={[
-                styles.paletteSquare,
-                {
-                  backgroundColor: selectedColorPalette[0],
-                  borderColor: "black",
-                  borderWidth: isMosaic ? 1 : 0,
-                },
-              ]}
-            />
-            <View
-              style={[
-                styles.paletteSquare,
-                {
-                  backgroundColor: selectedColorPalette[1],
-                  borderColor: "black",
-                  borderWidth: isMosaic ? 1 : 0,
-                },
-              ]}
-            />
-            <View
-              style={[
-                styles.paletteSquare,
-                {
-                  backgroundColor: selectedColorPalette[2],
-                  borderColor: "black",
-                  borderWidth: isMosaic ? 1 : 0,
-                },
-              ]}
-            />
-          </View>
-        </View>
+        </>
       )}
 
-      {/* <ThemedText
+      <ThemedText
         style={[styles.optionText, { marginTop: 12 }]}
         type="subtitle"
       >
         Color Options
-      </ThemedText> */}
+      </ThemedText>
 
       {colorPaletteOptions.length === 0 ? (
         <ActivityIndicator />
@@ -275,6 +246,15 @@ export default function Settings() {
           handleChangeColorPalette={handleChangeColorPalette}
         />
       )}
+      <View>
+        <TouchableOpacity
+          style={styles.unlockableButton}
+          onPress={() => setUnlockableProgressModal(true)}
+        >
+          <ThemedText>View Unlockables</ThemedText>
+        </TouchableOpacity>
+        <ThemedText></ThemedText>
+      </View>
       <ThemedView>
         <ThemedText>Square Borders</ThemedText>
         <Switch
@@ -303,16 +283,11 @@ export default function Settings() {
           setProgressModalPalette={setProgressModalPalette}
         />
       )}
-      {openProfile && (
-        <EditProfile
-          user={user}
-          profileBackground={profileBackground}
-          profileLetter={profileLetter}
-          profileBanner={profileBanner}
-          setProfileBackground={setProfileBackground}
-          setProfileLetter={setProfileLetter}
-          setProfileBanner={setProfileBanner}
-          setOpenProfile={setOpenProfile}
+      {unlockableProgressMdoal && (
+        <UnlockableProgressModal
+          colorPaletteOptions={colorPaletteOptions.flat()}
+          isMosaic={isMosaic}
+          setUnlockableProgressModal={setUnlockableProgressModal}
         />
       )}
     </ThemedView>
@@ -339,7 +314,7 @@ const ColorPaletteOptionsWebView = ({
         const isSelected = selectedIndex === paletteIndex;
         return (
           <TouchableOpacity
-            key={palette.key}
+            key={paletteIndex}
             style={[
               styles.paletteCard,
               isSelected && styles.selectedCard,
@@ -831,13 +806,9 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "bold",
   },
-  iconContainer: {
-    position: "absolute",
-    bottom: 0,
-    right: 5,
-    backgroundColor: "#f0f0f0ff",
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+  unlockableButton: {
+    padding: 5,
+    borderRadius: 5,
+    backgroundColor: "#448ee2ff",
   },
 });

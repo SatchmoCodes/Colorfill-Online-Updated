@@ -1,7 +1,19 @@
 // components/CustomHeader.tsx
-import { router, useNavigation } from "expo-router";
-import React from "react";
-import { StyleSheet, TouchableOpacity, useColorScheme } from "react-native";
+import {
+  loadProfileBackgroundColor,
+  loadProfileBannerColor,
+  loadProfileLetterColor,
+} from "@/helper/asyncStorageHelper";
+import { useUser } from "@/hooks/useFirebaseUser";
+import { router, useFocusEffect, useNavigation } from "expo-router";
+import React, { useCallback, useEffect, useState } from "react";
+import {
+  DeviceEventEmitter,
+  StyleSheet,
+  TouchableOpacity,
+  useColorScheme,
+} from "react-native";
+import Avatar from "./Avatar";
 import { ThemedText } from "./ThemedText";
 import { ThemedView } from "./ThemedView";
 import { IconSymbol } from "./ui/IconSymbol";
@@ -18,10 +30,61 @@ export default function CustomHeader({
   routeName,
   docId = null,
 }: CustomHeaderProps) {
+  const user = useUser();
   const navigation = useNavigation();
   const theme = useColorScheme() ?? "light";
-  const isGearIconHidden = ["settings", "playerlist"].includes(routeName);
-  const isPlayerIconHidden = ["settings", "playerlist"].includes(routeName);
+  const isGearIconHidden = ["settings", "playerlist", "viewprofile"].includes(
+    routeName
+  );
+  const isPlayerIconHidden = ["settings", "playerlist", "viewprofile"].includes(
+    routeName
+  );
+
+  const isProfileIconHidden = [
+    "settings",
+    "playerlist",
+    "viewprofile",
+  ].includes(routeName);
+
+  const [profileBackground, setProfileBackground] = useState("gray");
+  const [profileLetter, setProfileLetter] = useState("white");
+  const [profileBanner, setProfileBanner] = useState("blue");
+
+  async function loadProfileIcon() {
+    setProfileBackground((await loadProfileBackgroundColor()) ?? "gray");
+    setProfileLetter((await loadProfileLetterColor()) ?? "white");
+    setProfileBanner((await loadProfileBannerColor()) ?? "blue");
+  }
+
+  useFocusEffect(
+    useCallback(() => {
+      loadProfileIcon();
+    }, [])
+  );
+
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener(
+      "profileColorsUpdated",
+      loadProfileIcon
+    );
+    return () => sub.remove();
+  }, []);
+
+  const handleProfileClick = async () => {
+    const paramData = {
+      id: user.uid,
+      displayName: user.displayName,
+      profileBackground: profileBackground,
+      profileLetter: profileLetter,
+      profileBanner: profileBanner,
+      online: true,
+      lastSeen: Date.now(),
+    };
+    router.push({
+      pathname: "/(protected)/viewprofile",
+      params: { player: JSON.stringify(paramData) },
+    });
+  };
 
   return (
     <ThemedView style={styles.headerContainer}>
@@ -60,6 +123,15 @@ export default function CustomHeader({
         >
           <IconSymbol name="gear" size={24} color="white" />
         </TouchableOpacity>
+      )}
+      {!isProfileIconHidden && (
+        <Avatar
+          username={user.displayName ?? "?"}
+          profileBackground={profileBackground}
+          profileLetter={profileLetter}
+          size="small"
+          handleAvatarClick={() => handleProfileClick()}
+        />
       )}
     </ThemedView>
   );

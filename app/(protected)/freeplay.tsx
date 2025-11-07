@@ -15,6 +15,7 @@ import {
 } from "@/helper/asyncStorageHelper";
 import { getUser } from "@/helper/commonQueries";
 import { getColorPaletteOptions } from "@/helper/getColorPaletteOptions";
+import { getWindowWidth } from "@/helper/getWindowWidth";
 import { squareGenerator } from "@/helper/squareGenerator";
 import { updateCriteriaMap } from "@/helper/updateCriteriaMap";
 import { useUser } from "@/hooks/useFirebaseUser";
@@ -38,11 +39,9 @@ import {
   Animated,
   Easing,
   PixelRatio,
-  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
-  useWindowDimensions,
   View,
 } from "react-native";
 import uuid from "react-native-uuid";
@@ -474,7 +473,7 @@ export default function Freeplay() {
           <View>
             <ThemedText style={styles.score}>
               {score}
-              {bestScore && !hasGeneratedNewBoard && `/ ${currentBestScore}`}
+              {bestScore && !hasGeneratedNewBoard && ` / ${currentBestScore}`}
             </ThemedText>
             {showSquareCounter && (
               <SquareCounter
@@ -546,12 +545,8 @@ const GameBoard = ({
   boardVersion,
   isMosaic,
 }: GameBoardProps) => {
-  let windowWidth =
-    Platform.OS === "web"
-      ? useWindowDimensions().width * 0.33
-      : useWindowDimensions().width;
+  let windowWidth = getWindowWidth();
   const columns = Math.sqrt(boardConfig[boardSize]);
-
   const parentHorizontalPadding = 20;
   const maxBoardWidth = Math.min(windowWidth - parentHorizontalPadding, 700);
   const rawTile = Math.floor(maxBoardWidth / columns);

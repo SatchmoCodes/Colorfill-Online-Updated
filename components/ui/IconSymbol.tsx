@@ -27,6 +27,9 @@ const MAPPING = {
   backward: "arrow-back",
   pencil: "edit",
   person: "person",
+  "arrow.clockwise": "refresh",
+  cloud: "cloud",
+  "cloud.bolt": "cloud-off",
 } as IconMapping;
 
 /**

@@ -11,6 +11,7 @@ import {
 } from "@/helper/asyncStorageHelper";
 import { getUser } from "@/helper/commonQueries";
 import { getColorPaletteOptions } from "@/helper/getColorPaletteOptions";
+import { getWindowWidth } from "@/helper/getWindowWidth";
 import { PVPSquare } from "@/helper/pvpSquareGenerator";
 import { updateCriteriaMap } from "@/helper/updateCriteriaMap";
 import { useUser } from "@/hooks/useFirebaseUser";
@@ -42,10 +43,8 @@ import {
   Easing,
   Modal,
   PixelRatio,
-  Platform,
   StyleSheet,
   TouchableOpacity,
-  useWindowDimensions,
   View,
 } from "react-native";
 import { ActivityIndicator } from "react-native-paper";
@@ -877,10 +876,7 @@ const GameBoard = (props: PVPGameBoard) => {
     isMosaic,
   } = props;
 
-  let windowWidth =
-    Platform.OS === "web"
-      ? useWindowDimensions().width * 0.33
-      : useWindowDimensions().width;
+  let windowWidth = getWindowWidth();
   const columns = Math.sqrt(boardSizePVPConfig[boardSize]);
 
   const parentHorizontalPadding = 30;

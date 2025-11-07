@@ -24,6 +24,8 @@ export default function Playerlist() {
   const user = useUser();
   const { playerList, onlinePlayerCount } = useOnlinePlayerList();
 
+  console.log("what is this", playerList);
+
   // 👇 Track which player's popover is open
   const [openPlayerId, setOpenPlayerId] = useState<string | null>(null);
 
@@ -46,7 +48,7 @@ export default function Playerlist() {
         })
         // The rest of your code remains the same
         .filter((x) => {
-          if (user.displayName === x.displayName) return false;
+          // if (user.displayName === x.displayName) return false;
           if (showAllPlayers) return true;
           if (!x.online) return false;
           return true;
@@ -141,8 +143,6 @@ const PlayerCard = ({
     }
   };
 
-  const isMobile = ["android", "ios"].includes(Platform.OS);
-
   return (
     <ThemedView style={[{ paddingBottom: 20 }, isOpen && { zIndex: 100 }]}>
       <ThemedView
@@ -185,11 +185,13 @@ const PlayerCard = ({
                 borderRadius: 20,
               }}
             >
-              <TouchableOpacity onPress={() => docId && handleInvite()}>
-                <ThemedText style={{ color: docId ? "white" : "gray" }}>
-                  Invite to Game
-                </ThemedText>
-              </TouchableOpacity>
+              {user.displayName !== player.displayName && (
+                <TouchableOpacity onPress={() => docId && handleInvite()}>
+                  <ThemedText style={{ color: docId ? "white" : "gray" }}>
+                    Invite to Game
+                  </ThemedText>
+                </TouchableOpacity>
+              )}
               <TouchableOpacity
                 onPress={() =>
                   router.push({

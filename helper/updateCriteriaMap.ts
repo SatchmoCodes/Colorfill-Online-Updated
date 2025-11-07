@@ -37,21 +37,21 @@ export const updateCriteriaMap = async ({
         (bestSmallScore === null || bestSmallScore > 13) &&
         savedCriteriaMap["small_1"]?.locked !== false,
       message: "Score 13 or lower on a small board to unlock this color scheme",
-      progress: bestSmallScore ? `current best: ${bestSmallScore}` : "n/a",
+      progress: bestSmallScore ? `Current best:: ${bestSmallScore}` : "n/a",
     },
     small_2: {
       locked:
         (bestSmallScore === null || bestSmallScore > 11) &&
         savedCriteriaMap["small_2"]?.locked !== false,
       message: "Score 11 or lower on a small board to unlock this color scheme",
-      progress: bestSmallScore ? `current best: ${bestSmallScore}` : "n/a",
+      progress: bestSmallScore ? `Current best:: ${bestSmallScore}` : "n/a",
     },
     small_3: {
       locked:
         (bestSmallScore === null || bestSmallScore > 9) &&
         savedCriteriaMap["small_3"]?.locked !== false,
       message: "Score 11 or lower on a small board to unlock this color scheme",
-      progress: bestSmallScore ? `current best: ${bestSmallScore}` : "n/a",
+      progress: bestSmallScore ? `Current best:: ${bestSmallScore}` : "n/a",
     },
     medium_1: {
       locked:
@@ -59,7 +59,7 @@ export const updateCriteriaMap = async ({
         savedCriteriaMap["medium_1"]?.locked !== false,
       message:
         "Score 17 or lower on a medium board to unlock this color scheme",
-      progress: bestMediumScore ? `current best: ${bestMediumScore}` : "n/a",
+      progress: bestMediumScore ? `Current best:: ${bestMediumScore}` : "n/a",
     },
     medium_2: {
       locked:
@@ -67,7 +67,7 @@ export const updateCriteriaMap = async ({
         savedCriteriaMap["medium_2"]?.locked !== false,
       message:
         "Score 15 or lower on a medium board to unlock this color scheme",
-      progress: bestMediumScore ? `current best: ${bestMediumScore}` : "n/a",
+      progress: bestMediumScore ? `Current best:: ${bestMediumScore}` : "n/a",
     },
     medium_3: {
       locked:
@@ -75,49 +75,49 @@ export const updateCriteriaMap = async ({
         savedCriteriaMap["medium_3"]?.locked !== false,
       message:
         "Score 13 or lower on a medium board to unlock this color scheme",
-      progress: bestMediumScore ? `current best: ${bestMediumScore}` : "n/a",
+      progress: bestMediumScore ? `Current best:: ${bestMediumScore}` : "n/a",
     },
     large_1: {
       locked:
         (bestLargeScore === null || bestLargeScore > 21) &&
         savedCriteriaMap["large_1"]?.locked !== false,
       message: "Score 21 or lower on a large board to unlock this color scheme",
-      progress: bestLargeScore ? `current best: ${bestLargeScore}` : "n/a",
+      progress: bestLargeScore ? `Current best:: ${bestLargeScore}` : "n/a",
     },
     large_2: {
       locked:
         (bestLargeScore === null || bestLargeScore > 19) &&
         savedCriteriaMap["large_2"]?.locked !== false,
       message: "Score 19 or lower on a large board to unlock this color scheme",
-      progress: bestLargeScore ? `current best: ${bestLargeScore}` : "n/a",
+      progress: bestLargeScore ? `Current best:: ${bestLargeScore}` : "n/a",
     },
     large_3: {
       locked:
         (bestLargeScore === null || bestLargeScore > 17) &&
         savedCriteriaMap["large_3"]?.locked !== false,
       message: "Score 17 or lower on a large board to unlock this color scheme",
-      progress: bestLargeScore ? `current best: ${bestLargeScore}` : "n/a",
+      progress: bestLargeScore ? `Current best:: ${bestLargeScore}` : "n/a",
     },
     xlarge_1: {
       locked:
         (bestXLargeScore === null || bestXLargeScore > 30) &&
         savedCriteriaMap["xlarge_1"]?.locked !== false,
       message: "Score 30 or lower on an XL board to unlock this color scheme",
-      progress: bestXLargeScore ? `current best: ${bestXLargeScore}` : "n/a",
+      progress: bestXLargeScore ? `Current best:: ${bestXLargeScore}` : "n/a",
     },
     xlarge_2: {
       locked:
         (bestXLargeScore === null || bestXLargeScore > 23) &&
         savedCriteriaMap["xlarge_2"]?.locked !== false,
       message: "Score 23 or lower on an XL board to unlock this color scheme",
-      progress: bestXLargeScore ? `current best: ${bestXLargeScore}` : "n/a",
+      progress: bestXLargeScore ? `Current best:: ${bestXLargeScore}` : "n/a",
     },
     xlarge_3: {
       locked:
         (bestXLargeScore === null || bestXLargeScore > 21) &&
         savedCriteriaMap["xlarge_3"]?.locked !== false,
       message: "Score 21 or lower on an XL board to unlock this color scheme",
-      progress: bestXLargeScore ? `current best: ${bestXLargeScore}` : "n/a",
+      progress: bestXLargeScore ? `Current best:: ${bestXLargeScore}` : "n/a",
     },
     boards_completed_1: {
       locked:
@@ -218,7 +218,7 @@ export const updateCriteriaMap = async ({
         savedCriteriaMap["winstreak_1"]?.locked !== false,
       message: "Win 3 matches in a row in player vs player",
       progress:
-        bestWinStreak === null ? "n/a" : `current best: ${bestWinStreak}`,
+        bestWinStreak === null ? "n/a" : `Current best:: ${bestWinStreak}`,
     },
     winstreak_2: {
       locked:
@@ -226,7 +226,7 @@ export const updateCriteriaMap = async ({
         savedCriteriaMap["winstreak_2"]?.locked !== false,
       message: "Win 6 matches in a row in player vs player",
       progress:
-        bestWinStreak === null ? "n/a" : `current best: ${bestWinStreak}`,
+        bestWinStreak === null ? "n/a" : `Current best:: ${bestWinStreak}`,
     },
     winstreak_3: {
       locked:
@@ -234,7 +234,7 @@ export const updateCriteriaMap = async ({
         savedCriteriaMap["winstreak_3"]?.locked !== false,
       message: "Win 9 matches in a row in player vs player",
       progress:
-        bestWinStreak === null ? "n/a" : `current best: ${bestWinStreak}`,
+        bestWinStreak === null ? "n/a" : `Current best:: ${bestWinStreak}`,
     },
   };
 

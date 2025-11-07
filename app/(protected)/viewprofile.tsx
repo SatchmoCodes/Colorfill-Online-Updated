@@ -1,21 +1,37 @@
 import Avatar from "@/components/Avatar";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
+import EditProfile from "@/components/ui/EditProfile";
+import { IconSymbol } from "@/components/ui/IconSymbol";
 import { getUser } from "@/helper/commonQueries";
+import { useUser } from "@/hooks/useFirebaseUser";
 import { PlayerList } from "@/hooks/useOnlinePlayerList";
 import { UserDoc } from "@/schema/userDocModel";
 import { useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { StyleSheet } from "react-native";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { ActivityIndicator } from "react-native-paper";
 
 export default function ViewProfile() {
   const { player } = useLocalSearchParams<{ player: string }>();
   const profile: PlayerList = JSON.parse(player);
+  const user = useUser();
 
   const [userDocData, setUserDocData] = useState<UserDoc | null>(null);
+  const [openProfile, setOpenProfile] = useState(false);
+  const [profileBackground, setProfileBackground] = useState(
+    profile.profileBackground ?? "#313131ff"
+  );
+  const [profileLetter, setProfileLetter] = useState(
+    profile.profileLetter ?? "#ffffff"
+  );
+  const [profileBanner, setProfileBanner] = useState(
+    profile.profileBanner ?? "#0b40b3ff"
+  );
 
   if (!profile) return <ActivityIndicator />;
+
+  const profileId = profile.id;
 
   const getUserData = async (uid: string) => {
     try {
@@ -32,19 +48,44 @@ export default function ViewProfile() {
   };
 
   useEffect(() => {
-    if (profile) {
+    if (profile && !userDocData) {
       getUserData(profile.id);
     }
-  }, [profile]);
+  }, [profileId]);
 
   return (
     <ThemedView style={styles.container}>
-      <Avatar
-        profileBackground={profile.profileBackground}
-        profileLetter={profile.profileLetter}
-        username={profile.displayName}
-        size="xlarge"
-      />
+      <ThemedView style={{ position: "relative" }}>
+        {profile.displayName === user.displayName ? (
+          <>
+            <Avatar
+              profileBackground={profileBackground}
+              profileLetter={profileLetter}
+              size="xlarge"
+              username={profile.displayName}
+              handleAvatarClick={() => setOpenProfile(true)}
+            />
+            <TouchableOpacity
+              onPress={() => setOpenProfile(true)}
+              style={styles.iconContainer}
+            >
+              <IconSymbol
+                style={{ textAlign: "center" }}
+                size={14}
+                name="pencil"
+                color={"black"}
+              />
+            </TouchableOpacity>
+          </>
+        ) : (
+          <Avatar
+            profileBackground={profileBackground}
+            profileLetter={profileLetter}
+            size="xlarge"
+            username={profile.displayName}
+          />
+        )}
+      </ThemedView>
       <ThemedText type="subtitle" style={{ marginTop: 20, marginBottom: 20 }}>
         {profile.displayName}
       </ThemedText>
@@ -52,89 +93,108 @@ export default function ViewProfile() {
         {!userDocData ? (
           <ActivityIndicator />
         ) : (
-          <ThemedView style={{ gap: 5, width: "100%", alignItems: "center" }}>
+          <View style={{ gap: 5, width: "100%", alignItems: "center" }}>
             {/* Boards Played (Already styled) */}
-            <ThemedView style={styles.dataRow}>
+            <View style={styles.dataRow}>
               <ThemedText style={styles.dataPoint}>Boards Played:</ThemedText>
               <ThemedText>{userDocData.boardsCompleted ?? "N/A"}</ThemedText>
-            </ThemedView>
+            </View>
 
             {/* Boards of the Day Completed */}
-            <ThemedView style={styles.dataRow}>
+            <View style={styles.dataRow}>
               <ThemedText style={styles.dataPoint}>BOTD Completed:</ThemedText>
               <ThemedText>
                 {userDocData.boardsOfTheDayCompleted ?? "N/A"}
               </ThemedText>
-            </ThemedView>
+            </View>
 
             {/* Best Small Score */}
-            <ThemedView style={styles.dataRow}>
+            <View style={styles.dataRow}>
               <ThemedText style={styles.dataPoint}>
                 Best Small Score:
               </ThemedText>
               <ThemedText>{userDocData.bestSmallScore ?? "N/A"}</ThemedText>
-            </ThemedView>
+            </View>
 
             {/* Best Medium Score */}
-            <ThemedView style={styles.dataRow}>
+            <View style={styles.dataRow}>
               <ThemedText style={styles.dataPoint}>
                 Best Medium Score:
               </ThemedText>
               <ThemedText>{userDocData.bestMediumScore ?? "N/A"}</ThemedText>
-            </ThemedView>
+            </View>
 
             {/* Best Large Score */}
-            <ThemedView style={styles.dataRow}>
+            <View style={styles.dataRow}>
               <ThemedText style={styles.dataPoint}>
                 Best Large Score:
               </ThemedText>
               <ThemedText>{userDocData.bestLargeScore ?? "N/A"}</ThemedText>
-            </ThemedView>
+            </View>
+
+            <View style={styles.dataRow}>
+              <ThemedText style={styles.dataPoint}>
+                Best XLarge Score:
+              </ThemedText>
+              <ThemedText>{userDocData.bestXLargeScore ?? "N/A"}</ThemedText>
+            </View>
 
             {/* PVP Games Played */}
-            <ThemedView style={styles.dataRow}>
+            <View style={styles.dataRow}>
               <ThemedText style={styles.dataPoint}>
                 PVP Games Played:
               </ThemedText>
               <ThemedText>{userDocData.totalGames ?? "N/A"}</ThemedText>
-            </ThemedView>
+            </View>
 
             {/* Wins */}
-            <ThemedView style={styles.dataRow}>
+            <View style={styles.dataRow}>
               <ThemedText style={styles.dataPoint}>Wins:</ThemedText>
               <ThemedText>{userDocData.wins ?? "N/A"}</ThemedText>
-            </ThemedView>
+            </View>
 
             {/* Losses */}
-            <ThemedView style={styles.dataRow}>
+            <View style={styles.dataRow}>
               <ThemedText style={styles.dataPoint}>Losses:</ThemedText>
               <ThemedText>{userDocData.losses ?? "N/A"}</ThemedText>
-            </ThemedView>
+            </View>
 
             {/* Best Win Streak */}
-            <ThemedView style={styles.dataRow}>
+            <View style={styles.dataRow}>
               <ThemedText style={styles.dataPoint}>Best Win Streak:</ThemedText>
               <ThemedText>{userDocData.bestWinStreak ?? "N/A"}</ThemedText>
-            </ThemedView>
+            </View>
 
             {/* Current Win Streak */}
-            <ThemedView style={styles.dataRow}>
+            <View style={styles.dataRow}>
               <ThemedText style={styles.dataPoint}>
                 Current Win Streak:
               </ThemedText>
               <ThemedText>{userDocData.currentWinStreak ?? "N/A"}</ThemedText>
-            </ThemedView>
+            </View>
 
             {/* Win Rate */}
-            <ThemedView style={styles.dataRow}>
+            <View style={styles.dataRow}>
               <ThemedText style={styles.dataPoint}>Win Rate:</ThemedText>
               <ThemedText>
                 {userDocData.winRate ? `${userDocData.winRate}%` : "N/A"}
               </ThemedText>
-            </ThemedView>
-          </ThemedView>
+            </View>
+          </View>
         )}
       </>
+      {openProfile && (
+        <EditProfile
+          user={user}
+          profileBackground={profileBackground}
+          profileLetter={profileLetter}
+          profileBanner={profileBanner}
+          setProfileBackground={setProfileBackground}
+          setProfileLetter={setProfileLetter}
+          setProfileBanner={setProfileBanner}
+          setOpenProfile={setOpenProfile}
+        />
+      )}
     </ThemedView>
   );
 }
@@ -154,5 +214,14 @@ const styles = StyleSheet.create({
   },
   dataPoint: {
     width: "70%",
+  },
+  iconContainer: {
+    position: "absolute",
+    bottom: 0,
+    right: 10,
+    backgroundColor: "#f0f0f0ff",
+    width: 16,
+    height: 16,
+    borderRadius: 8,
   },
 });

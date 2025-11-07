@@ -36,7 +36,7 @@ export const generateDailyBoard = onSchedule(
       boardId,
       boardData,
       size: boardSelection.size,
-      generatedAt: today.toISOString(),
+      generatedAt: yyyyMMdd,
     });
 
     console.log("Daily board generated at 8 AM!", { yyyyMMdd, boardSelection });

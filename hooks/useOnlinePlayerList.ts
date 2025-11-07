@@ -1,5 +1,10 @@
 import { rtdb } from "@/firebaseConfig";
-import { onValue, ref } from "firebase/database";
+import {
+  onChildAdded,
+  onChildChanged,
+  onChildRemoved,
+  ref,
+} from "firebase/database";
 import { useEffect, useState } from "react";
 
 export interface PlayerList {
@@ -13,27 +18,47 @@ export interface PlayerList {
 }
 
 export const useOnlinePlayerList = () => {
-  const [playerList, setPlayerList] = useState<undefined | PlayerList[]>();
+  const [playerList, setPlayerList] = useState<PlayerList[]>([]);
   const [onlinePlayerCount, setOnlinePlayerCount] = useState(0);
 
   useEffect(() => {
     const usersRef = ref(rtdb, "/onlineUsers");
 
-    const unsubscribe = onValue(usersRef, (snapshot) => {
-      if (!snapshot.exists()) return [];
-      const users = snapshot.val();
-      const currentPlayerList = Object.entries(users as PlayerList).map(
-        ([key, value]) => ({ ...value, id: key })
-      );
-      const onlineCount = Object.entries(users as PlayerList).filter(
-        ([key, u]) => u.online
-      ).length;
-      // .map(([key, u]) => ({ ...u, id: key }));
-      setPlayerList(currentPlayerList);
-      setOnlinePlayerCount(onlineCount);
+    // Add listener for new users coming online
+    const addListener = onChildAdded(usersRef, (snapshot) => {
+      const data = snapshot.val();
+      setPlayerList((prev) => [...prev, { ...data, id: snapshot.key! }]);
+      if (data.online) setOnlinePlayerCount((prev) => prev + 1);
     });
 
-    return () => unsubscribe();
+    // Remove listener for users going offline / removed
+    const removeListener = onChildRemoved(usersRef, (snapshot) => {
+      setPlayerList((prev) => prev.filter((p) => p.id !== snapshot.key));
+    });
+
+    // Handle updates (e.g. user goes from offline → online)
+    const changeListener = onChildChanged(usersRef, (snapshot) => {
+      const data = snapshot.val();
+      setPlayerList((prev) =>
+        prev.map((p) => (p.id === snapshot.key ? { ...p, ...data } : p))
+      );
+
+      // Update count safely
+      setOnlinePlayerCount((prev) => {
+        const onlineNow = data.online;
+        const prevUser = playerList.find((p) => p.id === snapshot.key);
+        if (!prevUser) return prev;
+        if (prevUser.online && !onlineNow) return prev - 1;
+        if (!prevUser.online && onlineNow) return prev + 1;
+        return prev;
+      });
+    });
+
+    return () => {
+      addListener();
+      removeListener();
+      changeListener();
+    };
   }, []);
 
   return { playerList, onlinePlayerCount };

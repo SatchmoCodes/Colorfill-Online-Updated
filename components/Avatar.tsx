@@ -1,12 +1,18 @@
 import React from "react";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
-import { ThemedText } from "./ThemedText";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 const sizeMap = {
   small: 30,
   medium: 40,
   large: 50,
   xlarge: 60,
+};
+
+const fontSizeMap = {
+  small: 12,
+  medium: 16,
+  large: 18,
+  xlarge: 22,
 };
 
 interface AvatarProps {
@@ -40,11 +46,14 @@ export default function Avatar(props: AvatarProps) {
           },
         ]}
       >
-        <ThemedText
-          style={[styles.avatarText, { color: profileLetter ?? "#ffffff" }]}
+        <Text
+          style={[
+            styles.avatarText,
+            { color: profileLetter ?? "#ffffff", fontSize: fontSizeMap[size] },
+          ]}
         >
           {username[0]?.toUpperCase()}
-        </ThemedText>
+        </Text>
       </TouchableOpacity>
     );
   }
@@ -60,11 +69,14 @@ export default function Avatar(props: AvatarProps) {
         },
       ]}
     >
-      <ThemedText
-        style={[styles.avatarText, { color: profileLetter ?? "#ffffff" }]}
+      <Text
+        style={[
+          styles.avatarText,
+          { color: profileLetter ?? "#ffffff", fontSize: fontSizeMap[size] },
+        ]}
       >
         {username[0]?.toUpperCase()}
-      </ThemedText>
+      </Text>
     </View>
   );
 }

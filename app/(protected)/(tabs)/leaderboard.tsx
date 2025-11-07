@@ -1,7 +1,13 @@
+import ThemedDropDown from "@/components/ThemedDropDown";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
+import CommonButton from "@/components/ui/CommonButton";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import { db } from "@/firebaseConfig";
+import {
+  loadLeaderboardRefreshTime,
+  saveLeaderboardRefreshTime,
+} from "@/helper/asyncStorageHelper";
 import { buildBOTDDateOptions, monthMap } from "@/helper/buildBOTDDateOptions";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -27,7 +33,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Dropdown } from "react-native-element-dropdown";
 
 export type Gamemode = "freeplay" | "progressive" | "boardoftheday" | "pvp";
 
@@ -53,6 +58,8 @@ const PVPQueryOptions = [
   { label: "Best Win Streak", value: "bestWinStreak" },
   { label: "Win Rate", value: "winRate" },
 ];
+
+const COOLDOWN_SECONDS = 15;
 
 const botdDateOptions = buildBOTDDateOptions();
 
@@ -169,7 +176,7 @@ export default function Leaderboard() {
 
             setTableData(
               snapshot.empty
-                ? []
+                ? [...currentTableData]
                 : [
                     ...currentTableData,
                     ...snapshot.docs.map((doc) => ({
@@ -211,7 +218,7 @@ export default function Leaderboard() {
 
               setTableData(
                 snapshot.empty
-                  ? []
+                  ? [...currentTableData]
                   : [
                       ...currentTableData,
                       ...snapshot.docs.map((doc) => ({
@@ -255,7 +262,7 @@ export default function Leaderboard() {
 
             setTableData(
               snapshot.empty
-                ? []
+                ? [...currentTableData]
                 : [
                     ...currentTableData,
                     ...snapshot.docs.map((doc) => ({
@@ -294,15 +301,11 @@ export default function Leaderboard() {
       !lastDoc
     )
       return;
-
     setLoadingMore(true);
-
     try {
-      let results;
-
       switch (gamemode) {
         case "freeplay":
-          results = await getQueryResults({
+          await getQueryResults({
             queryGamemode: gamemode,
             querySize: size,
             startAfterDoc: lastDoc,
@@ -310,7 +313,7 @@ export default function Leaderboard() {
           });
           break;
         case "boardoftheday":
-          results = await getQueryResults({
+          await getQueryResults({
             queryGamemode: gamemode,
             queryBotdId: botdId,
             startAfterDoc: lastDoc,
@@ -318,7 +321,7 @@ export default function Leaderboard() {
           });
           break;
         case "pvp":
-          results = await getQueryResults({
+          await getQueryResults({
             queryGamemode: gamemode,
             queryPVPOption: pvpQueryParameter,
             startAfterDoc: lastDoc,
@@ -330,6 +333,29 @@ export default function Leaderboard() {
       console.error("Pagination error:", err);
     } finally {
       setLoadingMore(false);
+    }
+  };
+
+  const fetchRefreshData = async () => {
+    switch (gamemode) {
+      case "freeplay":
+        await getQueryResults({
+          queryGamemode: gamemode,
+          querySize: size,
+        });
+        break;
+      case "boardoftheday":
+        await getQueryResults({
+          queryGamemode: gamemode,
+          queryBotdId: botdId,
+        });
+        break;
+      case "pvp":
+        await getQueryResults({
+          queryGamemode: gamemode,
+          queryPVPOption: pvpQueryParameter,
+        });
+        break;
     }
   };
 
@@ -350,6 +376,7 @@ export default function Leaderboard() {
         <IconSymbol size={20} name="slider.horizontal.3" color={"#fff"} />
         <ThemedText style={styles.optionsText}>Sort Options</ThemedText>
       </TouchableOpacity>
+      <RefreshButton fetchRefreshData={fetchRefreshData} />
 
       {/* Leaderboard Table */}
       <View style={styles.tableWrapper}>
@@ -698,99 +725,168 @@ const OptionsModal = ({
             Options
           </ThemedText>
 
-          <ThemedText type="subtitle">Gamemode</ThemedText>
-          <Dropdown
-            data={gamemodeOptions}
-            placeholderStyle={{ color: "white" }}
-            selectedTextStyle={{ color: "white" }}
-            labelField="label"
-            valueField="value"
+          <ThemedText
+            style={{ marginBottom: 10, marginTop: 10 }}
+            type="subtitle"
+          >
+            Gamemode
+          </ThemedText>
+          <ThemedDropDown
+            options={gamemodeOptions}
             value={tempGamemode}
-            onChange={(item) => setTempGamemode(item.value)}
-            style={{ width: 200, marginTop: 10, marginBottom: 20 }}
+            onSetValue={setTempGamemode}
+            placeholder="Select Gamemode..."
           />
           {tempGamemode === "freeplay" && (
             <>
-              <ThemedText type="subtitle">Board Size</ThemedText>
-              <Dropdown
-                data={sizeOptions}
-                placeholderStyle={{ color: "white" }}
-                selectedTextStyle={{ color: "white" }}
-                labelField="label"
-                valueField="value"
+              <ThemedText
+                style={{ marginBottom: 10, marginTop: 10 }}
+                type="subtitle"
+              >
+                Board Size
+              </ThemedText>
+              <ThemedDropDown
+                options={sizeOptions}
                 value={tempSize}
-                onChange={(item) => setTempSize(item.value)}
-                style={{ width: 200, marginTop: 10, marginBottom: 20 }}
+                onSetValue={setTempSize}
+                placeholder="Select Size..."
               />
             </>
           )}
           {tempGamemode === "boardoftheday" && (
             <>
-              <ThemedText type="subtitle">Year</ThemedText>
-              <Dropdown
-                data={yearOptions}
-                placeholderStyle={{ color: "white" }}
-                selectedTextStyle={{ color: "white" }}
-                labelField="label"
-                valueField="value"
+              <ThemedText
+                style={{ marginBottom: 10, marginTop: 10 }}
+                type="subtitle"
+              >
+                Year
+              </ThemedText>
+              <ThemedDropDown
+                options={yearOptions}
                 value={tempYear}
-                onChange={(item) => setTempYear(item.value)}
-                style={{ width: 200, marginTop: 10, marginBottom: 20 }}
+                onSetValue={setTempYear}
+                placeholder="Select Year..."
               />
-              <ThemedText type="subtitle">Month</ThemedText>
-              <Dropdown
-                data={monthOptions}
-                placeholderStyle={{ color: "white" }}
-                selectedTextStyle={{ color: "white" }}
-                labelField="label"
-                valueField="value"
+              <ThemedText
+                style={{ marginBottom: 10, marginTop: 10 }}
+                type="subtitle"
+              >
+                Month
+              </ThemedText>
+              <ThemedDropDown
+                options={monthOptions}
                 value={tempMonth}
-                onChange={(item) => setTempMonth(item.value)}
-                style={{ width: 200, marginTop: 10, marginBottom: 20 }}
+                onSetValue={setTempMonth}
+                placeholder="Select Month..."
               />
-              <ThemedText type="subtitle">Day</ThemedText>
-              <Dropdown
-                data={dayOptions ?? []}
-                placeholderStyle={{ color: "white" }}
-                selectedTextStyle={{ color: "white" }}
-                labelField="label"
-                valueField="value"
+              <ThemedText
+                style={{ marginBottom: 10, marginTop: 10 }}
+                type="subtitle"
+              >
+                Day
+              </ThemedText>
+              <ThemedDropDown
+                options={dayOptions ?? []}
                 value={tempDay}
-                onChange={(item) => setTempDay(item.value)}
-                style={{ width: 200, marginTop: 10, marginBottom: 20 }}
+                onSetValue={setTempDay}
+                placeholder="Select Day..."
               />
             </>
           )}
           {tempGamemode === "pvp" && (
             <>
-              <ThemedText type="subtitle">Query Parameters</ThemedText>
-              <Dropdown
-                data={PVPQueryOptions}
-                placeholderStyle={{ color: "white" }}
-                selectedTextStyle={{ color: "white" }}
-                labelField="label"
-                valueField="value"
+              <ThemedText
+                style={{ marginBottom: 10, marginTop: 10 }}
+                type="subtitle"
+              >
+                Query Parameters
+              </ThemedText>
+              <ThemedDropDown
+                options={PVPQueryOptions}
                 value={tempPvpQueryParameter}
-                onChange={(item) => setTempPvpQueryParameter(item.value)}
-                style={{ width: 200, marginTop: 10, marginBottom: 20 }}
+                onSetValue={setTempPvpQueryParameter}
+                placeholder="Select Option..."
               />
             </>
           )}
 
           {/* Apply Button */}
-          <TouchableOpacity style={styles.applyButton} onPress={handleApply}>
-            <LinearGradient
-              colors={["#ff7e5f", "#feb47b"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.applyButtonBackground}
-            >
-              <ThemedText style={styles.applyButtonText}>Apply</ThemedText>
-            </LinearGradient>
-          </TouchableOpacity>
+          <View style={{ marginTop: 30 }}>
+            <CommonButton title="Apply" size={200} handlePress={handleApply} />
+          </View>
         </ThemedView>
       </View>
     </Modal>
+  );
+};
+
+const RefreshButton = ({
+  fetchRefreshData,
+}: {
+  fetchRefreshData: () => Promise<void>;
+}) => {
+  const [remainingTime, setRemainingTime] = useState<number>(0);
+
+  // Interval to update cooldown timer
+  useEffect(() => {
+    let interval = null;
+
+    const updateRemaining = async () => {
+      const lastRefresh = await loadLeaderboardRefreshTime();
+      if (lastRefresh) {
+        const currentTime = Date.now();
+        const diff = (currentTime - lastRefresh) / 1000;
+        const remaining = Math.max(0, COOLDOWN_SECONDS - diff);
+        setRemainingTime(remaining);
+      } else {
+        setRemainingTime(0);
+      }
+    };
+
+    updateRemaining(); // run immediately
+    interval = setInterval(updateRemaining, 1000); // update every second
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, []);
+
+  async function handleClickRefresh() {
+    const lastRefresh = await loadLeaderboardRefreshTime();
+    const currentTime = Date.now();
+
+    if (lastRefresh) {
+      const diff = (currentTime - lastRefresh) / 1000;
+      if (diff > COOLDOWN_SECONDS) {
+        await fetchRefreshData();
+        await saveLeaderboardRefreshTime(currentTime);
+        setRemainingTime(COOLDOWN_SECONDS); // reset cooldown
+      } else {
+        alert(
+          `Please wait ${Math.ceil(
+            COOLDOWN_SECONDS - diff
+          )} seconds to refresh scores`
+        );
+      }
+    } else {
+      await fetchRefreshData();
+      await saveLeaderboardRefreshTime(currentTime);
+      setRemainingTime(COOLDOWN_SECONDS);
+    }
+  }
+
+  // Change color based on cooldown
+  const iconColor = remainingTime > 0 ? "#888888" : "#ffffff"; // gray when waiting
+  const iconOpacity = remainingTime > 0 ? 0.5 : 1;
+
+  return (
+    <TouchableOpacity
+      onPress={handleClickRefresh}
+      disabled={remainingTime > 0}
+      style={{ opacity: iconOpacity }}
+    >
+      <IconSymbol size={25} name="arrow.clockwise" color={iconColor} />
+    </TouchableOpacity>
   );
 };
 

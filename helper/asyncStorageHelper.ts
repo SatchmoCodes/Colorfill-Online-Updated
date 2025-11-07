@@ -14,6 +14,8 @@ const SOLVED_BOTD_ID_KEY = "botd_id";
 const PROFILE_BACKGROUND_COLOR_KEY = "profile-color";
 const PROFILE_LETTER_COLOR_KEY = "profile-letter-color";
 const PROFILE_BANNER_COLOR_KEY = "profile-banner-color";
+const LEADERBOARD_REFRESH_KEY = "leaderboard-refresh";
+
 export const FREEPLAY_OFFLINE_SCORES_KEY = "offline-scores";
 
 export async function saveColorIndex(idx: number) {
@@ -122,4 +124,13 @@ export async function saveOfflineScores(score: ScoreDoc) {
 export async function loadOfflineScores(): Promise<ScoreDoc[] | []> {
   const saved = await AsyncStorage.getItem(FREEPLAY_OFFLINE_SCORES_KEY);
   return saved !== null ? JSON.parse(saved) : [];
+}
+
+export async function saveLeaderboardRefreshTime(time: number) {
+  await AsyncStorage.setItem(LEADERBOARD_REFRESH_KEY, JSON.stringify(time));
+}
+
+export async function loadLeaderboardRefreshTime(): Promise<number | null> {
+  const saved = await AsyncStorage.getItem(LEADERBOARD_REFRESH_KEY);
+  return saved !== null ? JSON.parse(saved) : null;
 }

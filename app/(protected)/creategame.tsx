@@ -1,17 +1,18 @@
+import ThemedDropDown from "@/components/ThemedDropDown";
 import { ThemedText } from "@/components/ThemedText";
+import CommonButton from "@/components/ui/CommonButton";
 import { letters, numbers } from "@/constants/LettersAndNumbers";
-import { auth, db } from "@/firebaseConfig";
+import { db } from "@/firebaseConfig";
 import {
   loadProfileBackgroundColor,
   loadProfileLetterColor,
 } from "@/helper/asyncStorageHelper";
 import { pvpSquareGenerator } from "@/helper/pvpSquareGenerator";
+import { useUser } from "@/hooks/useFirebaseUser";
 import { router } from "expo-router";
-import { User } from "firebase/auth";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import React, { useEffect, useState } from "react";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
-import { Dropdown } from "react-native-element-dropdown";
+import React, { useState } from "react";
+import { StyleSheet, View } from "react-native";
 import { RadioButton } from "react-native-paper";
 import uuid from "react-native-uuid";
 
@@ -41,20 +42,11 @@ export type PVPBoardType = "random" | "mirror" | "partmirror";
 export type PlayerType = "owner" | "opponent";
 
 export default function CreateGame() {
+  const user = useUser();
   const [boardSize, setBoardSize] = useState<PVPBoardSize>("small");
   const [boardType, setBoardType] = useState<PVPBoardType>("random");
   const [fogOfWar, setFogOfWar] = useState(false);
   const [lobbyType, setLobbyType] = useState<LobbyType>("public");
-  const [user, setUser] = useState<User | null>();
-
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (user) {
-        setUser(user);
-      }
-    });
-    return unsubscribe;
-  }, [auth]);
 
   const handleCreateGame = async () => {
     const numberOfSquares = boardSizePVPConfig[boardSize];
@@ -120,78 +112,106 @@ export default function CreateGame() {
 
   return (
     <View style={styles.container}>
-      <ThemedText
-        style={{ textAlign: "center", marginBottom: 20 }}
-        type="title"
-      >
-        Create Game
-      </ThemedText>
-      <View>
-        <ThemedText style={{ textAlign: "center" }} type="subtitle">
-          Board Size
-        </ThemedText>
-        <Dropdown
-          data={boardSizeOptions}
-          labelField="label"
-          valueField="value"
-          placeholderStyle={{ color: "white" }}
-          selectedTextStyle={{ color: "white" }}
-          value={boardSize}
-          onChange={(item) => setBoardSize(item.value)}
-          style={{ width: 200, marginTop: 10, marginBottom: 20 }}
-        />
-        <ThemedText style={{ textAlign: "center" }} type="subtitle">
-          Board Type
-        </ThemedText>
-        <Dropdown
-          data={boardTypeOptions}
-          labelField="label"
-          valueField="value"
-          placeholderStyle={{ color: "white" }}
-          selectedTextStyle={{ color: "white" }}
-          value={boardType}
-          onChange={(item) => setBoardType(item.value)}
-          style={{ width: 200, marginTop: 10, marginBottom: 20 }}
-        />
-        <ThemedText style={{ textAlign: "center" }} type="subtitle">
-          Fog of War
-        </ThemedText>
-        <RadioButton.Group
-          onValueChange={(value) => {
-            if (value === "on") setFogOfWar(true);
-            if (value === "off") setFogOfWar(false);
-          }}
-          value={fogOfWar ? "on" : "off"}
+      <View style={{ height: "90%", gap: 20 }}>
+        <ThemedText
+          style={{ textAlign: "center", marginBottom: 20 }}
+          type="title"
         >
-          <View
-            style={{ flexDirection: "row", justifyContent: "space-between" }}
-          >
-            <RadioButton value="on"></RadioButton>
-            <ThemedText style={{ marginTop: 5 }}>On</ThemedText>
-            <RadioButton value="off"></RadioButton>
-            <ThemedText style={{ marginTop: 5 }}>Off</ThemedText>
-          </View>
-        </RadioButton.Group>
-        <ThemedText style={{ textAlign: "center" }} type="subtitle">
-          Lobby Type
+          ⚙️ Game Options
         </ThemedText>
-        <RadioButton.Group
-          onValueChange={(value) => setLobbyType(value as LobbyType)}
-          value={lobbyType}
-        >
-          <View
-            style={{ flexDirection: "row", justifyContent: "space-between" }}
+        <View style={styles.optionCard}>
+          <ThemedText style={styles.optionTitle}>Board Size</ThemedText>
+          <ThemedDropDown
+            options={boardSizeOptions}
+            value={boardSize}
+            onSetValue={setBoardSize}
+            placeholder="Board Size"
+          />
+        </View>
+        <View style={styles.optionCard}>
+          <ThemedText style={styles.optionTitle}>Board Type</ThemedText>
+          <ThemedDropDown
+            options={boardTypeOptions}
+            value={boardType}
+            onSetValue={setBoardType}
+            placeholder="Board Type"
+          />
+        </View>
+        <View style={styles.optionCard}>
+          <ThemedText style={styles.optionTitle}>Fog of War</ThemedText>
+          <RadioButton.Group
+            onValueChange={(value) => {
+              if (value === "on") setFogOfWar(true);
+              if (value === "off") setFogOfWar(false);
+            }}
+            value={fogOfWar ? "on" : "off"}
           >
-            <RadioButton value="public"></RadioButton>
-            <ThemedText style={{ marginTop: 5 }}>Public</ThemedText>
-            <RadioButton value="private"></RadioButton>
-            <ThemedText style={{ marginTop: 5 }}>Private</ThemedText>
-          </View>
-        </RadioButton.Group>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "center",
+                gap: 10,
+                // backgroundColor: "#222222",
+                padding: 2,
+                borderRadius: 5,
+                width: 200,
+              }}
+            >
+              <ThemedText style={{ marginTop: 5 }}>On</ThemedText>
+              <RadioButton
+                uncheckedColor="#ffffff"
+                color="#2c78ceff"
+                value="on"
+              ></RadioButton>
+              <ThemedText style={{ marginTop: 5 }}>Off</ThemedText>
+              <RadioButton
+                uncheckedColor="#ffffff"
+                color="#2c78ceff"
+                value="off"
+              ></RadioButton>
+            </View>
+          </RadioButton.Group>
+        </View>
+        <View style={styles.optionCard}>
+          <ThemedText style={styles.optionTitle}>Lobby Type</ThemedText>
+          <RadioButton.Group
+            onValueChange={(value) => setLobbyType(value as LobbyType)}
+            value={lobbyType}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "center",
+                gap: 10,
+                // backgroundColor: "#222222",
+                padding: 2,
+                borderRadius: 5,
+                width: 200,
+              }}
+            >
+              <ThemedText style={{ marginTop: 5 }}>Public</ThemedText>
+              <RadioButton
+                uncheckedColor="#ffffff"
+                color="#2c78ceff"
+                value="public"
+              ></RadioButton>
+              <ThemedText style={{ marginTop: 5 }}>Private</ThemedText>
+              <RadioButton
+                uncheckedColor="#ffffff"
+                color="#2c78ceff"
+                value="private"
+              ></RadioButton>
+            </View>
+          </RadioButton.Group>
+        </View>
       </View>
-      <TouchableOpacity onPress={() => handleCreateGame()}>
-        <ThemedText>Create Game</ThemedText>
-      </TouchableOpacity>
+      <View style={{ height: "10%" }}>
+        <CommonButton
+          title="Create Game"
+          size={300}
+          handlePress={() => handleCreateGame()}
+        />
+      </View>
     </View>
   );
 }
@@ -201,5 +221,42 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     padding: 20,
+  },
+  optionCard: {
+    borderRadius: 16,
+    padding: 16,
+    width: "90%",
+    alignSelf: "center",
+    marginBottom: 15,
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    backgroundColor: "#444444",
+    minWidth: 250,
+    alignItems: "center",
+  },
+  optionTitle: {
+    textAlign: "center",
+    marginBottom: 10,
+    fontSize: 18,
+    fontWeight: "600",
+  },
+  dropdown: {
+    width: 200,
+    backgroundColor: "#222222",
+    padding: 10,
+    borderRadius: 5,
+  },
+  radioButton: {
+    backgroundColor: "#222222",
+  },
+  dropdownItemContainerStyle: {
+    backgroundColor: "#222222",
+  },
+  dropdownContainerStyle: {
+    borderColor: "black",
+  },
+  dropdownItemTextStyle: {
+    color: "gray",
   },
 });

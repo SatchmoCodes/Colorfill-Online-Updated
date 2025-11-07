@@ -25,6 +25,7 @@
         <category android:name="android.intent.category.DEFAULT"/>
         <category android:name="android.intent.category.BROWSABLE"/>
         <data android:scheme="colorfillonlineupdated"/>
+        <data android:scheme="exp+colorfillonlineupdated"/>
       </intent-filter>
     </activity>
   </application>

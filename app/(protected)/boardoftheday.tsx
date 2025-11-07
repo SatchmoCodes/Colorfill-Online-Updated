@@ -17,6 +17,8 @@ import {
 } from "@/helper/asyncStorageHelper";
 import { getUser } from "@/helper/commonQueries";
 import { getColorPaletteOptions } from "@/helper/getColorPaletteOptions";
+import { getEasternBoardDate } from "@/helper/getEasternBoardDate";
+import { getWindowWidth } from "@/helper/getWindowWidth";
 import { squareGenerator } from "@/helper/squareGenerator";
 import { updateCriteriaMap } from "@/helper/updateCriteriaMap";
 import { useUser } from "@/hooks/useFirebaseUser";
@@ -25,11 +27,11 @@ import { useFocusEffect } from "@react-navigation/native";
 import {
   addDoc,
   collection,
+  doc,
   DocumentData,
+  getDoc,
   getDocs,
   increment,
-  limit,
-  orderBy,
   query,
   QueryDocumentSnapshot,
   serverTimestamp,
@@ -45,11 +47,9 @@ import {
   Easing,
   Modal,
   PixelRatio,
-  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
-  useWindowDimensions,
   View,
 } from "react-native";
 import { PaletteObj } from "./settings";
@@ -454,23 +454,26 @@ export default function BoardoftheDay() {
 
   async function getBoardOfTheDay() {
     try {
-      const q = query(
-        collection(db, "boards").withConverter(boardConverter),
-        orderBy("generatedAt", "desc"),
-        limit(1)
-      );
+      const yyyyMMdd = getEasternBoardDate();
+      console.log("Fetching BOTD for (ET):", yyyyMMdd);
 
-      const docSnap = await getDocs(q);
-      if (docSnap.empty) {
-        console.warn("No BOTD found in Firestore.");
+      const boardRef = doc(db, "boards", yyyyMMdd).withConverter(
+        boardConverter
+      );
+      const boardSnap = await getDoc(boardRef);
+
+      if (!boardSnap.exists()) {
+        console.warn("No BOTD found for", yyyyMMdd);
         setLoadingState("error");
         return;
       }
 
-      const doc = docSnap.docs[0].data();
-      await saveCurrentBOTD(doc);
+      const boardDoc = boardSnap.data();
+      await saveCurrentBOTD(boardDoc);
 
-      const boardId = doc.boardId;
+      const boardId = boardDoc.boardId;
+
+      // --- Check if user already has a score for this board ---
       const userHasBOTDScoreQuery = query(
         collection(db, "scores"),
         where("uid", "==", user?.uid),
@@ -485,7 +488,8 @@ export default function BoardoftheDay() {
         return;
       }
 
-      const { boardData, size } = doc;
+      // --- Otherwise, load the board data ---
+      const { boardData, size } = boardDoc;
       const board = squareGenerator(boardData.length, boardData);
       const capturedCount = checkAdjacentSquares(
         board[0][0],
@@ -581,10 +585,7 @@ const GameBoard = ({
   boardSize,
   isMosaic,
 }: GameBoardProps) => {
-  let windowWidth =
-    Platform.OS === "web"
-      ? useWindowDimensions().width * 0.33
-      : useWindowDimensions().width;
+  let windowWidth = getWindowWidth();
   const columns = Math.sqrt(boardConfig[boardSize]);
   const parentHorizontalPadding = 20;
   const maxBoardWidth = Math.min(windowWidth - parentHorizontalPadding, 700);

@@ -6,7 +6,6 @@ import { IconSymbol } from "@/components/ui/IconSymbol";
 import { db } from "@/firebaseConfig";
 import { handleJoinGame } from "@/helper/handleJoinGame";
 import { useUser } from "@/hooks/useFirebaseUser";
-import { useOnlinePlayerList } from "@/hooks/useOnlinePlayerList";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect } from "expo-router";
 import { User } from "firebase/auth";
@@ -65,12 +64,16 @@ interface PVPGame {
   updatedAt: Date;
 }
 
+const boardTypeMap = {
+  random: "Random",
+  partmirror: "Partial Mirror",
+  mirror: "Mirror",
+};
+
 const PvpMenu = () => {
   const user = useUser();
   const [gameList, setGameList] = useState<PVPGame[]>([]);
   const [openJoinGameModal, setOpenJoinGameModal] = useState(false);
-
-  const playerList = useOnlinePlayerList();
 
   useFocusEffect(
     useCallback(() => {
@@ -98,7 +101,7 @@ const PvpMenu = () => {
 
   return (
     <View style={styles.container}>
-      <View style={{ height: "90%" }}>
+      <View style={{ height: "90%", width: "100%" }}>
         <ThemedText
           style={{ textAlign: "center", marginBottom: 10 }}
           type="title"
@@ -123,6 +126,7 @@ const PvpMenu = () => {
           flexDirection: "row",
           justifyContent: "space-between",
           alignItems: "center",
+          width: "100%",
           height: "10%",
         }}
       >
@@ -193,14 +197,60 @@ const GameCard = ({
       >
         <View style={styles.row}>
           {/* Left side: Game Info */}
-          <View style={{ justifyContent: "space-between" }}>
+          <View style={{ gap: 5 }}>
             <ThemedText style={styles.status}>
               Game Status: {game.status[0].toUpperCase() + game.status.slice(1)}
             </ThemedText>
-            <ThemedText style={styles.secondary}>
-              Board Type:{" "}
-              {game.boardType[0].toUpperCase() + game.boardType.slice(1)}
-            </ThemedText>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
+            >
+              <ThemedText style={styles.secondary}>
+                Board Type: {boardTypeMap[game.boardType]}
+              </ThemedText>
+              {game.fog ? (
+                <IconSymbol size={20} name="cloud" color={"white"} />
+              ) : (
+                <IconSymbol size={20} name="cloud.bolt" color={"white"} />
+              )}
+            </View>
+
+            {/* <ThemedText style={styles.secondary}>
+              Fog of War: {game.fog ? "On" : "Off"}
+            </ThemedText> */}
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <ThemedText
+                style={{
+                  opacity: game.size === "small" ? 1 : 0.25,
+                  fontWeight: game.size === "small" ? "bold" : 300,
+                }}
+              >
+                S
+              </ThemedText>
+              <ThemedText
+                style={{
+                  opacity: game.size === "medium" ? 1 : 0.25,
+                  fontWeight: game.size === "medium" ? "bold" : 300,
+                }}
+              >
+                M
+              </ThemedText>
+              <ThemedText
+                style={{
+                  opacity: game.size === "large" ? 1 : 0.25,
+                  fontWeight: game.size === "large" ? "bold" : 300,
+                }}
+              >
+                L
+              </ThemedText>
+              <ThemedText
+                style={{
+                  opacity: game.size === "xlarge" ? 1 : 0.25,
+                  fontWeight: game.size === "xlarge" ? "bold" : 300,
+                }}
+              >
+                XL
+              </ThemedText>
+            </View>
           </View>
 
           {/* Right side: Players */}
@@ -242,10 +292,14 @@ const JoinGameModal = ({
   const [code, setCode] = useState("");
 
   async function verifyCode() {
-    const q = query(collection(db, "games"), where("code", "==", code));
+    const q = query(
+      collection(db, "games"),
+      where("code", "==", code.toUpperCase())
+    );
     const querySnapshot = await getDocs(q);
     if (!querySnapshot.empty) {
       const docRef = querySnapshot.docs[0].ref;
+      setOpenJoinGameModal(false);
       handleJoinGame(docRef, user);
     } else {
       alert("Game not found");
@@ -299,18 +353,20 @@ export default PvpMenu;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    // alignItems: "center",
+    alignItems: "center",
     width: "100%",
-    padding: 30,
+    paddingTop: 20,
+    paddingBottom: 20,
+    paddingLeft: 10,
+    paddingRight: 10,
     position: "relative",
     zIndex: 1,
   },
   card: {
-    height: 120,
+    height: 140,
     borderRadius: 16,
     padding: 15,
     marginVertical: 10,
-
     // iOS shadow
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 6 },
@@ -318,6 +374,9 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     // Android shadow
     elevation: 6,
+    width: "100%",
+    maxWidth: 500,
+    margin: "auto",
   },
   row: {
     flexDirection: "row",
@@ -336,6 +395,7 @@ const styles = StyleSheet.create({
   },
   playerBox: {
     alignItems: "center",
+    justifyContent: "center",
   },
   playerHeader: {
     fontWeight: "600",
