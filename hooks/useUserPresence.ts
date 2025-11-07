@@ -12,6 +12,7 @@ import { registerForPushNotificationsAsync } from "@/helper/registerForPushNotif
 import { updateCriteriaMap } from "@/helper/updateCriteriaMap";
 import { UserDoc } from "@/schema/userDocModel";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Notifications from "expo-notifications";
 import { User } from "firebase/auth";
 import {
   onDisconnect,
@@ -22,7 +23,7 @@ import {
 } from "firebase/database";
 import { addDoc, collection, updateDoc } from "firebase/firestore";
 import { useEffect } from "react";
-import { AppState, DeviceEventEmitter } from "react-native";
+import { AppState, DeviceEventEmitter, Platform } from "react-native";
 
 export const useUserPresence = (user?: User | null) => {
   useEffect(() => {
@@ -47,6 +48,22 @@ export const useUserPresence = (user?: User | null) => {
       subscription.remove();
     };
   }, [user]);
+
+  useEffect(() => {
+    async function setupChannel() {
+      if (Platform.OS === "android") {
+        await Notifications.setNotificationChannelAsync("default", {
+          name: "Default",
+          importance: Notifications.AndroidImportance.HIGH,
+          sound: "default",
+          vibrationPattern: [0, 250, 250, 250],
+          lightColor: "#FF231F7C",
+        });
+      }
+    }
+
+    setupChannel();
+  }, []);
 };
 
 const establishUserPresence = async (user: User) => {

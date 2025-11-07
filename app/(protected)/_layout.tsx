@@ -5,7 +5,7 @@ import { useNotificationResponse } from "@/hooks/useNotificationResponse";
 import { useUserPresence } from "@/hooks/useUserPresence";
 import * as Notifications from "expo-notifications";
 import { Stack } from "expo-router";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, Platform, View } from "react-native";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -57,7 +57,7 @@ export default function ProtectedLayout() {
             name="freeplay"
             options={{
               title: "Free Play",
-              animation: "fade",
+              animation: Platform.OS === "ios" ? "slide_from_right" : "fade",
               contentStyle: { backgroundColor: "transparent" },
             }}
           />
@@ -65,27 +65,36 @@ export default function ProtectedLayout() {
             name="pvpmenu"
             options={{
               title: "PVP Menu",
-              animation: "fade",
+              animation: Platform.OS === "ios" ? "slide_from_right" : "fade",
               contentStyle: { backgroundColor: "transparent" },
             }}
           />
           <Stack.Screen
             name="settings"
-            options={{ title: "Settings", animation: "fade" }}
+            options={{
+              title: "Settings",
+              animation: Platform.OS === "ios" ? "default" : "fade",
+            }}
           />
           <Stack.Screen
             name="viewprofile"
-            options={{ title: "View Profile", animation: "fade" }}
+            options={{
+              title: "View Profile",
+              animation: Platform.OS === "ios" ? "default" : "fade",
+            }}
           />
           <Stack.Screen
             name="playerlist"
-            options={{ title: "Player List", animation: "fade" }}
+            options={{
+              title: "Player List",
+              animation: Platform.OS === "ios" ? "default" : "fade",
+            }}
           />
           <Stack.Screen
             name="viewscore"
             options={{
               title: "View Score",
-              animation: "fade",
+              animation: Platform.OS === "ios" ? "slide_from_right" : "fade",
               contentStyle: { backgroundColor: "transparent" },
             }}
           />
@@ -93,7 +102,7 @@ export default function ProtectedLayout() {
             name="creategame"
             options={{
               title: "PVP Create Game",
-              animation: "fade",
+              animation: Platform.OS === "ios" ? "slide_from_right" : "fade",
               contentStyle: { backgroundColor: "transparent" },
             }}
           />
@@ -101,7 +110,7 @@ export default function ProtectedLayout() {
             name="pvpgame"
             options={{
               title: "PVP Game",
-              animation: "fade",
+              animation: Platform.OS === "ios" ? "slide_from_right" : "fade",
               contentStyle: { backgroundColor: "transparent" },
             }}
           />
@@ -109,7 +118,7 @@ export default function ProtectedLayout() {
             name="boardoftheday"
             options={{
               title: "Board of the Day",
-              animation: "fade",
+              animation: Platform.OS === "ios" ? "slide_from_right" : "fade",
               contentStyle: { backgroundColor: "transparent" },
             }}
           />
