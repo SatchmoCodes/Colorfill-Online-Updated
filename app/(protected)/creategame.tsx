@@ -1,3 +1,4 @@
+import { ThemedBackground } from "@/components/ThemedBackground";
 import ThemedDropDown from "@/components/ThemedDropDown";
 import { ThemedText } from "@/components/ThemedText";
 import CommonButton from "@/components/ui/CommonButton";
@@ -111,13 +112,13 @@ export default function CreateGame() {
   };
 
   return (
-    <View style={styles.container}>
+    <ThemedBackground style={styles.container}>
       <View style={{ height: "90%", gap: 20 }}>
         <ThemedText
           style={{ textAlign: "center", marginBottom: 20 }}
           type="title"
         >
-          ⚙️ Game Options
+          Game Options
         </ThemedText>
         <View style={styles.optionCard}>
           <ThemedText style={styles.optionTitle}>Board Size</ThemedText>
@@ -212,7 +213,7 @@ export default function CreateGame() {
           handlePress={() => handleCreateGame()}
         />
       </View>
-    </View>
+    </ThemedBackground>
   );
 }
 
@@ -231,9 +232,11 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOpacity: 0.2,
     shadowRadius: 4,
-    backgroundColor: "#444444",
+    backgroundColor: "#363636ff",
     minWidth: 250,
     alignItems: "center",
+    borderColor: "#1a1919ff",
+    borderWidth: 1,
   },
   optionTitle: {
     textAlign: "center",

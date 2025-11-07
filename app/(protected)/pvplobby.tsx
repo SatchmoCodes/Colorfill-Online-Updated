@@ -1,9 +1,10 @@
 import Avatar from "@/components/Avatar";
 import CustomHeader from "@/components/CustomHeader";
+import { ThemedBackground } from "@/components/ThemedBackground";
 import { ThemedText } from "@/components/ThemedText";
+import CommonButton from "@/components/ui/CommonButton";
 import { db, rtdb } from "@/firebaseConfig";
 import { useUser } from "@/hooks/useFirebaseUser";
-import { LinearGradient } from "expo-linear-gradient";
 import {
   router,
   Stack,
@@ -25,7 +26,6 @@ import {
   Animated,
   Easing,
   StyleSheet,
-  TouchableOpacity,
   View,
 } from "react-native";
 
@@ -35,6 +35,14 @@ interface PlayerRefObject {
   profileBackground: string;
   profileLetter: string;
 }
+
+const boardTypeMap = {
+  random: "Random",
+  partmirror: "Partial Mirror",
+  mirror: "Mirror",
+} as const;
+
+type BoardTypeKey = keyof typeof boardTypeMap;
 
 export default function PvpLobby() {
   const user = useUser();
@@ -50,6 +58,9 @@ export default function PvpLobby() {
   const [opponentBackground, setOpponentBackground] = useState("#313131ff");
   const [opponentLetter, setOpponentLetter] = useState("#ffffff");
   const [docRef, setDocRef] = useState<DocumentReference | null>(null);
+  const [size, setSize] = useState<string | null>(null);
+  const [boardType, setBoardType] = useState<string | null>(null);
+  const [fogOfWar, setFogOfWar] = useState<boolean | null>(null);
   const [code, setCode] = useState("");
 
   const ownerRef = useRef<PlayerRefObject | null>(null);
@@ -75,6 +86,9 @@ export default function PvpLobby() {
           setOpponentBackground(data.opponentProfileBackground ?? "#313131ff");
           setOpponentLetter(data.opponentProfileLetter ?? "#ffffff");
           setCode(data.code);
+          setSize(data.size);
+          setBoardType(data.boardType);
+          setFogOfWar(data.fog);
           if (data.status === "playing") {
             router.replace({
               pathname: "/pvpgame",
@@ -232,7 +246,7 @@ export default function PvpLobby() {
           ),
         }}
       />
-      <View style={styles.container}>
+      <ThemedBackground style={styles.container}>
         <View style={{ flexDirection: "row", justifyContent: "center" }}>
           <View
             style={{
@@ -300,7 +314,29 @@ export default function PvpLobby() {
             )}
           </View>
         </View>
-
+        <View style={{ gap: 20 }}>
+          {[
+            {
+              label: "Board Size",
+              value: size ? size[0].toUpperCase() + size.slice(1) : "Unknown",
+            },
+            {
+              label: "Board Type",
+              value: boardType
+                ? boardTypeMap[boardType as BoardTypeKey]
+                : "Unknown",
+            },
+            {
+              label: "Fog of War",
+              value: fogOfWar === null ? "Unknown" : fogOfWar ? "On" : "Off",
+            },
+          ].map((item, index) => (
+            <View key={index} style={styles.infoCard}>
+              <ThemedText style={styles.infoLabel}>{item.label}</ThemedText>
+              <ThemedText style={styles.infoValue}>{item.value}</ThemedText>
+            </View>
+          ))}
+        </View>
         <View>
           {user.displayName === ownerName && (
             <ThemedText
@@ -311,39 +347,18 @@ export default function PvpLobby() {
             </ThemedText>
           )}
           {user?.displayName === ownerName ? (
-            <TouchableOpacity
-              onPress={() =>
-                user?.displayName === ownerName &&
-                opponentName !== null &&
-                handleGameStart()
-              }
-            >
-              <LinearGradient
-                colors={["#ff7e5f", "#feb47b"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={[
-                  styles.createButtonBackground,
-                  {
-                    opacity:
-                      user?.displayName === ownerName && opponentName !== null
-                        ? 1
-                        : 0.5,
-                  },
-                ]}
-              >
-                <ThemedText style={styles.createButtonText}>
-                  Start Game
-                </ThemedText>
-              </LinearGradient>
-            </TouchableOpacity>
+            <CommonButton
+              title="Start Game"
+              size={200}
+              handlePress={() => handleGameStart()}
+            />
           ) : (
             <ThemedText style={{ marginBottom: 50 }}>
               Waiting for game to start...
             </ThemedText>
           )}
         </View>
-      </View>
+      </ThemedBackground>
     </>
   );
 }
@@ -366,6 +381,31 @@ const styles = StyleSheet.create({
   createButtonText: {
     fontSize: 18,
     fontWeight: "bold",
+    color: "#fff",
+  },
+  infoCard: {
+    width: "90%",
+    minWidth: 300,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    backgroundColor: "rgba(27, 27, 27, 0.9)",
+    shadowColor: "#000",
+    shadowOffset: { width: 2, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  infoLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#ccc",
+  },
+  infoValue: {
+    fontSize: 16,
+    fontWeight: "700",
     color: "#fff",
   },
 });

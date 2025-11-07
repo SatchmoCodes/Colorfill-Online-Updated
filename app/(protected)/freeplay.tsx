@@ -1,6 +1,7 @@
 import BoardSizeModal from "@/components/BoardSizeModal";
 import ColorPaletteUnlockModal from "@/components/ColorPaletteUnlockModal";
 import SquareCounter, { resetSquareCount } from "@/components/SquareCounter";
+import { ThemedBackground } from "@/components/ThemedBackground";
 import { ThemedText } from "@/components/ThemedText";
 import BoardCompleteModal from "@/components/ui/BoardCompleteModal";
 import { db } from "@/firebaseConfig";
@@ -465,7 +466,7 @@ export default function Freeplay() {
   }
 
   return (
-    <View style={styles.container}>
+    <ThemedBackground style={styles.container}>
       {!selectedColorPalette ? (
         <ActivityIndicator />
       ) : (
@@ -534,7 +535,7 @@ export default function Freeplay() {
           setUnlockedColorPalettes={setUnlockedColorPalettes}
         />
       )}
-    </View>
+    </ThemedBackground>
   );
 }
 
@@ -638,19 +639,19 @@ const GameEffectButtons = (props: GameEffectButtonProps) => {
   return (
     <View style={[styles.colorRow, { justifyContent: "center" }]}>
       <TouchableOpacity
-        style={[styles.extraButton, { backgroundColor: "rgba(46, 46, 46, 1)" }]}
+        style={[styles.extraButton]}
         onPress={() => newBoardProcess(boardSize)}
       >
         <Text style={styles.extraText}>New Board</Text>
       </TouchableOpacity>
       <TouchableOpacity
-        style={[styles.extraButton, { backgroundColor: "rgba(46, 46, 46, 1)" }]}
+        style={[styles.extraButton]}
         onPress={() => resetBoardProcess()}
       >
         <Text style={styles.extraText}>Reset Board</Text>
       </TouchableOpacity>
       <TouchableOpacity
-        style={[styles.extraButton, { backgroundColor: "rgba(46, 46, 46, 1)" }]}
+        style={[styles.extraButton]}
         onPress={() => setShowBoardSizeModal(true)}
       >
         <Text style={styles.extraText}>Board Size</Text>
@@ -748,20 +749,33 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     width: 60,
     height: 60,
-    borderWidth: 1,
-    borderColor: "black",
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.15)", // subtle edge separation
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5, // Android shadow
   },
   extraButton: {
     justifyContent: "center",
     alignItems: "center",
-    borderRadius: 30,
-    borderColor: "black",
-    borderWidth: 1,
-    width: 60,
+    width: 85,
     height: 60,
+    borderRadius: 20,
+    backgroundColor: "rgba(22, 22, 22, 0.9)",
+    borderColor: "#2b2b2b",
+    borderWidth: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 4,
   },
   extraText: {
     color: "white",
+    fontWeight: "600",
+    fontSize: 13,
     textAlign: "center",
   },
 });

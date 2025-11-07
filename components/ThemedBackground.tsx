@@ -1,18 +1,22 @@
 import { LinearGradient } from "expo-linear-gradient";
-import { View } from "react-native";
+import { StyleProp, ViewStyle } from "react-native";
 
-export function ThemedBackground({ children }: { children: React.ReactNode }) {
+export function ThemedBackground({
+  children,
+  style,
+}: {
+  children: React.ReactNode;
+  style?: StyleProp<ViewStyle>;
+}) {
   return (
-    <View style={{ flex: 1, backgroundColor: "#000" }}>
-      <LinearGradient
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        colors={["#1a1a1aff", "#2b2a2aff"]}
-        style={{ flex: 1 }}
-      >
-        {children}
-      </LinearGradient>
-    </View>
+    <LinearGradient
+      start={{ x: 0, y: 0 }}
+      end={{ x: 2, y: 2 }}
+      colors={["#1a1a1aff", "#424242ff"]}
+      style={[style, { flex: 1 }]}
+    >
+      {children}
+    </LinearGradient>
   );
 }
 

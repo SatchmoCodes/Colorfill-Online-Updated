@@ -1,7 +1,9 @@
 import Avatar from "@/components/Avatar";
 import OnlinePlayerList from "@/components/OnlinePlayerList";
+import { ThemedBackground } from "@/components/ThemedBackground";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
+import CommonButton from "@/components/ui/CommonButton";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import { db } from "@/firebaseConfig";
 import { handleJoinGame } from "@/helper/handleJoinGame";
@@ -100,7 +102,7 @@ const PvpMenu = () => {
   );
 
   return (
-    <View style={styles.container}>
+    <ThemedBackground style={styles.container}>
       <View style={{ height: "90%", width: "100%" }}>
         <ThemedText
           style={{ textAlign: "center", marginBottom: 10 }}
@@ -126,38 +128,20 @@ const PvpMenu = () => {
           flexDirection: "row",
           justifyContent: "space-between",
           alignItems: "center",
-          width: "100%",
           height: "10%",
+          gap: 30,
         }}
       >
-        <TouchableOpacity
-          style={styles.createButton}
-          activeOpacity={0.8}
-          onPress={() => router.push("/creategame")}
-        >
-          <LinearGradient
-            colors={["#ff7e5f", "#feb47b"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.createButtonBackground}
-          >
-            <ThemedText style={styles.createButtonText}>Create Game</ThemedText>
-          </LinearGradient>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.createButton}
-          activeOpacity={0.8}
-          onPress={() => setOpenJoinGameModal(true)}
-        >
-          <LinearGradient
-            colors={["#ff7e5f", "#feb47b"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.createButtonBackground}
-          >
-            <ThemedText style={styles.createButtonText}>Join Game</ThemedText>
-          </LinearGradient>
-        </TouchableOpacity>
+        <CommonButton
+          title="Create Game"
+          size={150}
+          handlePress={() => router.push("/creategame")}
+        />
+        <CommonButton
+          title="Join Game"
+          size={150}
+          handlePress={() => setOpenJoinGameModal(true)}
+        />
       </View>
       {openJoinGameModal && (
         <JoinGameModal
@@ -165,7 +149,7 @@ const PvpMenu = () => {
           setOpenJoinGameModal={setOpenJoinGameModal}
         />
       )}
-    </View>
+    </ThemedBackground>
   );
 };
 

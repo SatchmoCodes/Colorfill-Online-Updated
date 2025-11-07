@@ -12,7 +12,6 @@ import {
   saveShowSquareCounter,
 } from "@/helper/asyncStorageHelper";
 import { getColorPaletteOptions } from "@/helper/getColorPaletteOptions";
-import { useUser } from "@/hooks/useFirebaseUser";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -52,11 +51,6 @@ interface ColorPaletteOptionsContainerProps {
   handleChangeColorPalette: (arg1: number, arg2: boolean) => void;
 }
 
-interface MosaicToggleProps {
-  isMosaic: boolean;
-  handleToggleMosaicMode: (mode: boolean) => void;
-}
-
 interface ColorPaletteModalProps {
   progressModalPalette: PaletteObj | null;
   setProgressModalPalette: React.Dispatch<
@@ -80,7 +74,6 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
 }
 
 export default function Settings() {
-  const user = useUser();
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [selectedColorPalette, setSelectedColorPalette] =
     useState<PaletteObj | null>(null);
@@ -91,7 +84,6 @@ export default function Settings() {
     useState<PaletteObj | null>(null);
   const [isMosaic, setIsMosaic] = useState(false);
   const [showSquareCounter, setShowSquareCounter] = useState(false);
-  const [openProfile, setOpenProfile] = useState(false);
   const [unlockableProgressMdoal, setUnlockableProgressModal] = useState(false);
 
   const initialPage = Math.floor(selectedIndex / PAGE_SIZE);
@@ -157,69 +149,71 @@ export default function Settings() {
 
   return (
     <ThemedView style={[styles.container]}>
-      {!selectedColorPalette ? (
-        <ActivityIndicator />
-      ) : (
-        <>
-          <ThemedText type="subtitle">Selected Color</ThemedText>
-          <View style={[styles.paletteCard, { marginTop: 20 }]}>
-            <View style={styles.paletteRow}>
-              <View
-                style={[
-                  styles.paletteSquare,
-                  {
-                    backgroundColor: selectedColorPalette[3],
-                    borderColor: "black",
-                    borderWidth: isMosaic ? 1 : 0,
-                  },
-                ]}
-              />
-              <View
-                style={[
-                  styles.paletteSquare,
-                  {
-                    backgroundColor: selectedColorPalette[4],
-                    borderColor: "black",
-                    borderWidth: isMosaic ? 1 : 0,
-                  },
-                ]}
-              />
+      <View style={{ minHeight: 100, justifyContent: "center" }}>
+        {!selectedColorPalette ? (
+          <ActivityIndicator />
+        ) : (
+          <>
+            <ThemedText type="subtitle">Selected Color</ThemedText>
+            <View style={[styles.paletteCard]}>
+              <View style={styles.paletteRow}>
+                <View
+                  style={[
+                    styles.paletteSquare,
+                    {
+                      backgroundColor: selectedColorPalette[3],
+                      borderColor: "black",
+                      borderWidth: isMosaic ? 1 : 0,
+                    },
+                  ]}
+                />
+                <View
+                  style={[
+                    styles.paletteSquare,
+                    {
+                      backgroundColor: selectedColorPalette[4],
+                      borderColor: "black",
+                      borderWidth: isMosaic ? 1 : 0,
+                    },
+                  ]}
+                />
+              </View>
+              <View style={styles.paletteRow}>
+                <View
+                  style={[
+                    styles.paletteSquare,
+                    {
+                      backgroundColor: selectedColorPalette[0],
+                      borderColor: "black",
+                      borderWidth: isMosaic ? 1 : 0,
+                    },
+                  ]}
+                />
+                <View
+                  style={[
+                    styles.paletteSquare,
+                    {
+                      backgroundColor: selectedColorPalette[1],
+                      borderColor: "black",
+                      borderWidth: isMosaic ? 1 : 0,
+                    },
+                  ]}
+                />
+                <View
+                  style={[
+                    styles.paletteSquare,
+                    {
+                      backgroundColor: selectedColorPalette[2],
+                      borderColor: "black",
+                      borderWidth: isMosaic ? 1 : 0,
+                    },
+                  ]}
+                />
+              </View>
             </View>
-            <View style={styles.paletteRow}>
-              <View
-                style={[
-                  styles.paletteSquare,
-                  {
-                    backgroundColor: selectedColorPalette[0],
-                    borderColor: "black",
-                    borderWidth: isMosaic ? 1 : 0,
-                  },
-                ]}
-              />
-              <View
-                style={[
-                  styles.paletteSquare,
-                  {
-                    backgroundColor: selectedColorPalette[1],
-                    borderColor: "black",
-                    borderWidth: isMosaic ? 1 : 0,
-                  },
-                ]}
-              />
-              <View
-                style={[
-                  styles.paletteSquare,
-                  {
-                    backgroundColor: selectedColorPalette[2],
-                    borderColor: "black",
-                    borderWidth: isMosaic ? 1 : 0,
-                  },
-                ]}
-              />
-            </View>
-          </View>
-        </>
-      )}
+          </>
+        )}
+      </View>
 
       <ThemedText
         style={[styles.optionText, { marginTop: 12 }]}
@@ -228,30 +222,41 @@ export default function Settings() {
         Color Options
       </ThemedText>
 
-      {colorPaletteOptions.length === 0 ? (
-        <ActivityIndicator />
-      ) : Platform.OS === "web" ? (
-        <ColorPaletteOptionsWebView
-          colorPaletteOptions={colorPaletteOptions}
-          isMosaic={isMosaic}
-          selectedIndex={selectedIndex}
-          handleChangeColorPalette={handleChangeColorPalette}
-        />
-      ) : (
-        <ColorPaletteOptionsContainer
-          colorPaletteOptions={colorPaletteOptions}
-          initialPage={initialPage}
-          selectedIndex={selectedIndex}
-          isMosaic={isMosaic}
-          handleChangeColorPalette={handleChangeColorPalette}
-        />
-      )}
+      <View
+        style={{
+          minHeight: 220,
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        {colorPaletteOptions.length === 0 ? (
+          <ActivityIndicator />
+        ) : Platform.OS === "web" ? (
+          <ColorPaletteOptionsWebView
+            colorPaletteOptions={colorPaletteOptions}
+            isMosaic={isMosaic}
+            selectedIndex={selectedIndex}
+            handleChangeColorPalette={handleChangeColorPalette}
+          />
+        ) : (
+          <ColorPaletteOptionsContainer
+            colorPaletteOptions={colorPaletteOptions}
+            initialPage={initialPage}
+            selectedIndex={selectedIndex}
+            isMosaic={isMosaic}
+            handleChangeColorPalette={handleChangeColorPalette}
+          />
+        )}
+      </View>
+
       <View>
         <TouchableOpacity
           style={styles.unlockableButton}
           onPress={() => setUnlockableProgressModal(true)}
         >
-          <ThemedText>View Unlockables</ThemedText>
+          <ThemedText style={{ fontWeight: "bold" }}>
+            View Unlockables
+          </ThemedText>
         </TouchableOpacity>
         <ThemedText></ThemedText>
       </View>
@@ -807,7 +812,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   unlockableButton: {
-    padding: 5,
+    padding: 8,
     borderRadius: 5,
     backgroundColor: "#448ee2ff",
   },

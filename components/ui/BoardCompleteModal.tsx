@@ -1,13 +1,9 @@
 import { BoardSize } from "@/app/(protected)/freeplay";
 import React from "react";
-import {
-  ActivityIndicator,
-  Modal,
-  StyleSheet,
-  TouchableOpacity,
-} from "react-native";
+import { ActivityIndicator, Modal, StyleSheet } from "react-native";
 import { ThemedText } from "../ThemedText";
 import { ThemedView } from "../ThemedView";
+import CommonButton from "./CommonButton";
 
 interface ModalProps {
   setShowBoardCompleteModal: React.Dispatch<React.SetStateAction<boolean>>;
@@ -50,30 +46,30 @@ export default function BoardCompleteModal(props: ModalProps) {
                   : "You did not beat the previous best score!"}
               </ThemedText>
             ) : (
-              <ThemedText>You completed the board in {score} turns!</ThemedText>
+              <ThemedText style={{ marginBottom: 30 }} type="subtitle">
+                You completed the board in {score} turns!
+              </ThemedText>
             )}
 
             <ThemedView
               style={{ flexDirection: "row", gap: 10, marginTop: 10 }}
             >
-              <TouchableOpacity
-                style={styles.button}
-                onPress={() => {
+              <CommonButton
+                title="New Board"
+                size={150}
+                handlePress={() => {
                   newBoardProcess(boardSize);
                   setShowBoardCompleteModal(false);
                 }}
-              >
-                <ThemedText>New Board</ThemedText>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.button}
-                onPress={() => {
+              />
+              <CommonButton
+                title="Retry Board"
+                size={150}
+                handlePress={() => {
                   resetBoardProcess();
                   setShowBoardCompleteModal(false);
                 }}
-              >
-                <ThemedText>Retry Board</ThemedText>
-              </TouchableOpacity>
+              />
             </ThemedView>
           </>
         )}

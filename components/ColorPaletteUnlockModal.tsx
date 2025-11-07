@@ -1,14 +1,9 @@
 import { PaletteObj } from "@/app/(protected)/settings";
 import React from "react";
-import {
-  Modal,
-  PixelRatio,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Modal, PixelRatio, StyleSheet, View } from "react-native";
 import { ThemedText } from "./ThemedText";
 import { ThemedView } from "./ThemedView";
+import CommonButton from "./ui/CommonButton";
 
 interface ModalProps {
   unlockedColorPalettes: PaletteObj[];
@@ -29,7 +24,7 @@ export default function ColorPaletteUnlockModal(props: ModalProps) {
       style={styles.modalStyle}
     >
       <ThemedView style={styles.centeredView}>
-        <ThemedText>
+        <ThemedText type="subtitle">
           {unlockedColorPalettes.length === 1
             ? "You unlocked a new color palette!"
             : `You unlocked ${unlockedColorPalettes.length} new color palettes!`}
@@ -96,12 +91,11 @@ export default function ColorPaletteUnlockModal(props: ModalProps) {
             );
           })}
         </View>
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => setUnlockedColorPalettes([])}
-        >
-          <ThemedText>Close</ThemedText>
-        </TouchableOpacity>
+        <CommonButton
+          title="Close"
+          size={80}
+          handlePress={() => setUnlockedColorPalettes([])}
+        />
       </ThemedView>
     </Modal>
   );

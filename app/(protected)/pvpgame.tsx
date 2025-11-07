@@ -1,5 +1,6 @@
 import Avatar from "@/components/Avatar";
 import ColorPaletteUnlockModal from "@/components/ColorPaletteUnlockModal";
+import { ThemedBackground } from "@/components/ThemedBackground";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { db, rtdb } from "@/firebaseConfig";
@@ -771,7 +772,7 @@ export default function PvpGame() {
 
   if (currentUserType) {
     return (
-      <View style={styles.container}>
+      <ThemedBackground style={styles.container}>
         {!selectedColorPalette ? (
           <ActivityIndicator />
         ) : (
@@ -860,7 +861,7 @@ export default function PvpGame() {
             )}
           </>
         )}
-      </View>
+      </ThemedBackground>
     );
   }
 

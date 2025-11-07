@@ -1,3 +1,4 @@
+import { ThemedBackground } from "@/components/ThemedBackground";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import CommonButton from "@/components/ui/CommonButton";
@@ -13,10 +14,10 @@ import {
   where,
 } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, View } from "react-native";
 
 export default function ViewScore() {
-  const { boardId, boardSize, boardData, bestScore, createdBy } =
+  const { boardId, boardSize, boardData, bestScore, createdBy, createdAt } =
     useLocalSearchParams();
 
   const [originalCreator, setOriginalCreator] = useState<DocumentData | null>(
@@ -25,11 +26,13 @@ export default function ViewScore() {
 
   if (!boardId) {
     return (
-      <ThemedView>
+      <ThemedView style={styles.container}>
         <ThemedText>No board found...</ThemedText>
       </ThemedView>
     );
   }
+
+  console.log("created at", createdAt);
 
   async function getScoreCreator() {
     try {
@@ -53,51 +56,104 @@ export default function ViewScore() {
   }, []);
 
   return (
-    <View style={styles.container}>
-      <View style={{ height: "90%" }}>
-        <ThemedText style={{ textAlign: "center" }} type="title">
-          Board Info
-        </ThemedText>
-        {!originalCreator ? (
-          <ActivityIndicator />
-        ) : (
-          <View style={{ marginTop: 20, marginBottom: 20, gap: 20 }}>
-            <View style={{ flexDirection: "row", gap: 20 }}>
-              <ThemedText>Created by:</ThemedText>
-              <ThemedText>{originalCreator?.createdBy ?? ""}</ThemedText>
-            </View>
-            <View style={{ flexDirection: "row", gap: 20 }}>
-              <ThemedText>Best score: </ThemedText>
-              <ThemedText>{createdBy}</ThemedText>
-            </View>
-            <View style={{ flexDirection: "row", gap: 20 }}>
-              <ThemedText>Board size: </ThemedText>
-              <ThemedText>
-                {boardSize[0].toUpperCase() + boardSize.slice(1)}
-              </ThemedText>
-            </View>
-          </View>
-        )}
-      </View>
+    <ThemedBackground style={styles.container}>
+      <View style={{ height: "90%", width: "100%" }}>
+        <ScrollView
+          style={{ flex: 1, width: "100%" }}
+          contentContainerStyle={{ alignItems: "center", gap: 20 }}
+        >
+          <ThemedText style={styles.title} type="title">
+            Board Info
+          </ThemedText>
 
-      <CommonButton
-        title="Play Board"
-        size={200}
-        handlePress={() =>
-          router.push({
-            pathname: "/freeplay",
-            params: { boardId, boardData, bestScore },
-          })
-        }
-      />
-    </View>
+          {!originalCreator ? (
+            <ActivityIndicator size="large" color="#fff" />
+          ) : (
+            <View style={styles.infoCard}>
+              {[
+                {
+                  id: "creator",
+                  label: "Created by",
+                  value: originalCreator.createdBy ?? "",
+                },
+                { id: "createdAt", label: "Created At", value: createdAt },
+                { id: "holder", label: "Score Holder", value: createdBy },
+                {
+                  id: "size",
+                  label: "Board size",
+                  value: boardSize[0].toUpperCase() + boardSize.slice(1),
+                },
+                { id: "score", label: "Best Score", value: bestScore },
+              ].map((row) => (
+                <View key={row.id} style={styles.infoRow}>
+                  <ThemedText style={styles.infoLabel}>{row.label}:</ThemedText>
+                  <ThemedText style={styles.infoValue}>{row.value}</ThemedText>
+                </View>
+              ))}
+            </View>
+          )}
+        </ScrollView>
+      </View>
+      <View style={{ height: "10%" }}>
+        <CommonButton
+          title="Play Board"
+          size={200}
+          handlePress={() =>
+            router.push({
+              pathname: "/freeplay",
+              params: { boardId, boardData, bestScore },
+            })
+          }
+        />
+      </View>
+    </ThemedBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    padding: 20,
     alignItems: "center",
-    padding: 30,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: "bold",
+    marginBottom: 10,
+    textAlign: "center",
+    color: "#fff",
+    textShadowColor: "rgba(0,0,0,0.6)",
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 4,
+  },
+  infoCard: {
+    width: "100%",
+    backgroundColor: "rgba(20, 20, 20, 0.9)",
+    borderRadius: 20,
+    padding: 20,
+    gap: 15,
+    shadowColor: "#000",
+    shadowOffset: { width: 2, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  infoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: "rgba(60,60,60,0.5)",
+    borderRadius: 12,
+  },
+  infoLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#ddd",
+  },
+  infoValue: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#fff",
   },
 });

@@ -1,5 +1,6 @@
 import ColorPaletteUnlockModal from "@/components/ColorPaletteUnlockModal";
 import SquareCounter, { resetSquareCount } from "@/components/SquareCounter";
+import { ThemedBackground } from "@/components/ThemedBackground";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { db } from "@/firebaseConfig";
@@ -511,7 +512,7 @@ export default function BoardoftheDay() {
   }
 
   return (
-    <View style={styles.container}>
+    <ThemedBackground style={styles.container}>
       {loadingState === "loading" && (
         <>
           <ThemedText type="subtitle">Fetching todays board...</ThemedText>
@@ -575,7 +576,7 @@ export default function BoardoftheDay() {
           setUnlockedColorPalettes={setUnlockedColorPalettes}
         />
       )}
-    </View>
+    </ThemedBackground>
   );
 }
 

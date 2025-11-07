@@ -366,16 +366,14 @@ export default function Leaderboard() {
       </ThemedText>
 
       {/* Sort Options Button */}
-      <TouchableOpacity
-        style={styles.optionsButton}
-        onPress={() =>
+      <CommonButton
+        title="Sort Options"
+        size={150}
+        style={{ marginBottom: 10 }}
+        handlePress={() =>
           setOpenLeaderboardOptionsModal(!openLeaderboardOptionsModal)
         }
-        activeOpacity={0.8}
-      >
-        <IconSymbol size={20} name="slider.horizontal.3" color={"#fff"} />
-        <ThemedText style={styles.optionsText}>Sort Options</ThemedText>
-      </TouchableOpacity>
+      />
       <RefreshButton fetchRefreshData={fetchRefreshData} />
 
       {/* Leaderboard Table */}
@@ -532,57 +530,86 @@ const Table = ({
         keyExtractor={(item) => item.id}
         ListHeaderComponent={<TopRow gamemode={gamemode} />}
         onEndReached={handlePagination}
-        onEndReachedThreshold={0.5} // triggers when 50% away from bottom
+        onEndReachedThreshold={0.5}
+        stickyHeaderIndices={[0]}
         ListFooterComponent={
-          loadingMore ? <ActivityIndicator size="small" color="#999" /> : null
+          loadingMore ? <ActivityIndicator size="small" color="blue" /> : null
         }
-        renderItem={({ item, index }) => (
-          <TouchableOpacity
-            style={[
-              styles.row,
-              index % 2 === 0 ? styles.rowEven : styles.rowOdd,
-            ]}
-            onPress={() =>
-              gamemode === "freeplay" &&
-              router.push({
-                pathname: "/viewscore",
-                params: {
-                  boardId: item.boardId,
-                  boardSize: item.size,
-                  boardData: item.boardData,
-                  bestScore: item.score,
-                  createdBy: item.createdBy,
-                },
-              })
-            }
-          >
-            <ThemedView style={[styles.cell, { width: "20%" }]}>
-              <ThemedText style={styles.cellText}>{index + 1}</ThemedText>
-            </ThemedView>
-            <ThemedView style={[styles.cell, { width: "55%" }]}>
-              <ThemedText style={styles.cellText}>
-                {gamemode === "pvp" ? item.username : item.createdBy}
-              </ThemedText>
-            </ThemedView>
-            <ThemedView style={[styles.cell, { width: "25%" }]}>
-              <ThemedText
-                style={[
-                  styles.cellText,
-                  {
-                    color:
-                      gamemode === "pvp"
-                        ? getValueColor(item, pvpQueryParameter)
-                        : "white",
+        renderItem={({ item, index }) => {
+          let readableDate = "";
+
+          if (item.createdAt && typeof item.createdAt.toDate === "function") {
+            const jsDate = item.createdAt.toDate();
+
+            readableDate = jsDate.toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            });
+          } else {
+            readableDate = "N/A";
+          }
+
+          return (
+            <TouchableOpacity
+              onPress={() =>
+                gamemode === "freeplay" &&
+                router.push({
+                  pathname: "/viewscore",
+                  params: {
+                    boardId: item.boardId,
+                    boardSize: item.size,
+                    boardData: item.boardData,
+                    bestScore: item.score,
+                    createdBy: item.createdBy,
+                    // 🚀 Pass the new readable date
+                    createdAt: readableDate,
                   },
-                ]}
+                })
+              }
+            >
+              {/* ... Rest of your rendering logic remains the same ... */}
+              <LinearGradient
+                style={styles.row}
+                colors={
+                  index % 2 === 0
+                    ? ["#0f0f0fff", "#202020ff"]
+                    : ["#383838ff", "#525151ff"]
+                }
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
               >
-                {gamemode === "pvp"
-                  ? displayValue(item, pvpQueryParameter)
-                  : item.score}
-              </ThemedText>
-            </ThemedView>
-          </TouchableOpacity>
-        )}
+                <ThemedView style={[styles.cell, { width: "20%" }]}>
+                  <ThemedText style={styles.cellText}>{index + 1}</ThemedText>
+                </ThemedView>
+                <ThemedView style={[styles.cell, { width: "55%" }]}>
+                  <ThemedText style={styles.cellText}>
+                    {gamemode === "pvp" ? item.username : item.createdBy}
+                  </ThemedText>
+                </ThemedView>
+                <ThemedView style={[styles.cell, { width: "25%" }]}>
+                  <ThemedText
+                    style={[
+                      styles.cellText,
+                      {
+                        color:
+                          gamemode === "pvp"
+                            ? getValueColor(item, pvpQueryParameter)
+                            : "white",
+                      },
+                    ]}
+                  >
+                    {gamemode === "pvp"
+                      ? displayValue(item, pvpQueryParameter)
+                      : item.score}
+                  </ThemedText>
+                </ThemedView>
+              </LinearGradient>
+            </TouchableOpacity>
+          );
+        }}
       />
     </>
   );
@@ -927,7 +954,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
-    // elevation: ,
   },
   topRow: {
     flexDirection: "row",
@@ -946,12 +972,6 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     width: "100%",
-  },
-  rowEven: {
-    backgroundColor: "rgba(62,62,62,0.95)",
-  },
-  rowOdd: {
-    backgroundColor: "rgba(45,45,45,0.95)",
   },
   cell: {
     // This is the cell content wrapper

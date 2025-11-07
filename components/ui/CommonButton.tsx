@@ -1,27 +1,32 @@
 import { LinearGradient } from "expo-linear-gradient";
 import React from "react";
-import { StyleSheet, TouchableOpacity } from "react-native";
+import {
+  StyleProp,
+  StyleSheet,
+  TouchableOpacity,
+  ViewStyle,
+} from "react-native";
 import { ThemedText } from "../ThemedText";
 
 export default function CommonButton({
   title,
   size,
+  style,
   handlePress,
 }: {
   title: string;
   size: number;
+  style?: StyleProp<ViewStyle>;
   handlePress: () => void;
 }) {
   return (
     <TouchableOpacity
       onPress={() => handlePress()}
-      style={[styles.createButton, { width: size }]}
+      style={[style, styles.createButton, { width: size }]}
       activeOpacity={0.8}
     >
       <LinearGradient
-        colors={["#ff7e5f", "#feb47b"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+        colors={["#448ee2ff", "#162c44ff"]}
         style={[styles.createButtonBackground]}
       >
         <ThemedText style={styles.createButtonText}>{title}</ThemedText>

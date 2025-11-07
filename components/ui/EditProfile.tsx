@@ -134,6 +134,7 @@ export default function EditProfile({
             />
             <View style={{ flexDirection: "row", gap: 30, marginTop: 20 }}>
               <TouchableOpacity
+                style={[styles.profileButton, { backgroundColor: "green" }]}
                 disabled={
                   originalBackground === iconBackground &&
                   originalLetterColor === letterColor &&
@@ -141,10 +142,13 @@ export default function EditProfile({
                 }
                 onPress={() => updateColor()}
               >
-                <ThemedText>Save</ThemedText>
+                <ThemedText style={{ textAlign: "center" }}>Save</ThemedText>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => setOpenProfile(false)}>
-                <ThemedText>Cancel</ThemedText>
+              <TouchableOpacity
+                style={[styles.profileButton, { backgroundColor: "red" }]}
+                onPress={() => setOpenProfile(false)}
+              >
+                <ThemedText style={{ textAlign: "center" }}>Cancel</ThemedText>
               </TouchableOpacity>
             </View>
           </>
@@ -172,7 +176,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 5,
-    borderColor: "white",
     borderWidth: 1,
     minHeight: 300,
     minWidth: 300,
@@ -213,5 +216,10 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     borderRadius: 8,
+  },
+  profileButton: {
+    padding: 8,
+    borderRadius: 50,
+    width: 75,
   },
 });
