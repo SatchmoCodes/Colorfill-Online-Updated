@@ -28,8 +28,8 @@ const MAPPING = {
   pencil: "edit",
   person: "person",
   "arrow.clockwise": "refresh",
-  cloud: "cloud",
-  "cloud.bolt": "cloud-off",
+  "icloud.fill": "cloud",
+  "icloud.slash": "cloud-off",
 } as IconMapping;
 
 /**

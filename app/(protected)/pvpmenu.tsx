@@ -208,9 +208,9 @@ const GameCard = ({
                 Board Type: {boardTypeMap[game.boardType]}
               </ThemedText>
               {game.fog ? (
-                <IconSymbol size={20} name="cloud" color={"white"} />
+                <IconSymbol size={20} name="icloud.fill" color={"white"} />
               ) : (
-                <IconSymbol size={20} name="cloud.bolt" color={"white"} />
+                <IconSymbol size={20} name="icloud.slash" color={"white"} />
               )}
             </View>
 
