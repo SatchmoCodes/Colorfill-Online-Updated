@@ -22,7 +22,6 @@ export default function UnlockableProgressModal({
   isMosaic: boolean;
   setUnlockableProgressModal: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
-  console.log("hello", colorPaletteOptions);
   return (
     <Modal
       onRequestClose={() => setUnlockableProgressModal(false)}
@@ -31,7 +30,7 @@ export default function UnlockableProgressModal({
     >
       <ThemedView style={styles.fixedHeader}>
         <TouchableOpacity
-          style={{ position: "absolute", top: 5, right: 5 }}
+          style={{ position: "absolute", top: 10, right: 10 }}
           onPress={() => setUnlockableProgressModal(false)}
         >
           <IconSymbol size={28} name="clear.fill" color={"white"} />
@@ -166,6 +165,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-end", // Align content horizontally to the end (right)
     paddingRight: 10,
     zIndex: 10, // Ensure it's above the scroll view content
+    paddingTop: 20,
   },
   container: {
     flex: 1,

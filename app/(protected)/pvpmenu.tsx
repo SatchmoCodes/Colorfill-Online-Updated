@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   card: {
-    height: 140,
+    height: 120,
     borderRadius: 16,
     padding: 15,
     marginVertical: 10,
@@ -379,7 +379,6 @@ const styles = StyleSheet.create({
   },
   playerBox: {
     alignItems: "center",
-    justifyContent: "center",
   },
   playerHeader: {
     fontWeight: "600",

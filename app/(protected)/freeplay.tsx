@@ -4,6 +4,7 @@ import SquareCounter, { resetSquareCount } from "@/components/SquareCounter";
 import { ThemedBackground } from "@/components/ThemedBackground";
 import { ThemedText } from "@/components/ThemedText";
 import BoardCompleteModal from "@/components/ui/BoardCompleteModal";
+import ColorButton from "@/components/ui/ColorButton";
 import { db } from "@/firebaseConfig";
 import {
   loadColorIndex,
@@ -41,8 +42,6 @@ import {
   Easing,
   PixelRatio,
   StyleSheet,
-  Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 import uuid from "react-native-uuid";
@@ -419,7 +418,7 @@ export default function Freeplay() {
 
       const updatedScoreMap = Object.fromEntries(
         Object.entries(scoreFieldMap).map(([key, value]) => {
-          if (boardSize === key && isBetterScore) {
+          if (boardSize === key) {
             return [value, updatedScore];
           }
           return [value, userDoc.data[value] ?? null]; // always default to null
@@ -638,24 +637,24 @@ const GameEffectButtons = (props: GameEffectButtonProps) => {
   } = props;
   return (
     <View style={[styles.colorRow, { justifyContent: "center" }]}>
-      <TouchableOpacity
-        style={[styles.extraButton]}
-        onPress={() => newBoardProcess(boardSize)}
-      >
-        <Text style={styles.extraText}>New Board</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={[styles.extraButton]}
-        onPress={() => resetBoardProcess()}
-      >
-        <Text style={styles.extraText}>Reset Board</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={[styles.extraButton]}
-        onPress={() => setShowBoardSizeModal(true)}
-      >
-        <Text style={styles.extraText}>Board Size</Text>
-      </TouchableOpacity>
+      <ColorButton
+        isDisabled={false}
+        text="New Board"
+        handlePress={() => newBoardProcess(boardSize)}
+        style={{ backgroundColor: "rgba(40, 40, 40, 1)" }}
+      />
+      <ColorButton
+        isDisabled={false}
+        text="Reset Board"
+        handlePress={() => resetBoardProcess()}
+        style={{ backgroundColor: "rgba(40, 40, 40, 1)" }}
+      />
+      <ColorButton
+        isDisabled={false}
+        text="Board Size"
+        handlePress={() => setShowBoardSizeModal(true)}
+        style={{ backgroundColor: "rgba(40, 40, 40, 1)" }}
+      />
     </View>
   );
 };
@@ -664,61 +663,24 @@ const ColorRowButtons = (props: ColorRowButtons) => {
   const { activeColor, selectedColorPalette, handleColorChange } = props;
   return (
     <View style={styles.colorRow}>
-      <TouchableOpacity
-        style={[
-          styles.colorButton,
-          {
-            backgroundColor:
-              activeColor === 0 ? "white" : selectedColorPalette[0],
-            opacity: activeColor === 0 ? 0.05 : 1,
-          },
-        ]}
-        onPress={() => activeColor !== 0 && handleColorChange(0)}
-      />
-      <TouchableOpacity
-        style={[
-          styles.colorButton,
-          {
-            backgroundColor:
-              activeColor === 1 ? "white" : selectedColorPalette[1],
-            opacity: activeColor === 1 ? 0.05 : 1,
-          },
-        ]}
-        onPress={() => activeColor !== 1 && handleColorChange(1)}
-      />
-      <TouchableOpacity
-        style={[
-          styles.colorButton,
-          {
-            backgroundColor:
-              activeColor === 2 ? "white" : selectedColorPalette[2],
-            opacity: activeColor === 2 ? 0.05 : 1,
-          },
-        ]}
-        onPress={() => activeColor !== 2 && handleColorChange(2)}
-      />
-      <TouchableOpacity
-        style={[
-          styles.colorButton,
-          {
-            backgroundColor:
-              activeColor === 3 ? "white" : selectedColorPalette[3],
-            opacity: activeColor === 3 ? 0.05 : 1,
-          },
-        ]}
-        onPress={() => activeColor !== 3 && handleColorChange(3)}
-      />
-      <TouchableOpacity
-        style={[
-          styles.colorButton,
-          {
-            backgroundColor:
-              activeColor === 4 ? "white" : selectedColorPalette[4],
-            opacity: activeColor === 4 ? 0.05 : 1,
-          },
-        ]}
-        onPress={() => activeColor !== 4 && handleColorChange(4)}
-      />
+      {Array.from({ length: 5 }).map((_, i) => {
+        const isActive = activeColor === i;
+        const colorKeyIndex = i as ColorKey;
+        return (
+          <ColorButton
+            key={i}
+            isDisabled={activeColor === i}
+            handlePress={() => {
+              if (!isActive) handleColorChange(colorKeyIndex);
+            }}
+            style={{
+              backgroundColor: isActive
+                ? "white"
+                : selectedColorPalette[colorKeyIndex],
+            }}
+          />
+        );
+      })}
     </View>
   );
 };
@@ -760,11 +722,11 @@ const styles = StyleSheet.create({
   extraButton: {
     justifyContent: "center",
     alignItems: "center",
-    width: 85,
+    width: 60,
     height: 60,
-    borderRadius: 20,
-    backgroundColor: "rgba(22, 22, 22, 0.9)",
-    borderColor: "#2b2b2b",
+    borderRadius: 30,
+    backgroundColor: "rgba(40, 40, 40, 1)",
+    borderColor: "rgba(255,255,255,0.15)", // subtle edge separation
     borderWidth: 1,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },

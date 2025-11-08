@@ -351,6 +351,7 @@ export default function PvpLobby() {
               title="Start Game"
               size={200}
               handlePress={() => handleGameStart()}
+              style={{ opacity: opponentName ? 1 : 0.5 }}
             />
           ) : (
             <ThemedText style={{ marginBottom: 50 }}>

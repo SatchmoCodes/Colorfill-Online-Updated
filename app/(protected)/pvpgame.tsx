@@ -3,6 +3,7 @@ import ColorPaletteUnlockModal from "@/components/ColorPaletteUnlockModal";
 import { ThemedBackground } from "@/components/ThemedBackground";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
+import ColorButton from "@/components/ui/ColorButton";
 import { db, rtdb } from "@/firebaseConfig";
 import {
   loadColorIndex,
@@ -1012,76 +1013,25 @@ const ColorRowButtons = (props: ColorRowProps) => {
     <View
       style={[styles.colorRow, { opacity: turn === currentUserType ? 1 : 0.2 }]}
     >
-      <TouchableOpacity
-        style={[
-          styles.colorButton,
-          {
-            backgroundColor: selectedColorPalette[0],
-            opacity: activeColor.includes(0) ? 0.05 : 1,
-          },
-        ]}
-        onPress={() =>
-          !activeColor.includes(0) &&
-          currentUserType === turn &&
-          handleColorChange(0)
-        }
-      />
-      <TouchableOpacity
-        style={[
-          styles.colorButton,
-          {
-            backgroundColor: selectedColorPalette[1],
-            opacity: activeColor.includes(1) ? 0.05 : 1,
-          },
-        ]}
-        onPress={() =>
-          !activeColor.includes(1) &&
-          currentUserType === turn &&
-          handleColorChange(1)
-        }
-      />
-      <TouchableOpacity
-        style={[
-          styles.colorButton,
-          {
-            backgroundColor: selectedColorPalette[2],
-            opacity: activeColor.includes(2) ? 0.05 : 1,
-          },
-        ]}
-        onPress={() =>
-          !activeColor.includes(2) &&
-          currentUserType === turn &&
-          handleColorChange(2)
-        }
-      />
-      <TouchableOpacity
-        style={[
-          styles.colorButton,
-          {
-            backgroundColor: selectedColorPalette[3],
-            opacity: activeColor.includes(3) ? 0.05 : 1,
-          },
-        ]}
-        onPress={() =>
-          !activeColor.includes(3) &&
-          currentUserType === turn &&
-          handleColorChange(3)
-        }
-      />
-      <TouchableOpacity
-        style={[
-          styles.colorButton,
-          {
-            backgroundColor: selectedColorPalette[4],
-            opacity: activeColor.includes(4) ? 0.05 : 1,
-          },
-        ]}
-        onPress={() =>
-          !activeColor.includes(4) &&
-          currentUserType === turn &&
-          handleColorChange(4)
-        }
-      />
+      {Array.from({ length: 5 }).map((_, i) => {
+        const isActive = activeColor.includes(i);
+        const colorKeyIndex = i as ColorKey;
+        return (
+          <ColorButton
+            key={i}
+            isDisabled={isActive}
+            handlePress={() => {
+              if (!isActive && currentUserType === turn)
+                handleColorChange(colorKeyIndex);
+            }}
+            style={{
+              backgroundColor: isActive
+                ? "white"
+                : selectedColorPalette[colorKeyIndex],
+            }}
+          />
+        );
+      })}
     </View>
   );
 };
@@ -1096,51 +1046,22 @@ const FakeColorRowButtons = (props: FakeColorRowProps) => {
         { marginBottom: 20, opacity: turn === currentUserType ? 0.2 : 1 },
       ]}
     >
-      <TouchableOpacity
-        style={[
-          styles.colorButton,
-          {
-            backgroundColor: selectedColorPalette[0],
-            opacity: activeColor.includes(0) ? 0.05 : 1,
-          },
-        ]}
-      />
-      <TouchableOpacity
-        style={[
-          styles.colorButton,
-          {
-            backgroundColor: selectedColorPalette[1],
-            opacity: activeColor.includes(1) ? 0.05 : 1,
-          },
-        ]}
-      />
-      <TouchableOpacity
-        style={[
-          styles.colorButton,
-          {
-            backgroundColor: selectedColorPalette[2],
-            opacity: activeColor.includes(2) ? 0.05 : 1,
-          },
-        ]}
-      />
-      <TouchableOpacity
-        style={[
-          styles.colorButton,
-          {
-            backgroundColor: selectedColorPalette[3],
-            opacity: activeColor.includes(3) ? 0.05 : 1,
-          },
-        ]}
-      />
-      <TouchableOpacity
-        style={[
-          styles.colorButton,
-          {
-            backgroundColor: selectedColorPalette[4],
-            opacity: activeColor.includes(4) ? 0.05 : 1,
-          },
-        ]}
-      />
+      {Array.from({ length: 5 }).map((_, i) => {
+        const isActive = activeColor.includes(i);
+        const colorKeyIndex = i as ColorKey;
+        return (
+          <ColorButton
+            key={i}
+            isDisabled={isActive}
+            handlePress={() => {}}
+            style={{
+              backgroundColor: isActive
+                ? "white"
+                : selectedColorPalette[colorKeyIndex],
+            }}
+          />
+        );
+      })}
     </View>
   );
 };

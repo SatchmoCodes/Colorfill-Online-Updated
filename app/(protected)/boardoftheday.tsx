@@ -3,6 +3,7 @@ import SquareCounter, { resetSquareCount } from "@/components/SquareCounter";
 import { ThemedBackground } from "@/components/ThemedBackground";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
+import ColorButton from "@/components/ui/ColorButton";
 import { db } from "@/firebaseConfig";
 import {
   loadColorIndex,
@@ -49,7 +50,6 @@ import {
   Modal,
   PixelRatio,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -665,12 +665,12 @@ const GameEffectButtons = (props: GameEffectButtonProps) => {
   const { resetBoardProcess } = props;
   return (
     <View style={styles.colorRow}>
-      <TouchableOpacity
-        style={[styles.extraButton, { backgroundColor: "rgba(46, 46, 46, 1)" }]}
-        onPress={() => resetBoardProcess()}
-      >
-        <Text style={styles.extraText}>Reset Board</Text>
-      </TouchableOpacity>
+      <ColorButton
+        isDisabled={false}
+        text="New Board"
+        handlePress={() => resetBoardProcess()}
+        style={{ backgroundColor: "rgba(40, 40, 40, 1)" }}
+      />
     </View>
   );
 };
@@ -679,61 +679,24 @@ const ColorRowButtons = (props: ColorRowButtons) => {
   const { activeColor, selectedColorPalette, handleColorChange } = props;
   return (
     <View style={styles.colorRow}>
-      <TouchableOpacity
-        style={[
-          styles.colorButton,
-          {
-            backgroundColor:
-              activeColor === 0 ? "white" : selectedColorPalette[0],
-            opacity: activeColor === 0 ? 0.05 : 1,
-          },
-        ]}
-        onPress={() => activeColor !== 0 && handleColorChange(0)}
-      />
-      <TouchableOpacity
-        style={[
-          styles.colorButton,
-          {
-            backgroundColor:
-              activeColor === 1 ? "white" : selectedColorPalette[1],
-            opacity: activeColor === 1 ? 0.05 : 1,
-          },
-        ]}
-        onPress={() => activeColor !== 1 && handleColorChange(1)}
-      />
-      <TouchableOpacity
-        style={[
-          styles.colorButton,
-          {
-            backgroundColor:
-              activeColor === 2 ? "white" : selectedColorPalette[2],
-            opacity: activeColor === 2 ? 0.05 : 1,
-          },
-        ]}
-        onPress={() => activeColor !== 2 && handleColorChange(2)}
-      />
-      <TouchableOpacity
-        style={[
-          styles.colorButton,
-          {
-            backgroundColor:
-              activeColor === 3 ? "white" : selectedColorPalette[3],
-            opacity: activeColor === 3 ? 0.05 : 1,
-          },
-        ]}
-        onPress={() => activeColor !== 3 && handleColorChange(3)}
-      />
-      <TouchableOpacity
-        style={[
-          styles.colorButton,
-          {
-            backgroundColor:
-              activeColor === 4 ? "white" : selectedColorPalette[4],
-            opacity: activeColor === 4 ? 0.05 : 1,
-          },
-        ]}
-        onPress={() => activeColor !== 4 && handleColorChange(4)}
-      />
+      {Array.from({ length: 5 }).map((_, i) => {
+        const isActive = activeColor === i;
+        const colorKeyIndex = i as ColorKey;
+        return (
+          <ColorButton
+            key={i}
+            isDisabled={activeColor === i}
+            handlePress={() => {
+              if (!isActive) handleColorChange(colorKeyIndex);
+            }}
+            style={{
+              backgroundColor: isActive
+                ? "white"
+                : selectedColorPalette[colorKeyIndex],
+            }}
+          />
+        );
+      })}
     </View>
   );
 };
@@ -860,20 +823,33 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     width: 60,
     height: 60,
-    borderWidth: 1,
-    borderColor: "black",
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.15)", // subtle edge separation
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5, // Android shadow
   },
   extraButton: {
     justifyContent: "center",
     alignItems: "center",
-    borderRadius: 30,
-    borderColor: "black",
-    borderWidth: 1,
-    width: 60,
+    width: 85,
     height: 60,
+    borderRadius: 20,
+    backgroundColor: "rgba(22, 22, 22, 0.9)",
+    borderColor: "#2b2b2b",
+    borderWidth: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 4,
   },
   extraText: {
     color: "white",
+    fontWeight: "600",
+    fontSize: 13,
     textAlign: "center",
   },
   centeredView: {
