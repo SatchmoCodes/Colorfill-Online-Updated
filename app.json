@@ -10,12 +10,16 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "googleServicesFile": "./GoogleService-Info.plist"
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "bundleIdentifier": "com.colorfillonlineupdated",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "splash": {
       "image": "./assets/images/ColorFill-iOS.png",
       "resizeMode": "cover",
-      "backgroundColor": "#b5b5b5",
+      "backgroundColor": "#ffffff",
       "imageWidth": "200"
     },
     "notification": {

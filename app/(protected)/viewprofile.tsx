@@ -12,6 +12,8 @@ import React, { useEffect, useState } from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { ActivityIndicator } from "react-native-paper";
 
+type LoadingState = "loading" | "complete" | "error";
+
 export default function ViewProfile() {
   const { player } = useLocalSearchParams<{ player: string }>();
   const profile: PlayerList = JSON.parse(player);
@@ -28,8 +30,9 @@ export default function ViewProfile() {
   const [profileBanner, setProfileBanner] = useState(
     profile.profileBanner ?? "#0b40b3ff"
   );
+  const [loading, setLoading] = useState<LoadingState>("loading");
 
-  if (!profile) return <ActivityIndicator />;
+  if (!profile) return <ThemedText>No Profile Found</ThemedText>;
 
   const profileId = profile.id;
 
@@ -38,12 +41,15 @@ export default function ViewProfile() {
       const userDoc = await getUser(uid);
       if (userDoc) {
         setUserDocData(userDoc.data);
+        setLoading("complete");
       } else {
         setUserDocData(null);
+        setLoading("error");
       }
     } catch (error) {
       console.log("error getting user data ", error);
       setUserDocData(null);
+      setLoading("error");
     }
   };
 
@@ -90,21 +96,20 @@ export default function ViewProfile() {
         {profile.displayName}
       </ThemedText>
       <>
-        {!userDocData ? (
-          <ActivityIndicator />
-        ) : (
+        {loading === "loading" && <ActivityIndicator />}
+        {loading === "complete" && (
           <View style={{ gap: 5, width: "100%", alignItems: "center" }}>
             {/* Boards Played (Already styled) */}
             <View style={styles.dataRow}>
               <ThemedText style={styles.dataPoint}>Boards Played:</ThemedText>
-              <ThemedText>{userDocData.boardsCompleted ?? "N/A"}</ThemedText>
+              <ThemedText>{userDocData!.boardsCompleted ?? "N/A"}</ThemedText>
             </View>
 
             {/* Boards of the Day Completed */}
             <View style={styles.dataRow}>
               <ThemedText style={styles.dataPoint}>BOTD Completed:</ThemedText>
               <ThemedText>
-                {userDocData.boardsOfTheDayCompleted ?? "N/A"}
+                {userDocData!.boardsOfTheDayCompleted ?? "N/A"}
               </ThemedText>
             </View>
 
@@ -113,7 +118,7 @@ export default function ViewProfile() {
               <ThemedText style={styles.dataPoint}>
                 Best Small Score:
               </ThemedText>
-              <ThemedText>{userDocData.bestSmallScore ?? "N/A"}</ThemedText>
+              <ThemedText>{userDocData!.bestSmallScore ?? "N/A"}</ThemedText>
             </View>
 
             {/* Best Medium Score */}
@@ -121,7 +126,7 @@ export default function ViewProfile() {
               <ThemedText style={styles.dataPoint}>
                 Best Medium Score:
               </ThemedText>
-              <ThemedText>{userDocData.bestMediumScore ?? "N/A"}</ThemedText>
+              <ThemedText>{userDocData!.bestMediumScore ?? "N/A"}</ThemedText>
             </View>
 
             {/* Best Large Score */}
@@ -129,14 +134,14 @@ export default function ViewProfile() {
               <ThemedText style={styles.dataPoint}>
                 Best Large Score:
               </ThemedText>
-              <ThemedText>{userDocData.bestLargeScore ?? "N/A"}</ThemedText>
+              <ThemedText>{userDocData!.bestLargeScore ?? "N/A"}</ThemedText>
             </View>
 
             <View style={styles.dataRow}>
               <ThemedText style={styles.dataPoint}>
                 Best XLarge Score:
               </ThemedText>
-              <ThemedText>{userDocData.bestXLargeScore ?? "N/A"}</ThemedText>
+              <ThemedText>{userDocData!.bestXLargeScore ?? "N/A"}</ThemedText>
             </View>
 
             {/* PVP Games Played */}
@@ -144,25 +149,25 @@ export default function ViewProfile() {
               <ThemedText style={styles.dataPoint}>
                 PVP Games Played:
               </ThemedText>
-              <ThemedText>{userDocData.totalGames ?? "N/A"}</ThemedText>
+              <ThemedText>{userDocData!.totalGames ?? "N/A"}</ThemedText>
             </View>
 
             {/* Wins */}
             <View style={styles.dataRow}>
               <ThemedText style={styles.dataPoint}>Wins:</ThemedText>
-              <ThemedText>{userDocData.wins ?? "N/A"}</ThemedText>
+              <ThemedText>{userDocData!.wins ?? "N/A"}</ThemedText>
             </View>
 
             {/* Losses */}
             <View style={styles.dataRow}>
               <ThemedText style={styles.dataPoint}>Losses:</ThemedText>
-              <ThemedText>{userDocData.losses ?? "N/A"}</ThemedText>
+              <ThemedText>{userDocData!.losses ?? "N/A"}</ThemedText>
             </View>
 
             {/* Best Win Streak */}
             <View style={styles.dataRow}>
               <ThemedText style={styles.dataPoint}>Best Win Streak:</ThemedText>
-              <ThemedText>{userDocData.bestWinStreak ?? "N/A"}</ThemedText>
+              <ThemedText>{userDocData!.bestWinStreak ?? "N/A"}</ThemedText>
             </View>
 
             {/* Current Win Streak */}
@@ -170,18 +175,19 @@ export default function ViewProfile() {
               <ThemedText style={styles.dataPoint}>
                 Current Win Streak:
               </ThemedText>
-              <ThemedText>{userDocData.currentWinStreak ?? "N/A"}</ThemedText>
+              <ThemedText>{userDocData!.currentWinStreak ?? "N/A"}</ThemedText>
             </View>
 
             {/* Win Rate */}
             <View style={styles.dataRow}>
               <ThemedText style={styles.dataPoint}>Win Rate:</ThemedText>
               <ThemedText>
-                {userDocData.winRate ? `${userDocData.winRate}%` : "N/A"}
+                {userDocData!.winRate ? `${userDocData!.winRate}%` : "N/A"}
               </ThemedText>
             </View>
           </View>
         )}
+        {loading === "error" && <ThemedText>Profile not found</ThemedText>}
       </>
       {openProfile && (
         <EditProfile

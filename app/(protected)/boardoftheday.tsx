@@ -667,7 +667,7 @@ const GameEffectButtons = (props: GameEffectButtonProps) => {
     <View style={styles.colorRow}>
       <ColorButton
         isDisabled={false}
-        text="New Board"
+        text="Reset Board"
         handlePress={() => resetBoardProcess()}
         style={{ backgroundColor: "rgba(40, 40, 40, 1)" }}
       />

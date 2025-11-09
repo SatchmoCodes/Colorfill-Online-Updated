@@ -1,5 +1,6 @@
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
+import CommonButton from "@/components/ui/CommonButton";
 import UnlockableProgressModal from "@/components/ui/UnlockableProgressModal";
 import {
   loadColorIndex,
@@ -727,9 +728,11 @@ const ColorPaletteProgressModal = (props: ColorPaletteModalProps) => {
         <ThemedText>{progressModalPalette?.message}</ThemedText>
         <ThemedText>Progress: {progressModalPalette?.progress}</ThemedText>
         <ThemedView style={{ flexDirection: "row", gap: 10, marginTop: 10 }}>
-          <TouchableOpacity onPress={() => setProgressModalPalette(null)}>
-            <ThemedText>Close</ThemedText>
-          </TouchableOpacity>
+          <CommonButton
+            title="Close"
+            size={100}
+            handlePress={() => setProgressModalPalette(null)}
+          />
         </ThemedView>
       </ThemedView>
     </Modal>
