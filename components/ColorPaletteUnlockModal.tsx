@@ -93,7 +93,7 @@ export default function ColorPaletteUnlockModal(props: ModalProps) {
         </View>
         <CommonButton
           title="Close"
-          size={80}
+          size={120}
           handlePress={() => setUnlockedColorPalettes([])}
         />
       </ThemedView>

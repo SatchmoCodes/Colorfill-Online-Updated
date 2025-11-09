@@ -12,7 +12,7 @@
       "supportsTablet": true
     },
     "notification": {
-      "icon": "./assets/images/ColorFill-Android.png",
+      "icon": "./assets/images/ColorFill-Android-Notification.png",
       "color": "#ffffff"
     },
     "android": {

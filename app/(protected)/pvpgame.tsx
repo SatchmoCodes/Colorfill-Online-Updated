@@ -4,6 +4,7 @@ import { ThemedBackground } from "@/components/ThemedBackground";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import ColorButton from "@/components/ui/ColorButton";
+import CommonButton from "@/components/ui/CommonButton";
 import { db, rtdb } from "@/firebaseConfig";
 import {
   loadColorIndex,
@@ -1329,8 +1330,10 @@ const EndGameModal = (props: EndGameModalProps) => {
             ? `${ownerScore} - ${opponentScore}`
             : `${opponentScore} - ${ownerScore}`}
         </ThemedText>
-        <TouchableOpacity
-          onPress={() => {
+        <CommonButton
+          title="Return to Menu"
+          size={150}
+          handlePress={() => {
             navigation.dispatch(
               CommonActions.reset({
                 index: 1,
@@ -1339,9 +1342,7 @@ const EndGameModal = (props: EndGameModalProps) => {
             );
             setWinner(null);
           }}
-        >
-          <ThemedText>Return to menu</ThemedText>
-        </TouchableOpacity>
+        />
       </ThemedView>
     </Modal>
   );

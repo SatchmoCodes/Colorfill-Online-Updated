@@ -575,8 +575,8 @@ const Table = ({
                 style={styles.row}
                 colors={
                   index % 2 === 0
-                    ? ["#0f0f0fff", "#202020ff"]
-                    : ["#383838ff", "#525151ff"]
+                    ? ["#1b1b1bff", "#1b1b1bff"]
+                    : ["#383838ff", "#383838ff"]
                 }
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
