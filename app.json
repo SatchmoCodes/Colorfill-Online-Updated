@@ -11,6 +11,11 @@
     "ios": {
       "supportsTablet": true
     },
+    "splash": {
+      "image": "./assets/images/ColorFill-Splash-Original.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#ffffff"
+    },
     "notification": {
       "icon": "./assets/images/ColorFill-Android-Notification.png",
       "color": "#ffffff"
@@ -30,17 +35,7 @@
       "favicon": "./assets/images/ColorFill-Favicon.png",
       "indexHtmlPath": "./web/index.html"
     },
-    "plugins": [
-      "expo-router",
-      [
-        "expo-splash-screen",
-        {
-          "image": "./assets/images/ColorFill-Splash.png",
-          "resizeMode": "cover",
-          "backgroundColor": "#ffffff"
-        }
-      ]
-    ],
+    "plugins": ["expo-router"],
     "experiments": {
       "typedRoutes": true
     },
