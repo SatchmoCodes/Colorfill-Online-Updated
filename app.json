@@ -9,7 +9,8 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "googleServicesFile": "./GoogleService-Info.plist"
     },
     "splash": {
       "image": "./assets/images/ColorFill-Splash-Original.png",
@@ -35,7 +36,16 @@
       "favicon": "./assets/images/ColorFill-Favicon.png",
       "indexHtmlPath": "./web/index.html"
     },
-    "plugins": ["expo-router"],
+    "plugins": [
+      "expo-router",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/ColorFill-Android-Notification.png",
+          "color": "#ffffff"
+        }
+      ]
+    ],
     "experiments": {
       "typedRoutes": true
     },

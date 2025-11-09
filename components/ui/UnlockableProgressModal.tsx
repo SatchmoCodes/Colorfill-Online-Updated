@@ -28,24 +28,24 @@ export default function UnlockableProgressModal({
       transparent
       animationType="slide"
     >
-      <ThemedView style={styles.fixedHeader}>
-        <TouchableOpacity
-          style={{ position: "absolute", top: 10, right: 10 }}
-          onPress={() => setUnlockableProgressModal(false)}
-        >
-          <IconSymbol size={28} name="clear.fill" color={"white"} />
-        </TouchableOpacity>
-      </ThemedView>
-      <ThemedView style={{ padding: 20 }}>
-        <ThemedText type="subtitle" style={{ textAlign: "center" }}>
-          Full Unlockable List (
-          {colorPaletteOptions.filter((x) => !x.locked).length}/
-          {colorPaletteOptions.length})
-        </ThemedText>
-      </ThemedView>
+      <ThemedView style={styles.modalBody}>
+        <ThemedView style={styles.fixedHeader}>
+          <TouchableOpacity
+            style={{ position: "absolute", top: 50, right: 10 }}
+            onPress={() => setUnlockableProgressModal(false)}
+          >
+            <IconSymbol size={28} name="clear.fill" color={"white"} />
+          </TouchableOpacity>
+        </ThemedView>
+        <ThemedView style={{ padding: 20 }}>
+          <ThemedText type="subtitle" style={{ textAlign: "center" }}>
+            Full Unlockable List (
+            {colorPaletteOptions.filter((x) => !x.locked).length}/
+            {colorPaletteOptions.length})
+          </ThemedText>
+        </ThemedView>
 
-      <ScrollView>
-        <ThemedView style={styles.modalBody}>
+        <ScrollView>
           <ThemedView style={styles.container}>
             <View style={{ gap: 20 }}>
               {colorPaletteOptions.slice(3).map((x, i) => (
@@ -152,8 +152,8 @@ export default function UnlockableProgressModal({
               ))}
             </View>
           </ThemedView>
-        </ThemedView>
-      </ScrollView>
+        </ScrollView>
+      </ThemedView>
     </Modal>
   );
 }
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-end", // Align content horizontally to the end (right)
     paddingRight: 10,
     zIndex: 10, // Ensure it's above the scroll view content
-    paddingTop: 20,
+    paddingTop: 60,
   },
   container: {
     flex: 1,
@@ -173,9 +173,11 @@ const styles = StyleSheet.create({
     maxWidth: 500,
     width: "100%",
     margin: "auto",
+    paddingBottom: 60,
   },
   modalBody: {
     width: "100%",
+    flex: 1,
   },
   paletteRow: {
     flexDirection: "row",
