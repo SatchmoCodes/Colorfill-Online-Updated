@@ -41,6 +41,15 @@ export const useUserPresence = (user?: User | null) => {
           online: true,
           lastSeen: Date.now(),
         });
+
+        // Re-check notification permissions and update token if necessary
+        const expoToken = await registerForPushNotificationsAsync();
+        if (expoToken) {
+          const userDoc = await getUser(user.uid);
+          if (userDoc && userDoc.data.expoPushToken !== expoToken) {
+            await updateDoc(userDoc.ref, { expoPushToken: expoToken });
+          }
+        }
       }
     });
 

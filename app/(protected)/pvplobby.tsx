@@ -42,7 +42,15 @@ const boardTypeMap = {
   mirror: "Mirror",
 } as const;
 
+const boardSizeMap = {
+  small: "Small",
+  medium: "Medium",
+  large: "Large",
+  xlarge: "Extra Large",
+} as const;
+
 type BoardTypeKey = keyof typeof boardTypeMap;
+type boardSizeKey = keyof typeof boardSizeMap;
 
 export default function PvpLobby() {
   const user = useUser();
@@ -318,7 +326,7 @@ export default function PvpLobby() {
           {[
             {
               label: "Board Size",
-              value: size ? size[0].toUpperCase() + size.slice(1) : "Unknown",
+              value: size ? boardSizeMap[size as boardSizeKey] : "Unknown",
             },
             {
               label: "Board Type",

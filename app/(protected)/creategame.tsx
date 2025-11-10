@@ -12,9 +12,9 @@ import { pvpSquareGenerator } from "@/helper/pvpSquareGenerator";
 import { useUser } from "@/hooks/useFirebaseUser";
 import { router } from "expo-router";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
-import { RadioButton } from "react-native-paper";
+import { RadioButtonProps, RadioGroup } from "react-native-radio-buttons-group";
 import uuid from "react-native-uuid";
 
 export const boardSizePVPConfig = {
@@ -44,6 +44,46 @@ export type PlayerType = "owner" | "opponent";
 
 export default function CreateGame() {
   const user = useUser();
+  const fogRadioButtons: RadioButtonProps[] = useMemo(
+    () => [
+      {
+        id: "1", // acts as primary key, should be unique and non-empty string
+        label: "On",
+        value: "on",
+        color: "#2c78ceff",
+      },
+      {
+        id: "2",
+        label: "Off",
+        value: "off",
+        color: "#2c78ceff",
+      },
+    ],
+    []
+  );
+
+  const lobbyTypeRadioButtons: RadioButtonProps[] = useMemo(
+    () => [
+      {
+        id: "1", // acts as primary key, should be unique and non-empty string
+        label: "Public",
+        value: "public",
+        color: "#2c78ceff",
+      },
+      {
+        id: "2",
+        label: "Private",
+        value: "private",
+        color: "#2c78ceff",
+      },
+    ],
+    []
+  );
+  const [selectedFogId, setSelectedFogId] = useState<string | undefined>("1");
+  const [selectedLobbyTypeId, setSelectedLobbyTypeId] = useState<
+    string | undefined
+  >("1");
+
   const [boardSize, setBoardSize] = useState<PVPBoardSize>("small");
   const [boardType, setBoardType] = useState<PVPBoardType>("random");
   const [fogOfWar, setFogOfWar] = useState(false);
@@ -111,6 +151,25 @@ export default function CreateGame() {
     }
   };
 
+  const handlePressFogButton = (e: string) => {
+    console.log("e", e);
+    const matchingItem = fogRadioButtons.find((x) => x.id === e);
+    if (matchingItem?.value === "on") {
+      setFogOfWar(true);
+    }
+    if (matchingItem?.value === "off") {
+      setFogOfWar(false);
+    }
+    setSelectedFogId(e);
+  };
+
+  const handlePressLobbyButton = (e: string) => {
+    const matchingItem = lobbyTypeRadioButtons.find((x) => x.id === e);
+    if (matchingItem?.value === "public") setLobbyType("public");
+    if (matchingItem?.value === "private") setLobbyType("private");
+    setSelectedLobbyTypeId(e);
+  };
+
   return (
     <ThemedBackground style={styles.container}>
       <View style={{ height: "90%", gap: 20 }}>
@@ -140,70 +199,23 @@ export default function CreateGame() {
         </View>
         <View style={styles.optionCard}>
           <ThemedText style={styles.optionTitle}>Fog of War</ThemedText>
-          <RadioButton.Group
-            onValueChange={(value) => {
-              if (value === "on") setFogOfWar(true);
-              if (value === "off") setFogOfWar(false);
-            }}
-            value={fogOfWar ? "on" : "off"}
-          >
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "center",
-                gap: 10,
-                // backgroundColor: "#222222",
-                padding: 2,
-                borderRadius: 5,
-                width: 200,
-              }}
-            >
-              <ThemedText style={{ marginTop: 5 }}>On</ThemedText>
-              <RadioButton
-                uncheckedColor="#ffffff"
-                color="#2c78ceff"
-                value="on"
-              ></RadioButton>
-              <ThemedText style={{ marginTop: 5 }}>Off</ThemedText>
-              <RadioButton
-                uncheckedColor="#ffffff"
-                color="#2c78ceff"
-                value="off"
-              ></RadioButton>
-            </View>
-          </RadioButton.Group>
+          <RadioGroup
+            radioButtons={fogRadioButtons}
+            onPress={handlePressFogButton}
+            selectedId={selectedFogId}
+            labelStyle={{ color: "white", fontSize: 16 }}
+            layout="row"
+          />
         </View>
         <View style={styles.optionCard}>
           <ThemedText style={styles.optionTitle}>Lobby Type</ThemedText>
-          <RadioButton.Group
-            onValueChange={(value) => setLobbyType(value as LobbyType)}
-            value={lobbyType}
-          >
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "center",
-                gap: 10,
-                // backgroundColor: "#222222",
-                padding: 2,
-                borderRadius: 5,
-                width: 200,
-              }}
-            >
-              <ThemedText style={{ marginTop: 5 }}>Public</ThemedText>
-              <RadioButton
-                uncheckedColor="#ffffff"
-                color="#2c78ceff"
-                value="public"
-              ></RadioButton>
-              <ThemedText style={{ marginTop: 5 }}>Private</ThemedText>
-              <RadioButton
-                uncheckedColor="#ffffff"
-                color="#2c78ceff"
-                value="private"
-              ></RadioButton>
-            </View>
-          </RadioButton.Group>
+          <RadioGroup
+            radioButtons={lobbyTypeRadioButtons}
+            onPress={handlePressLobbyButton}
+            selectedId={selectedLobbyTypeId}
+            labelStyle={{ color: "white", fontSize: 16 }}
+            layout="row"
+          />
         </View>
       </View>
       <View style={{ height: "10%" }}>
@@ -232,10 +244,10 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOpacity: 0.2,
     shadowRadius: 4,
-    backgroundColor: "#363636ff",
+    backgroundColor: "#141414ff",
     minWidth: 250,
     alignItems: "center",
-    borderColor: "#1a1919ff",
+    borderColor: "#2c78ceff",
     borderWidth: 1,
   },
   optionTitle: {
