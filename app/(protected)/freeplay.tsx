@@ -17,6 +17,7 @@ import {
 } from "@/helper/asyncStorageHelper";
 import { getUser } from "@/helper/commonQueries";
 import { getColorPaletteOptions } from "@/helper/getColorPaletteOptions";
+import { getWindowHeight } from "@/helper/getWindowHeight";
 import { getWindowWidth } from "@/helper/getWindowWidth";
 import { squareGenerator } from "@/helper/squareGenerator";
 import { updateCriteriaMap } from "@/helper/updateCriteriaMap";
@@ -164,6 +165,8 @@ export default function Freeplay() {
   const [loadingSetScore, setLoadingSetScore] = useState(false);
   const [hasCreatedScore, setHasCreatedScore] = useState(false); //state variable for board loaded from leaderboard in case user resets board before actually solving
   const [boardComplete, setBoardComplete] = useState(false);
+
+  const isSmallDevice = getWindowHeight() <= 720;
 
   useFocusEffect(
     useCallback(() => {
@@ -475,7 +478,7 @@ export default function Freeplay() {
               {score}
               {bestScore && !hasGeneratedNewBoard && ` / ${currentBestScore}`}
             </ThemedText>
-            {showSquareCounter && (
+            {showSquareCounter && !isSmallDevice && (
               <SquareCounter
                 squaresRemaining={squaresRemaining}
                 selectedColorPalette={selectedColorPalette}

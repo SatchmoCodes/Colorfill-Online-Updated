@@ -5,6 +5,7 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import ColorButton from "@/components/ui/ColorButton";
 import CommonButton from "@/components/ui/CommonButton";
+import { TimerDisplay } from "@/components/ui/PVPTimer";
 import { db, rtdb } from "@/firebaseConfig";
 import {
   loadColorIndex,
@@ -14,6 +15,7 @@ import {
 } from "@/helper/asyncStorageHelper";
 import { getUser } from "@/helper/commonQueries";
 import { getColorPaletteOptions } from "@/helper/getColorPaletteOptions";
+import { getWindowHeight } from "@/helper/getWindowHeight";
 import { getWindowWidth } from "@/helper/getWindowWidth";
 import { PVPSquare } from "@/helper/pvpSquareGenerator";
 import { updateCriteriaMap } from "@/helper/updateCriteriaMap";
@@ -47,7 +49,6 @@ import {
   Modal,
   PixelRatio,
   StyleSheet,
-  TouchableOpacity,
   View,
 } from "react-native";
 import { ActivityIndicator } from "react-native-paper";
@@ -99,6 +100,16 @@ interface ScoreSectionProps {
   ownerLetter: string;
   opponentBackground: string;
   opponentLetter: string;
+  isSmallDevice: boolean;
+  turnDeadline: number;
+  isGameStarted: boolean;
+  isGameCompleted: boolean;
+  gameRef: DocumentReference;
+  ownerRef: RefObject<PlayerRefObject | null>;
+  opponentRef: RefObject<PlayerRefObject | null>;
+  user: User;
+  onEndOfTurn: () => void;
+  handlePlayerLeave: (gameRef: DocumentReference, username: string) => void;
 }
 
 interface BeginGameModalProps {
@@ -170,11 +181,14 @@ export default function PvpGame() {
   const ownerRef = useRef<PlayerRefObject>(null);
   const opponentRef = useRef<PlayerRefObject>(null);
   const gameCompletedRef = useRef(false);
+  const moveInProgressRef = useRef(false);
 
   const currentUser = user.displayName;
   const currentUserType = currentUser === ownerName ? "owner" : "opponent";
 
   const gameRef = doc(db, "games", gameId as string);
+
+  const isSmallDevice = getWindowHeight() <= 760;
 
   useFocusEffect(
     useCallback(() => {
@@ -354,6 +368,8 @@ export default function PvpGame() {
 
   const handleColorChange = async (color: ColorKey) => {
     if (winner || !turn) return;
+    if (moveInProgressRef.current) return;
+    moveInProgressRef.current = true;
     const visited = new Set<string>();
     const currentBoardState = boardState.map((row) =>
       row.map((square) => ({ ...square }))
@@ -462,6 +478,11 @@ export default function PvpGame() {
         });
       } catch (error) {
         console.log("error updating board data, ", error);
+      } finally {
+        // allow next move only after a small delay to ensure state sync
+        setTimeout(() => {
+          moveInProgressRef.current = false;
+        }, 500); // half a second is plenty
       }
     }
   };
@@ -792,8 +813,7 @@ export default function PvpGame() {
               ownerLetter={ownerLetter}
               opponentBackground={opponentBackground}
               opponentLetter={opponentLetter}
-            />
-            <TimerDisplay
+              isSmallDevice={isSmallDevice}
               turnDeadline={turnDeadline}
               isGameStarted={isGameStarted}
               isGameCompleted={gameCompletedRef.current}
@@ -804,12 +824,16 @@ export default function PvpGame() {
               onEndOfTurn={handleEndOfTurn}
               handlePlayerLeave={handlePlayerLeave}
             />
-            <FakeColorRowButtons
-              selectedColorPalette={selectedColorPalette}
-              activeColor={[ownerSelectedColor, opponentSelectedColor]}
-              turn={turn}
-              currentUserType={currentUserType}
-            />
+
+            {!isSmallDevice && (
+              <FakeColorRowButtons
+                selectedColorPalette={selectedColorPalette}
+                activeColor={[ownerSelectedColor, opponentSelectedColor]}
+                turn={turn}
+                currentUserType={currentUserType}
+              />
+            )}
+
             <GameBoard
               boardState={boardState}
               boardSize={boardSize}
@@ -965,18 +989,14 @@ const Square = (props: PVPSquareViewProps) => {
         },
       ]}
     >
-      <TouchableOpacity
+      <View
         style={{ zIndex: 1000, justifyContent: "center", alignItems: "center" }}
-        onPress={() => console.log("balls", square)}
-      >
-        {/* <ThemedText style={{ fontSize: 25 }}>a</ThemedText> */}
-      </TouchableOpacity>
+      ></View>
       {/* Base = unrevealed gray */}
       <View
         style={{
           ...StyleSheet.absoluteFillObject,
           backgroundColor: fogColor,
-          // borderWidth: 0,
         }}
       />
 
@@ -1081,6 +1101,16 @@ const ScoreSection = (props: ScoreSectionProps) => {
     ownerLetter,
     opponentBackground,
     opponentLetter,
+    isSmallDevice,
+    turnDeadline,
+    isGameStarted,
+    isGameCompleted,
+    gameRef,
+    ownerRef,
+    opponentRef,
+    user,
+    onEndOfTurn,
+    handlePlayerLeave,
   } = props;
 
   return (
@@ -1090,17 +1120,20 @@ const ScoreSection = (props: ScoreSectionProps) => {
         justifyContent: "space-evenly",
         alignItems: "center",
         width: "100%",
+        marginBottom: 10,
       }}
     >
-      <View style={{ alignItems: "center" }}>
+      {/* Owner */}
+      <View style={{ alignItems: "center", flexGrow: 1 }}>
         <ThemedText style={{ textAlign: "center" }}>{ownerName}</ThemedText>
-        <Avatar
-          profileBackground={ownerBackground}
-          profileLetter={ownerLetter}
-          username={ownerName}
-          size="large"
-        />
-
+        {!isSmallDevice && (
+          <Avatar
+            profileBackground={ownerBackground}
+            profileLetter={ownerLetter}
+            username={ownerName}
+            size="large"
+          />
+        )}
         <View
           style={[
             styles.scoreSquare,
@@ -1113,19 +1146,37 @@ const ScoreSection = (props: ScoreSectionProps) => {
           <ThemedText style={styles.scoreSquareText}>{ownerScore}</ThemedText>
         </View>
       </View>
-      <View>
-        <ThemedText style={{ textAlign: "center", marginBottom: 20 }}>
+
+      {/* Center Section: VS + Timer */}
+      <View style={{ alignItems: "center", minWidth: 50 }}>
+        <ThemedText style={{ textAlign: "center", marginBottom: 10 }}>
           VS
         </ThemedText>
-      </View>
-      <View style={{ alignItems: "center" }}>
-        <ThemedText style={{ textAlign: "center" }}>{opponentName}</ThemedText>
-        <Avatar
-          profileBackground={opponentBackground}
-          profileLetter={opponentLetter}
-          username={opponentName}
-          size="large"
+
+        <TimerDisplay
+          turnDeadline={turnDeadline}
+          isGameStarted={isGameStarted}
+          isGameCompleted={isGameCompleted}
+          gameRef={gameRef}
+          ownerRef={ownerRef}
+          opponentRef={opponentRef}
+          user={user}
+          onEndOfTurn={onEndOfTurn}
+          handlePlayerLeave={handlePlayerLeave}
         />
+      </View>
+
+      {/* Opponent */}
+      <View style={{ alignItems: "center", flexGrow: 1 }}>
+        <ThemedText style={{ textAlign: "center" }}>{opponentName}</ThemedText>
+        {!isSmallDevice && (
+          <Avatar
+            profileBackground={opponentBackground}
+            profileLetter={opponentLetter}
+            username={opponentName}
+            size="large"
+          />
+        )}
         <View
           style={[
             styles.scoreSquare,
@@ -1142,64 +1193,6 @@ const ScoreSection = (props: ScoreSectionProps) => {
       </View>
     </View>
   );
-};
-
-const TimerDisplay = ({
-  turnDeadline,
-  isGameStarted,
-  isGameCompleted,
-  gameRef,
-  ownerRef,
-  opponentRef,
-  user,
-  onEndOfTurn,
-  handlePlayerLeave,
-}: {
-  turnDeadline: number;
-  isGameStarted: boolean;
-  isGameCompleted: boolean;
-  gameRef: DocumentReference;
-  ownerRef: RefObject<PlayerRefObject | null>;
-  opponentRef: RefObject<PlayerRefObject | null>;
-  user: User;
-  onEndOfTurn: () => void;
-  handlePlayerLeave: (gameRef: DocumentReference, username: string) => void;
-}) => {
-  const [timeLeft, setTimeLeft] = useState(0);
-
-  const opponent = opponentRef.current;
-  const owner = ownerRef.current;
-
-  useEffect(() => {
-    if (!turnDeadline || !isGameStarted) return;
-
-    let lastSeconds: number | null = null;
-    const interval = setInterval(() => {
-      const remaining = turnDeadline - Date.now();
-      const roundedSeconds = Math.max(0, Math.floor(remaining / 1000));
-
-      if (roundedSeconds !== lastSeconds) {
-        setTimeLeft(roundedSeconds);
-        lastSeconds = roundedSeconds;
-      }
-
-      if (remaining <= 0 && !isGameCompleted) {
-        onEndOfTurn();
-      }
-      if (remaining <= -15000 && !isGameCompleted && opponent && owner) {
-        if (user.displayName === owner.name) {
-          handlePlayerLeave(gameRef, opponent.name);
-        }
-        if (user.displayName === opponent.name) {
-          handlePlayerLeave(gameRef, owner.name);
-        }
-      }
-    }, 100);
-
-    return () => clearInterval(interval);
-  }, [turnDeadline, isGameStarted, isGameCompleted, onEndOfTurn]);
-
-  return <ThemedText style={{ fontSize: 20 }}>{timeLeft}</ThemedText>;
 };
 
 const BeginGameModal = ({

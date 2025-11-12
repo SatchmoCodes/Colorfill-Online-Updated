@@ -13,6 +13,7 @@ import {
   saveShowSquareCounter,
 } from "@/helper/asyncStorageHelper";
 import { getColorPaletteOptions } from "@/helper/getColorPaletteOptions";
+import { getWindowHeight } from "@/helper/getWindowHeight";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -86,6 +87,8 @@ export default function Settings() {
   const [isMosaic, setIsMosaic] = useState(false);
   const [showSquareCounter, setShowSquareCounter] = useState(false);
   const [unlockableProgressMdoal, setUnlockableProgressModal] = useState(false);
+
+  const isSmallDevice = getWindowHeight() <= 720;
 
   const initialPage = Math.floor(selectedIndex / PAGE_SIZE);
 
@@ -272,17 +275,20 @@ export default function Settings() {
           value={isMosaic}
         />
       </ThemedView>
-      <ThemedView>
-        <ThemedText>Show Square Counter</ThemedText>
-        <Switch
-          trackColor={{ false: "#767577", true: "#81b0ff" }}
-          thumbColor={showSquareCounter ? "#f5dd4b" : "#f4f3f4"}
-          ios_backgroundColor="#3e3e3e"
-          onValueChange={(e) => handleToggleShowSquareCounter(e)}
-          style={{ margin: "auto" }}
-          value={showSquareCounter}
-        />
-      </ThemedView>
+      {!isSmallDevice && (
+        <ThemedView>
+          <ThemedText>Show Square Counter</ThemedText>
+          <Switch
+            trackColor={{ false: "#767577", true: "#81b0ff" }}
+            thumbColor={showSquareCounter ? "#f5dd4b" : "#f4f3f4"}
+            ios_backgroundColor="#3e3e3e"
+            onValueChange={(e) => handleToggleShowSquareCounter(e)}
+            style={{ margin: "auto" }}
+            value={showSquareCounter}
+          />
+        </ThemedView>
+      )}
+
       {progressModalPalette && (
         <ColorPaletteProgressModal
           progressModalPalette={progressModalPalette}
