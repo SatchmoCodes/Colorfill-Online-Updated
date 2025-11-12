@@ -79,7 +79,7 @@ export default function CreateGame() {
     ],
     []
   );
-  const [selectedFogId, setSelectedFogId] = useState<string | undefined>("1");
+  const [selectedFogId, setSelectedFogId] = useState<string | undefined>("2");
   const [selectedLobbyTypeId, setSelectedLobbyTypeId] = useState<
     string | undefined
   >("1");
