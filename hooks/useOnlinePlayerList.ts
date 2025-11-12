@@ -39,18 +39,21 @@ export const useOnlinePlayerList = () => {
     // Handle updates (e.g. user goes from offline → online)
     const changeListener = onChildChanged(usersRef, (snapshot) => {
       const data = snapshot.val();
-      setPlayerList((prev) =>
-        prev.map((p) => (p.id === snapshot.key ? { ...p, ...data } : p))
-      );
 
-      // Update count safely
-      setOnlinePlayerCount((prev) => {
-        const onlineNow = data.online;
-        const prevUser = playerList.find((p) => p.id === snapshot.key);
-        if (!prevUser) return prev;
-        if (prevUser.online && !onlineNow) return prev - 1;
-        if (!prevUser.online && onlineNow) return prev + 1;
-        return prev;
+      setPlayerList((prev) => {
+        const prevUser = prev.find((p) => p.id === snapshot.key);
+        const newList = prev.map((p) =>
+          p.id === snapshot.key ? { ...p, ...data } : p
+        );
+
+        setOnlinePlayerCount((prevCount) => {
+          if (!prevUser) return prevCount;
+          if (prevUser.online && !data.online) return prevCount - 1;
+          if (!prevUser.online && data.online) return prevCount + 1;
+          return prevCount;
+        });
+
+        return newList;
       });
     });
 

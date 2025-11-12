@@ -16,6 +16,7 @@ import * as Notifications from "expo-notifications";
 import { User } from "firebase/auth";
 import {
   onDisconnect,
+  onValue,
   ref,
   serverTimestamp,
   set,
@@ -77,60 +78,61 @@ export const useUserPresence = (user?: User | null) => {
 
 const establishUserPresence = async (user: User) => {
   const userDoc = await getUser(user.uid);
-  if (userDoc) {
-    const profileBackground =
-      userDoc.data.profileBackground ??
-      colors[Math.floor(Math.random() * colors.length)];
-    const profileLetter =
-      userDoc.data.profileLetter ??
-      colors[Math.floor(Math.random() * colors.length)];
-    const profileBanner =
-      userDoc.data.profileBanner ??
-      colors[Math.floor(Math.random() * colors.length)];
+  if (!userDoc) return;
 
-    updateAsyncStorageValuesOnLoad({
-      ...userDoc.data,
-      profileBackground,
-      profileLetter,
-      profileBanner,
-    });
+  const profileBackground =
+    userDoc.data.profileBackground ??
+    colors[Math.floor(Math.random() * colors.length)];
+  const profileLetter =
+    userDoc.data.profileLetter ??
+    colors[Math.floor(Math.random() * colors.length)];
+  const profileBanner =
+    userDoc.data.profileBanner ??
+    colors[Math.floor(Math.random() * colors.length)];
 
-    uploadOfflineScores();
+  updateAsyncStorageValuesOnLoad({
+    ...userDoc.data,
+    profileBackground,
+    profileLetter,
+    profileBanner,
+  });
 
-    const userStatusRef = ref(rtdb, `/onlineUsers/${user.uid}`);
-    let updatedUserDocData: any = {
-      profileBackground,
-      profileBanner,
-      profileLetter,
-    };
+  uploadOfflineScores();
 
-    const expoToken = await registerForPushNotificationsAsync();
-    if (expoToken) {
-      updatedUserDocData = { ...updatedUserDocData, expoPushToken: expoToken };
-    }
+  const userStatusRef = ref(rtdb, `/onlineUsers/${user.uid}`);
+  let updatedUserDocData: any = {
+    profileBackground,
+    profileBanner,
+    profileLetter,
+  };
 
-    await updateDoc(userDoc.ref, {
-      ...updatedUserDocData,
-    });
+  const expoToken = await registerForPushNotificationsAsync();
+  if (expoToken) {
+    updatedUserDocData.expoPushToken = expoToken;
+  }
 
+  await updateDoc(userDoc.ref, updatedUserDocData);
+
+  const connectedRef = ref(rtdb, ".info/connected");
+  onValue(connectedRef, (snap) => {
+    if (snap.val() === false) return;
+
+    // Set user online
     set(userStatusRef, {
       displayName: user.displayName ?? userDoc.data.username ?? "Anonymous",
       profileBackground,
       profileLetter,
       profileBanner,
       online: true,
-      lastSeen: Date.now(),
+      lastSeen: serverTimestamp(),
     });
 
-    onDisconnect(userStatusRef).set({
-      displayName: user.displayName ?? userDoc.data.username ?? "Anonymous",
-      profileBackground,
-      profileLetter,
-      profileBanner,
+    // Ensure proper cleanup on disconnect
+    onDisconnect(userStatusRef).update({
       online: false,
       lastSeen: serverTimestamp(),
     });
-  }
+  });
 };
 
 const updateAsyncStorageValuesOnLoad = async (userDoc: UserDoc) => {
