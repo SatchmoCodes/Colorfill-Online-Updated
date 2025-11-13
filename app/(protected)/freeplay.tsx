@@ -129,6 +129,7 @@ export default function Freeplay() {
   });
   const [squaresRemaining, setSquaresRemaining] = useState(squaresRemainingMap);
   const [boardState, setBoardState] = useState(() => {
+    resetPlayedDepths();
     let boardData = null;
     if (boardId && colorData) {
       const colorDataArr = [...colorData]

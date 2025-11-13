@@ -21,6 +21,7 @@ import { getUser } from "@/helper/commonQueries";
 import { getColorPaletteOptions } from "@/helper/getColorPaletteOptions";
 import { getEasternBoardDate } from "@/helper/getEasternBoardDate";
 import { getWindowWidth } from "@/helper/getWindowWidth";
+import { playPop, resetPlayedDepths } from "@/helper/soundEffects";
 import { squareGenerator } from "@/helper/squareGenerator";
 import { updateCriteriaMap } from "@/helper/updateCriteriaMap";
 import { useUser } from "@/hooks/useFirebaseUser";
@@ -74,6 +75,7 @@ interface GameBoardProps {
   selectedColorPalette: PaletteObj;
   boardSize: BoardOfTheDaySize;
   isMosaic: boolean;
+  boardVersion: number;
 }
 
 interface SquareViewProps {
@@ -143,6 +145,7 @@ export default function BoardoftheDay() {
   const [boardId, setBoardId] = useState("");
   const [isMosaic, setIsMosaic] = useState(false);
   const [showSquareCounter, setShowSquareCounter] = useState(true);
+  const [boardVersion, setBoardVersion] = useState(1);
   const [unlockedColorPalettes, setUnlockedColorPalettes] = useState<
     PaletteObj[] | []
   >([]);
@@ -177,6 +180,7 @@ export default function BoardoftheDay() {
   }, [user]);
 
   const handleColorChange = (color: ColorKey) => {
+    resetPlayedDepths();
     const visited = new Set<string>();
     let remainingSquares = false;
     let capturedCount = 0;
@@ -281,6 +285,7 @@ export default function BoardoftheDay() {
   }
 
   const resetBoardProcess = () => {
+    resetPlayedDepths();
     const resetBoard = boardState.map((row) =>
       row.map((square) => ({
         ...square,
@@ -303,6 +308,7 @@ export default function BoardoftheDay() {
     resetSquareCount(resetBoard, capturedCount, setSquaresRemaining);
     setBoardState(resetBoard);
     setActiveColor(resetBoard[0][0].color);
+    setBoardVersion((prev) => prev + 1);
     setScore(0);
   };
 
@@ -376,6 +382,7 @@ export default function BoardoftheDay() {
   }
 
   async function boardOfTheDayProcess() {
+    resetPlayedDepths();
     let isProcessingBOTD = false;
     if (isProcessingBOTD) return;
     isProcessingBOTD = true;
@@ -534,6 +541,7 @@ export default function BoardoftheDay() {
             selectedColorPalette={selectedColorPalette}
             boardSize={boardSize}
             isMosaic={isMosaic}
+            boardVersion={boardVersion}
           />
           <GameEffectButtons resetBoardProcess={resetBoardProcess} />
           <ColorRowButtons
@@ -585,6 +593,7 @@ const GameBoard = ({
   selectedColorPalette,
   boardSize,
   isMosaic,
+  boardVersion,
 }: GameBoardProps) => {
   let windowWidth = getWindowWidth();
   const columns = Math.sqrt(boardConfig[boardSize]);
@@ -610,7 +619,7 @@ const GameBoard = ({
               color={selectedColorPalette[square.color]}
               squareSize={tileSize}
               isMosaic={isMosaic}
-              key={`${square.x}-${square.y}`}
+              key={`${square.x}-${square.y}-${boardVersion}`}
             />
           );
         });
@@ -625,8 +634,12 @@ const Square = (props: SquareViewProps) => {
 
   useEffect(() => {
     if (square.captured && square.depth !== undefined) {
+      const timeout = setTimeout(() => {
+        playPop(square.depth);
+      }, square.depth * 80); // same delay as animation start
+
       Animated.sequence([
-        Animated.delay(square.depth * 80), // ripple by depth
+        Animated.delay(square.depth * 80),
         Animated.timing(scale, {
           toValue: 1.2,
           duration: 120,
@@ -640,6 +653,8 @@ const Square = (props: SquareViewProps) => {
           useNativeDriver: true,
         }),
       ]).start();
+
+      return () => clearTimeout(timeout);
     }
   }, [square.captured]);
 

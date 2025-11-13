@@ -5,7 +5,6 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import ColorButton from "@/components/ui/ColorButton";
 import CommonButton from "@/components/ui/CommonButton";
-import { TimerDisplay } from "@/components/ui/PVPTimer";
 import { db, rtdb } from "@/firebaseConfig";
 import {
   loadColorIndex,
@@ -18,6 +17,7 @@ import { getColorPaletteOptions } from "@/helper/getColorPaletteOptions";
 import { getWindowHeight } from "@/helper/getWindowHeight";
 import { getWindowWidth } from "@/helper/getWindowWidth";
 import { PVPSquare } from "@/helper/pvpSquareGenerator";
+import { playPop, resetPlayedDepths } from "@/helper/soundEffects";
 import { updateCriteriaMap } from "@/helper/updateCriteriaMap";
 import { useUser } from "@/hooks/useFirebaseUser";
 import { CommonActions } from "@react-navigation/native";
@@ -225,6 +225,7 @@ export default function PvpGame() {
     const unsubscribe = onSnapshot(doc(db, "games", id), (docSnapshot) => {
       (async () => {
         if (!docSnapshot.exists()) return;
+        resetPlayedDepths();
 
         const data = docSnapshot.data();
         if (!data || gameCompletedRef.current) return;
@@ -367,6 +368,7 @@ export default function PvpGame() {
   }, [user, gameId]);
 
   const handleColorChange = async (color: ColorKey) => {
+    resetPlayedDepths();
     if (winner || !turn) return;
     if (moveInProgressRef.current) return;
     moveInProgressRef.current = true;
@@ -604,7 +606,6 @@ export default function PvpGame() {
     for (const neighbor of neighbors) {
       if (neighbor && !neighbor.captured && neighbor.color === color) {
         neighbor.visibleTo = [...new Set([...neighbor.visibleTo, player])];
-        neighbor.revealed = true;
         availableSquares.add(`${neighbor.x},${neighbor.y}`);
         dfsMarkAvailable(
           neighbor,
@@ -833,7 +834,6 @@ export default function PvpGame() {
                 currentUserType={currentUserType}
               />
             )}
-
             <GameBoard
               boardState={boardState}
               boardSize={boardSize}
@@ -903,6 +903,8 @@ const GameBoard = (props: PVPGameBoard) => {
     isMosaic,
   } = props;
 
+  console.log("boarddata", boardState);
+
   let windowWidth = getWindowWidth();
   const columns = Math.sqrt(boardSizePVPConfig[boardSize]);
 
@@ -948,8 +950,12 @@ const Square = (props: PVPSquareViewProps) => {
 
   useEffect(() => {
     if (square.captured && square.depth !== undefined) {
+      const timeout = setTimeout(() => {
+        playPop(square.depth);
+      }, square.depth * 80); // same delay as animation start
+
       Animated.sequence([
-        Animated.delay(square.depth * 80), // ripple by depth
+        Animated.delay(square.depth * 80),
         Animated.timing(scale, {
           toValue: 1.2,
           duration: 120,
@@ -963,18 +969,20 @@ const Square = (props: PVPSquareViewProps) => {
           useNativeDriver: true,
         }),
       ]).start();
+
+      return () => clearTimeout(timeout);
     }
   }, [square.captured]);
 
   useEffect(() => {
-    if (square.revealed) {
+    if (square.visibleTo.includes(currentUserType)) {
       Animated.timing(revealAnim, {
         toValue: 1,
         duration: 400,
         useNativeDriver: true,
       }).start();
     }
-  }, [square.revealed]);
+  }, [square.visibleTo]);
 
   return (
     <Animated.View
@@ -1010,11 +1018,7 @@ const Square = (props: PVPSquareViewProps) => {
             : fogColor,
           opacity: square.visibleTo.includes(currentUserType) ? revealAnim : 1,
           borderWidth:
-            isMosaic &&
-            square.visibleTo.includes(currentUserType) &&
-            square.revealed
-              ? 1
-              : 0,
+            isMosaic && square.visibleTo.includes(currentUserType) ? 1 : 0,
         }}
       />
     </Animated.View>
@@ -1153,7 +1157,7 @@ const ScoreSection = (props: ScoreSectionProps) => {
           VS
         </ThemedText>
 
-        <TimerDisplay
+        {/* <TimerDisplay
           turnDeadline={turnDeadline}
           isGameStarted={isGameStarted}
           isGameCompleted={isGameCompleted}
@@ -1163,7 +1167,7 @@ const ScoreSection = (props: ScoreSectionProps) => {
           user={user}
           onEndOfTurn={onEndOfTurn}
           handlePlayerLeave={handlePlayerLeave}
-        />
+        /> */}
       </View>
 
       {/* Opponent */}

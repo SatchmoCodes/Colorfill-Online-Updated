@@ -10,7 +10,6 @@ export interface PVPSquare {
   defaultColor: ColorKey;
   landLocked: boolean;
   visibleTo: PlayerType[];
-  revealed: boolean;
   depth: number;
   x: number;
   y: number;
@@ -63,12 +62,10 @@ export const pvpSquareGenerator = (
   squareGrid[0][0] = {
     ...squareGrid[0][0],
     visibleTo: ["owner", "opponent"],
-    revealed: true,
   };
   squareGrid[squareGrid.length - 1][squareGrid.length - 1] = {
     ...squareGrid[squareGrid.length - 1][squareGrid.length - 1],
     visibleTo: ["owner", "opponent"],
-    revealed: true,
   };
   return squareGrid;
 };
