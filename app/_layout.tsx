@@ -1,3 +1,4 @@
+import { loadSounds } from "@/helper/soundEffects"; // 👈 import your helper
 import { useFirebaseUser } from "@/hooks/useFirebaseUser";
 import {
   DarkTheme,
@@ -6,6 +7,7 @@ import {
 } from "@react-navigation/native";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
+import { useEffect } from "react";
 import { ActivityIndicator, useColorScheme, View } from "react-native";
 
 export default function RootLayout() {
@@ -15,6 +17,11 @@ export default function RootLayout() {
     SpaceMono: require("@/assets/fonts/SpaceMono-Regular.ttf"),
   });
   const colorScheme = useColorScheme();
+
+  // ✅ Load sounds once at startup
+  useEffect(() => {
+    loadSounds();
+  }, []);
 
   if (!loaded) return null;
 
@@ -32,7 +39,7 @@ export default function RootLayout() {
         ...(colorScheme === "dark" ? DarkTheme : DefaultTheme),
         colors: {
           ...(colorScheme === "dark" ? DarkTheme.colors : DefaultTheme.colors),
-          background: "transparent", // 👈 override here
+          background: "transparent",
         },
       }}
     >

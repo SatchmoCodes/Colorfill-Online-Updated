@@ -19,6 +19,7 @@ import { getUser } from "@/helper/commonQueries";
 import { getColorPaletteOptions } from "@/helper/getColorPaletteOptions";
 import { getWindowHeight } from "@/helper/getWindowHeight";
 import { getWindowWidth } from "@/helper/getWindowWidth";
+import { playPop, resetPlayedDepths } from "@/helper/soundEffects";
 import { squareGenerator } from "@/helper/squareGenerator";
 import { updateCriteriaMap } from "@/helper/updateCriteriaMap";
 import { useUser } from "@/hooks/useFirebaseUser";
@@ -192,6 +193,7 @@ export default function Freeplay() {
   );
 
   const handleColorChange = (color: ColorKey) => {
+    resetPlayedDepths();
     const visited = new Set<string>();
     let remainingSquares = false;
     let capturedCount = 0;
@@ -295,6 +297,7 @@ export default function Freeplay() {
   }
 
   const resetBoardProcess = () => {
+    resetPlayedDepths();
     const resetBoard = boardState.map((row) =>
       row.map((square) => ({
         ...square,
@@ -326,6 +329,7 @@ export default function Freeplay() {
   };
 
   const newBoardProcess = (size: BoardSize) => {
+    resetPlayedDepths();
     const boardData = squareGenerator(boardConfig[size]);
     const capturedCount = checkAdjacentSquares(
       boardData[0][0],
@@ -596,6 +600,10 @@ const Square = ({
 
   useEffect(() => {
     if (square.captured && square.depth !== undefined) {
+      const timeout = setTimeout(() => {
+        playPop(square.depth);
+      }, square.depth * 80); // same delay as animation start
+
       Animated.sequence([
         Animated.delay(square.depth * 80),
         Animated.timing(scale, {
@@ -611,6 +619,8 @@ const Square = ({
           useNativeDriver: true,
         }),
       ]).start();
+
+      return () => clearTimeout(timeout);
     }
   }, [square.captured]);
 
