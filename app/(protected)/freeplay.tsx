@@ -114,7 +114,15 @@ const squaresRemainingMap: Record<ColorKey, number> = {
 
 export default function Freeplay() {
   const user = useUser();
-  const { boardId, boardData: colorData, bestScore } = useLocalSearchParams();
+  const {
+    boardId,
+    boardData: colorData,
+    bestScore,
+  }: {
+    boardId: string;
+    boardData: string;
+    bestScore: string;
+  } = useLocalSearchParams();
   const networkState = Network.useNetworkState();
 
   const [boardSize, setBoardSize] = useState<BoardSize>(() => {
@@ -160,13 +168,16 @@ export default function Freeplay() {
   const [boardVersion, setBoardVersion] = useState(1);
   const [isMosaic, setIsMosaic] = useState(false);
   const [showSquareCounter, setShowSquareCounter] = useState(true);
-  const [hasGeneratedNewBoard, setHasGeneratedNewBoard] = useState(false);
   const [currentBestScore, setCurrentBestScore] = useState(
-    parseInt(!Array.isArray(bestScore) ? bestScore : "0")
+    parseInt(bestScore ?? "0")
   );
   const [loadingSetScore, setLoadingSetScore] = useState(false);
   const [hasCreatedScore, setHasCreatedScore] = useState(false); //state variable for board loaded from leaderboard in case user resets board before actually solving
   const [boardComplete, setBoardComplete] = useState(false);
+  const [isReplayingBoard, setIsReplayingBoard] = useState(false);
+  const [currentBoardId, setCurrentBoardId] = useState(
+    (boardId as string) ?? uuid.v4()
+  );
 
   const isSmallDevice = getWindowHeight() <= 720;
 
@@ -317,7 +328,7 @@ export default function Freeplay() {
       resetBoard[0][0].color,
       new Set()
     );
-    if (!hasGeneratedNewBoard && hasCreatedScore && boardId) {
+    if (currentBestScore !== 0 && hasCreatedScore) {
       setCurrentBestScore(score < currentBestScore ? score : currentBestScore);
     }
     resetSquareCount(resetBoard, capturedCount, setSquaresRemaining);
@@ -326,6 +337,7 @@ export default function Freeplay() {
     setBoardVersion((prev) => prev + 1);
     setUnlockedColorPalettes([]);
     setBoardComplete(false);
+    setIsReplayingBoard(true);
     setScore(0);
   };
 
@@ -345,13 +357,35 @@ export default function Freeplay() {
     setShowBoardSizeModal(false);
     setBoardVersion((prev) => prev + 1);
     setUnlockedColorPalettes([]);
-    setHasGeneratedNewBoard(true);
     setBoardComplete(false);
+    setHasCreatedScore(false);
+    setCurrentBoardId(uuid.v4());
+    setIsReplayingBoard(false);
+  };
+
+  const determineIsBetterScore = (
+    userBest: number | null,
+    boardBest: number,
+    updatedScore: number
+  ) => {
+    if (boardId === currentBoardId) {
+      if (userBest) return updatedScore < boardBest && updatedScore < userBest;
+      return false;
+    }
+    if (userBest) return updatedScore < userBest;
+    return false;
+  };
+
+  const determineHighScore = (
+    updatedScore: number,
+    currentBoardBestScore: number
+  ) => {
+    if (!boardId) return true;
+    return updatedScore < currentBoardBestScore;
   };
 
   async function handleBoardComplete(updatedScore: number) {
     if (boardComplete) return;
-
     setBoardComplete(true);
     setLoadingSetScore(true);
     setHasCreatedScore(true);
@@ -362,7 +396,7 @@ export default function Freeplay() {
     if (!networkState.isConnected) {
       if (!boardId) {
         const scoreData = {
-          boardId: uuid.v4(),
+          boardId: currentBoardId,
           score: updatedScore,
           size: boardSize,
           boardData,
@@ -379,11 +413,11 @@ export default function Freeplay() {
       return;
     }
     let currentBoardBestScore = null;
-    if (!hasGeneratedNewBoard && boardId) {
+    if (isReplayingBoard || boardId === currentBoardId) {
       const currentBestScoreDocs = await getDocs(
         query(
           collection(db, "scores"),
-          where("boardId", "==", boardId),
+          where("boardId", "==", currentBoardId),
           where("highScore", "==", true),
           orderBy("score", "asc")
         )
@@ -401,20 +435,23 @@ export default function Freeplay() {
           );
         }
       }
+    } else {
+      currentBoardBestScore = updatedScore;
+      setCurrentBestScore(currentBoardBestScore);
     }
+    console.log("boardid", boardId);
+    console.log("current boardId", currentBoardId);
     const [userDoc] = await Promise.all([
       getUser(user.uid),
       addDoc(collection(db, "scores"), {
-        boardId: boardId ? boardId : uuid.v4(),
+        boardId: boardId ? boardId : currentBoardId,
         score: updatedScore,
         size: boardSize,
         boardData,
         createdBy: user?.displayName,
         uid: user?.uid,
         gamemode: "freeplay",
-        highScore: !currentBoardBestScore
-          ? true
-          : currentBoardBestScore && updatedScore < currentBoardBestScore,
+        highScore: determineHighScore(updatedScore, currentBoardBestScore),
         createdAt: serverTimestamp(),
       }),
     ]);
@@ -422,11 +459,15 @@ export default function Freeplay() {
     if (userDoc) {
       const scoreField = scoreFieldMap[boardSize];
       const currentBest = userDoc.data[scoreField];
-      const isBetterScore = currentBest === null || updatedScore < currentBest;
+      const isBetterScore = determineIsBetterScore(
+        currentBest,
+        currentBoardBestScore,
+        updatedScore
+      );
 
       const updatedScoreMap = Object.fromEntries(
         Object.entries(scoreFieldMap).map(([key, value]) => {
-          if (boardSize === key) {
+          if (boardSize === key && isBetterScore) {
             return [value, updatedScore];
           }
           return [value, userDoc.data[value] ?? null]; // always default to null
@@ -481,7 +522,10 @@ export default function Freeplay() {
           <View>
             <ThemedText style={styles.score}>
               {score}
-              {bestScore && !hasGeneratedNewBoard && ` / ${currentBestScore}`}
+              {(bestScore && boardId === currentBoardId) ||
+              (hasCreatedScore && isReplayingBoard)
+                ? ` / ${currentBestScore}`
+                : ""}
             </ThemedText>
             {showSquareCounter && !isSmallDevice && (
               <SquareCounter
@@ -531,8 +575,8 @@ export default function Freeplay() {
           boardSize={boardSize}
           score={score}
           currentBestScore={currentBestScore}
-          hasGeneratedNewBoard={hasGeneratedNewBoard}
           loadingSetScore={loadingSetScore}
+          isReplayingBoard={isReplayingBoard}
         />
       )}
       {unlockedColorPalettes.length > 0 && (
