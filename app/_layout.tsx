@@ -1,4 +1,4 @@
-import { loadSounds } from "@/helper/soundEffects"; // 👈 import your helper
+import { loadSounds } from "@/helper/audio/soundManager"; // 👈 import your helper
 import { useFirebaseUser } from "@/hooks/useFirebaseUser";
 import {
   DarkTheme,

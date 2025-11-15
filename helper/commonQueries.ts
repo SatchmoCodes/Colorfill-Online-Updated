@@ -9,7 +9,7 @@ export const getUser = async (
     const newDocRef = doc(db, "users", uid);
     const userDoc = await getDoc(newDocRef);
 
-    if (!userDoc.exists()) {
+    if (userDoc.exists()) {
       const docSnap = userDoc;
       return {
         ref: docSnap.ref,

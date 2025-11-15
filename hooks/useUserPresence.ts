@@ -78,6 +78,7 @@ export const useUserPresence = (user?: User | null) => {
 
 const establishUserPresence = async (user: User) => {
   const userDoc = await getUser(user.uid);
+  console.log("stupid", userDoc);
   if (!userDoc) return;
 
   const profileBackground =

@@ -16,12 +16,12 @@ import {
   saveCurrentBOTD,
   saveSolvedBOTDId,
 } from "@/helper/asyncStorageHelper";
+import { playPop, resetPlayedDepths } from "@/helper/audio/soundManager";
 import { getUser } from "@/helper/commonQueries";
 import { getColorPaletteOptions } from "@/helper/getColorPaletteOptions";
 import { getEasternBoardDate } from "@/helper/getEasternBoardDate";
 import { getUnlockedColorPalettes } from "@/helper/getUnlockedColorPalettes";
 import { getWindowWidth } from "@/helper/getWindowWidth";
-import { playPop, resetPlayedDepths } from "@/helper/soundEffects";
 import { squareGenerator } from "@/helper/squareGenerator";
 import { updateCriteriaMap } from "@/helper/updateCriteriaMap";
 import { useUser } from "@/hooks/useFirebaseUser";

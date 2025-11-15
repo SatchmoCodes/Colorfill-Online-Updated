@@ -23,7 +23,7 @@
       "imageWidth": "200"
     },
     "notification": {
-      "icon": "./assets/images/android-notification-icon.png",
+      "icon": "./assets/images/ColorFill-Android-Notification.png",
       "color": "#ffffff"
     },
     "android": {
