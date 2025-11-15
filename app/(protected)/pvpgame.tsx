@@ -10,10 +10,10 @@ import {
   loadColorIndex,
   loadColorPaletteOptions,
   loadIsMosaicMode,
-  saveColorPaletteOptions,
 } from "@/helper/asyncStorageHelper";
 import { getUser } from "@/helper/commonQueries";
 import { getColorPaletteOptions } from "@/helper/getColorPaletteOptions";
+import { getUnlockedColorPalettes } from "@/helper/getUnlockedColorPalettes";
 import { getWindowHeight } from "@/helper/getWindowHeight";
 import { getWindowWidth } from "@/helper/getWindowWidth";
 import { PVPSquare } from "@/helper/pvpSquareGenerator";
@@ -658,24 +658,6 @@ export default function PvpGame() {
           : opponentUserDoc.data.bestWinStreak,
       }),
       updateCriteriaMap({
-        boardsCompleted: isOwner
-          ? ownerUserDoc.data.boardsCompleted
-          : opponentUserDoc.data.boardsCompleted,
-        boardsOfTheDayCompleted: isOwner
-          ? ownerUserDoc.data.boardsOfTheDayCompleted
-          : opponentUserDoc.data.boardsOfTheDayCompleted,
-        bestSmallScore: isOwner
-          ? ownerUserDoc.data.bestSmallScore
-          : opponentUserDoc.data.bestSmallScore,
-        bestMediumScore: isOwner
-          ? ownerUserDoc.data.bestMediumScore
-          : opponentUserDoc.data.bestMediumScore,
-        bestLargeScore: isOwner
-          ? ownerUserDoc.data.bestLargeScore
-          : opponentUserDoc.data.bestLargeScore,
-        bestXLargeScore: isOwner
-          ? ownerUserDoc.data.bestXLargeScore
-          : opponentUserDoc.data.bestXLargeScore,
         totalGames: isOwner
           ? ownerUserDoc.data.totalGames + 1
           : opponentUserDoc.data.totalGames + 1,
@@ -687,30 +669,13 @@ export default function PvpGame() {
           : Math.max(opponentUserDoc.data.bestWinStreak, opponentNextStreak),
       }),
     ]);
-
-    const updatedColorPaletteOptions = await getColorPaletteOptions(
+    const newlyUnlockedColorPalettes = await getUnlockedColorPalettes(
+      prevCriteriaMap,
       newCriteriaMap
     );
-
-    const newlyUnlockedColorPalettes = updatedColorPaletteOptions.filter(
-      (item) => {
-        if ("key" in item) {
-          const prevCriteriaMapItemLocked =
-            prevCriteriaMap[item.key]?.locked ?? true;
-          const newCriteriaMapItemLocked =
-            newCriteriaMap[item.key]?.locked ?? true;
-          return prevCriteriaMapItemLocked !== newCriteriaMapItemLocked;
-        }
-        return false;
-      }
-    );
-
     if (newlyUnlockedColorPalettes.length > 0) {
       setUnlockedColorPalettes(newlyUnlockedColorPalettes);
     }
-
-    await saveColorPaletteOptions(updatedColorPaletteOptions);
-
     // Only the winner performs the Firestore writes
     if (winner === currentUserType) {
       await Promise.all([

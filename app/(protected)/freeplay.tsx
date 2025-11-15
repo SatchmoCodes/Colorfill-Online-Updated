@@ -12,11 +12,11 @@ import {
   loadCriteriaMap,
   loadIsMosaicMode,
   loadShowSquareCounter,
-  saveColorPaletteOptions,
   saveOfflineScores,
 } from "@/helper/asyncStorageHelper";
 import { getUser } from "@/helper/commonQueries";
 import { getColorPaletteOptions } from "@/helper/getColorPaletteOptions";
+import { getUnlockedColorPalettes } from "@/helper/getUnlockedColorPalettes";
 import { getWindowHeight } from "@/helper/getWindowHeight";
 import { getWindowWidth } from "@/helper/getWindowWidth";
 import { playPop, resetPlayedDepths } from "@/helper/soundEffects";
@@ -455,7 +455,6 @@ export default function Freeplay() {
         createdAt: serverTimestamp(),
       }),
     ]);
-
     if (userDoc) {
       const scoreField = scoreFieldMap[boardSize];
       const currentBest = userDoc.data[scoreField];
@@ -464,7 +463,6 @@ export default function Freeplay() {
         currentBoardBestScore,
         updatedScore
       );
-
       const updatedScoreMap = Object.fromEntries(
         Object.entries(scoreFieldMap).map(([key, value]) => {
           if (boardSize === key && isBetterScore) {
@@ -473,42 +471,23 @@ export default function Freeplay() {
           return [value, userDoc.data[value] ?? null]; // always default to null
         })
       );
-      const prevCriteriaMap = (await loadCriteriaMap()) ?? {};
-
       await updateDoc(userDoc.ref, {
         boardsCompleted: increment(1),
         ...(isBetterScore ? { [scoreField]: updatedScore } : {}),
       });
-
+      const prevCriteriaMap = (await loadCriteriaMap()) ?? {};
       const newCriteriaMap = await updateCriteriaMap({
         boardsCompleted: (userDoc.data.boardsCompleted ?? 0) + 1,
-        boardsOfTheDayCompleted: userDoc.data.boardsOfTheDayCompleted,
-        totalGames: userDoc.data.totalGames,
-        wins: userDoc.data.wins,
-        bestWinStreak: userDoc.data.bestWinStreak,
         ...updatedScoreMap,
       });
-      const updatedColorPaletteOptions = await getColorPaletteOptions(
+      const newlyUnlockedColorPalettes = await getUnlockedColorPalettes(
+        prevCriteriaMap,
         newCriteriaMap
       );
-      const newlyUnlockedColorPalettes = updatedColorPaletteOptions.filter(
-        (item) => {
-          if ("key" in item) {
-            const prevCriteriaMapItemLocked =
-              prevCriteriaMap[item.key]?.locked ?? true;
-            const newCriteriaMapItemLocked =
-              newCriteriaMap[item.key]?.locked ?? true;
-            return prevCriteriaMapItemLocked !== newCriteriaMapItemLocked;
-          }
-          return false;
-        }
-      );
-
       if (newlyUnlockedColorPalettes.length > 0) {
         setUnlockedColorPalettes(newlyUnlockedColorPalettes);
       }
       console.log("unlocked", newlyUnlockedColorPalettes);
-      await saveColorPaletteOptions(updatedColorPaletteOptions);
       setLoadingSetScore(false);
     }
   }

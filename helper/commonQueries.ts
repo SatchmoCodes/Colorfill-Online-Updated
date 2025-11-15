@@ -1,28 +1,16 @@
 import { db } from "@/firebaseConfig";
 import { UserDoc } from "@/schema/userDocModel";
-import {
-  collection,
-  DocumentReference,
-  getDocs,
-  limit,
-  query,
-  where,
-} from "firebase/firestore";
+import { doc, DocumentReference, getDoc } from "firebase/firestore";
 
 export const getUser = async (
   uid: string
 ): Promise<{ ref: DocumentReference; data: UserDoc } | null> => {
   try {
-    const userQuery = query(
-      collection(db, "users"),
-      where("uid", "==", uid),
-      limit(1)
-    );
+    const newDocRef = doc(db, "users", uid);
+    const userDoc = await getDoc(newDocRef);
 
-    const userDoc = await getDocs(userQuery);
-
-    if (!userDoc.empty) {
-      const docSnap = userDoc.docs[0];
+    if (!userDoc.exists()) {
+      const docSnap = userDoc;
       return {
         ref: docSnap.ref,
         data: docSnap.data() as UserDoc,
