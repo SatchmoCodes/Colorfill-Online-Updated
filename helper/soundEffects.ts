@@ -1,37 +1,57 @@
-import { Audio } from "expo-av";
+import Sound from "react-native-sound";
 
-const SOUND_POOL_SIZE = 5; // number of reusable sound players
-const soundPool: Audio.Sound[] = [];
+Sound.setCategory("Playback");
+
+const SOUND_POOL_SIZE = 6;
+const soundPool: Sound[] = [];
 let nextIndex = 0;
 let playedDepths = new Set<number>();
 
-export async function loadSounds() {
+export function loadSounds() {
   if (soundPool.length > 0) return;
 
+  // Enable faster loading on Android
+  Sound.setCategory("Ambient", true);
+
   for (let i = 0; i < SOUND_POOL_SIZE; i++) {
-    const sound = new Audio.Sound();
-    await sound.loadAsync(require("@/assets/sounds/pop.mp3"));
-    soundPool.push(sound);
+    const snd = new Sound(
+      require("@/assets/sounds/pop.mp3"),
+      Sound.MAIN_BUNDLE,
+      (error) => {
+        if (error) {
+          console.warn("Failed to load sound:", error);
+        }
+      }
+    );
+
+    soundPool.push(snd);
   }
 }
 
-export async function playPop(depth: number = 0) {
+export function playPop(depth: number = 0) {
   if (playedDepths.has(depth)) return;
   playedDepths.add(depth);
 
   if (soundPool.length === 0) return;
 
-  const sound = soundPool[nextIndex];
+  const snd = soundPool[nextIndex];
   nextIndex = (nextIndex + 1) % soundPool.length;
 
-  try {
-    await sound.setPositionAsync(0);
-    const rate = 1 + depth * 0.05 + Math.random() * 0.03;
-    await sound.setRateAsync(rate, false);
-    await sound.playAsync();
-  } catch (err) {
-    console.warn("playPop error:", err);
-  }
+  // Pitch / playback rate variation
+  const rate = 1 + depth * 0.05 + Math.random() * 0.03;
+
+  // 1. reset position
+  snd.setCurrentTime(0);
+
+  // 2. set playback speed (supported on both iOS + Android)
+  snd.setSpeed(rate);
+
+  // 3. play instantly
+  snd.play((success) => {
+    if (!success) {
+      console.warn("playback failed");
+    }
+  });
 }
 
 export function resetPlayedDepths() {
