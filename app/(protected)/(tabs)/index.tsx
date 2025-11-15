@@ -1,15 +1,23 @@
 import { Image, Pressable, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/ThemedText";
-import { auth } from "@/firebaseConfig";
+import { auth, rtdb } from "@/firebaseConfig";
+import { useUser } from "@/hooks/useFirebaseUser";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Network from "expo-network";
 import { router } from "expo-router";
+import { ref, serverTimestamp, update } from "firebase/database";
 import { useState } from "react";
 
 export default function HomeScreen() {
+  const user = useUser();
   const handleSignOut = async () => {
+    const userStatusRef = ref(rtdb, `/onlineUsers/${user.uid}`);
     await AsyncStorage.clear();
+    update(userStatusRef, {
+      online: false,
+      lastSeen: serverTimestamp(),
+    });
     auth.signOut();
   };
 

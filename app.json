@@ -17,13 +17,13 @@
       }
     },
     "splash": {
-      "image": "./assets/images/ColorFill-iOS.png",
+      "image": "./assets/images/ColorFill-Splash.png",
       "resizeMode": "cover",
       "backgroundColor": "#ffffff",
       "imageWidth": "200"
     },
     "notification": {
-      "icon": "./assets/images/ColorFill-Android-Notification.png",
+      "icon": "./assets/images/android-notification-icon.png",
       "color": "#ffffff"
     },
     "android": {

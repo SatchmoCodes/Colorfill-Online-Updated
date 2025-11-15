@@ -12,8 +12,8 @@ interface ModalProps {
   boardSize: BoardSize;
   score: number;
   currentBestScore: number;
-  hasGeneratedNewBoard: boolean;
   loadingSetScore: boolean;
+  isReplayingBoard: boolean;
 }
 
 export default function BoardCompleteModal(props: ModalProps) {
@@ -24,8 +24,8 @@ export default function BoardCompleteModal(props: ModalProps) {
     boardSize,
     score,
     currentBestScore,
-    hasGeneratedNewBoard,
     loadingSetScore,
+    isReplayingBoard,
   } = props;
 
   return (
@@ -39,7 +39,7 @@ export default function BoardCompleteModal(props: ModalProps) {
           <ActivityIndicator />
         ) : (
           <>
-            {!hasGeneratedNewBoard && currentBestScore > 0 ? (
+            {isReplayingBoard && currentBestScore > 0 ? (
               <ThemedText>
                 {score < currentBestScore
                   ? `You beat the previous best score in ${score} turns!`

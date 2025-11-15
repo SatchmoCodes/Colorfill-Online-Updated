@@ -2,7 +2,7 @@ import { colors } from "@/components/SimpleColorPicker";
 import { auth, db } from "@/firebaseConfig";
 import { router, useNavigation } from "expo-router";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import React, { useState } from "react";
 import {
   Image,
@@ -29,18 +29,29 @@ const Register = () => {
       cancel = true;
       alert("username must not include spaces");
     }
+    // The 'cancel' flag isn't currently used to stop execution. Add a return if needed.
+    if (cancel) {
+      return; // Stop the function if validation fails
+    }
+
     try {
       const response = await createUserWithEmailAndPassword(
         auth,
         email,
         password
       );
+
+      // Get the User ID (UID) from the successful creation response
+      const userUid = response.user.uid;
+
       updateProfile(response.user, {
         displayName: displayName,
       });
-      await addDoc(collection(db, "users"), {
+
+      // --- 🔑 Change is HERE: Use setDoc and doc(collection, userUid) ---
+      await setDoc(doc(db, "users", userUid), {
         email: email,
-        uid: response.user.uid,
+        uid: userUid, // Store the UID inside the document as well (good practice)
         username: displayName,
         wins: 0,
         losses: 0,
@@ -68,7 +79,7 @@ const Register = () => {
 
   return (
     <ImageBackground
-      source={require("@/assets/images/ColorFill-Splash.png")}
+      source={require("@/assets/images/ColorFill-Background.png")}
       style={styles.backgroundImage}
     >
       <View style={styles.container}>

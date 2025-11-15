@@ -67,7 +67,7 @@ const LoginScreen = ({}) => {
 
   return (
     <ImageBackground
-      source={require("@/assets/images/ColorFill-Splash.png")}
+      source={require("@/assets/images/ColorFill-Background.png")}
       style={styles.backgroundImage}
     >
       <View style={styles.container}>
