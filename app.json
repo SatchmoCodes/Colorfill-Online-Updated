@@ -16,7 +16,9 @@
         "ITSAppUsesNonExemptEncryption": false
       },
       "hooks": {
-        "postPrebuild": ["node ./scripts/copy-sounds.js"]
+        "postPrebuild": [
+          "node ./scripts/copy-sounds.js"
+        ]
       }
     },
     "splash": {
@@ -52,7 +54,8 @@
           "icon": "./assets/images/ColorFill-Android-Notification.png",
           "color": "#ffffff"
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true
