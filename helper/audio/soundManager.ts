@@ -17,12 +17,29 @@ if (Platform.OS === "web") {
   const { Audio } = require("expo-av");
   const popSounds: any[] = [];
 
+  // 1. Statically import all required assets
+  const soundModules = [
+    require("@/assets/sounds/pitched/pop_0.mp3"),
+    require("@/assets/sounds/pitched/pop_1.mp3"),
+    require("@/assets/sounds/pitched/pop_2.mp3"),
+    require("@/assets/sounds/pitched/pop_3.mp3"),
+    require("@/assets/sounds/pitched/pop_4.mp3"),
+    require("@/assets/sounds/pitched/pop_5.mp3"),
+    require("@/assets/sounds/pitched/pop_6.mp3"),
+    require("@/assets/sounds/pitched/pop_7.mp3"),
+    require("@/assets/sounds/pitched/pop_8.mp3"),
+    require("@/assets/sounds/pitched/pop_9.mp3"),
+    require("@/assets/sounds/pitched/pop_10.mp3"),
+    require("@/assets/sounds/pitched/pop_11.mp3"),
+  ];
+
   loadSounds = async () => {
     if (popSounds.length > 0) return;
 
     for (let i = 0; i < NUM_PITCHES; i++) {
       const snd = new Audio.Sound();
-      await snd.loadAsync(require(`@/assets/sounds/pitched/pop_${i}.wav`));
+      // 2. Load the sound using the static import result
+      await snd.loadAsync(soundModules[i]);
       popSounds.push(snd);
     }
   };
@@ -61,7 +78,7 @@ else {
     if (popSounds.length > 0) return;
 
     for (let i = 0; i < NUM_PITCHES; i++) {
-      const s = new Sound(`pop_${i}.wav`, Sound.MAIN_BUNDLE, (error: any) => {
+      const s = new Sound(`pop_${i}.mp3`, Sound.MAIN_BUNDLE, (error: any) => {
         if (error) console.log("Sound load error:", error);
       });
       popSounds.push(s);
