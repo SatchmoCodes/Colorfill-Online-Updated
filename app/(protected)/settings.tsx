@@ -1,6 +1,7 @@
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import CommonButton from "@/components/ui/CommonButton";
+import { IconSymbol } from "@/components/ui/IconSymbol";
 import UnlockableProgressModal from "@/components/ui/UnlockableProgressModal";
 import {
   loadColorIndex,
@@ -14,6 +15,7 @@ import {
 } from "@/helper/asyncStorageHelper";
 import { getColorPaletteOptions } from "@/helper/getColorPaletteOptions";
 import { getWindowHeight } from "@/helper/getWindowHeight";
+import Slider from "@react-native-community/slider";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -25,6 +27,7 @@ import {
   NativeSyntheticEvent,
   PixelRatio,
   Platform,
+  ScrollView,
   StyleSheet,
   Switch,
   TouchableOpacity,
@@ -152,7 +155,10 @@ export default function Settings() {
   }
 
   return (
-    <ThemedView style={[styles.container]}>
+    <ScrollView
+      contentContainerStyle={{ alignItems: "center" }}
+      style={[styles.container]}
+    >
       <View style={{ minHeight: 100, justifyContent: "center" }}>
         {!selectedColorPalette ? (
           <ActivityIndicator />
@@ -253,7 +259,7 @@ export default function Settings() {
         )}
       </View>
 
-      <View>
+      <View style={{ marginBottom: 30 }}>
         <TouchableOpacity
           style={styles.unlockableButton}
           onPress={() => setUnlockableProgressModal(true)}
@@ -264,8 +270,11 @@ export default function Settings() {
         </TouchableOpacity>
         <ThemedText></ThemedText>
       </View>
-      <ThemedView>
-        <ThemedText>Square Borders</ThemedText>
+      <ThemedText style={{ marginBottom: 30 }} type="subtitle">
+        General Settings
+      </ThemedText>
+      <ThemedView style={{ marginBottom: 10 }}>
+        <ThemedText>Show Square Borders</ThemedText>
         <Switch
           trackColor={{ false: "#767577", true: "#81b0ff" }}
           thumbColor={isMosaic ? "#f5dd4b" : "#f4f3f4"}
@@ -276,7 +285,7 @@ export default function Settings() {
         />
       </ThemedView>
       {!isSmallDevice && (
-        <ThemedView>
+        <ThemedView style={{ marginBottom: 10 }}>
           <ThemedText>Show Square Counter</ThemedText>
           <Switch
             trackColor={{ false: "#767577", true: "#81b0ff" }}
@@ -288,6 +297,24 @@ export default function Settings() {
           />
         </ThemedView>
       )}
+      <ThemedView>
+        <ThemedText>Square Capture Audio</ThemedText>
+        <TouchableOpacity>
+          <IconSymbol
+            style={{ textAlign: "center" }}
+            name="speaker.slash.fill"
+            size={36}
+            color={"white"}
+          />
+          <Slider
+            style={{ width: 200, height: 40 }}
+            minimumValue={0}
+            maximumValue={1}
+            minimumTrackTintColor="#FFFFFF"
+            maximumTrackTintColor="#000000"
+          />
+        </TouchableOpacity>
+      </ThemedView>
 
       {progressModalPalette && (
         <ColorPaletteProgressModal
@@ -302,7 +329,7 @@ export default function Settings() {
           setUnlockableProgressModal={setUnlockableProgressModal}
         />
       )}
-    </ThemedView>
+    </ScrollView>
   );
 }
 
@@ -746,7 +773,7 @@ const ColorPaletteProgressModal = (props: ColorPaletteModalProps) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: "center", padding: 20 },
+  container: { flex: 1, padding: 20, backgroundColor: "#151718" },
   centeredView: {
     justifyContent: "center",
     alignItems: "center",

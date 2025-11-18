@@ -16,15 +16,13 @@
         "ITSAppUsesNonExemptEncryption": false
       },
       "hooks": {
-        "postPrebuild": [
-          "node ./scripts/copy-sounds.js"
-        ]
+        "postPrebuild": ["node ./scripts/copy-sounds.js"]
       }
     },
     "splash": {
       "image": "./assets/images/ColorFill-Splash.png",
       "resizeMode": "cover",
-      "backgroundColor": "#ffffff",
+      "backgroundColor": "#151718",
       "imageWidth": "200"
     },
     "notification": {

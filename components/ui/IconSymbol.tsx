@@ -30,6 +30,9 @@ const MAPPING = {
   "arrow.clockwise": "refresh",
   "icloud.fill": "cloud",
   "icloud.slash": "cloud-off",
+  "speaker.slash.fill": "volume-off",
+  "speaker.1.fill": "volume-down",
+  "speaker.2.fill": "volume-up",
 } as IconMapping;
 
 /**
