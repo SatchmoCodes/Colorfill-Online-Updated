@@ -1,3 +1,5 @@
+import { savePopSoundVolume } from "../asyncStorageHelper";
+
 // soundManager.native.ts
 const Sound = require("react-native-sound").default;
 
@@ -11,11 +13,25 @@ const popSounds: any[] = [];
 // Pool for the highest-pitch repeated sound
 const highPitchPool: any[] = [];
 let highPoolIndex = 0;
+let globalVolume = 0.25;
 
 // ----------------------------------------------------
 // Reset depth tracking
 // ----------------------------------------------------
 export const resetPlayedDepths = () => playedDepths.clear();
+
+export const setSoundVolume = async (
+  v: number,
+  shouldPlaySound: boolean = false
+) => {
+  console.log("stupid retard", v);
+  globalVolume = v; // clamp to [0–1]
+  if (shouldPlaySound) {
+    resetPlayedDepths();
+    playPop(1);
+  }
+  await savePopSoundVolume(v);
+};
 
 // ----------------------------------------------------
 // Load all sounds
@@ -32,7 +48,7 @@ export const loadSounds = () => {
         console.log("❌ Native sound load error:", err);
       } else {
         console.log(`Loaded native sound index: ${i}`);
-        s.setVolume(1.0);
+        s.setVolume(globalVolume);
       }
     });
     popSounds.push(s);
@@ -50,7 +66,7 @@ export const loadSounds = () => {
         console.log("❌ High-pitch load error:", err);
       } else {
         console.log(`Loaded high-pitch pool sound: ${i}`);
-        s.setVolume(1.0);
+        s.setVolume(globalVolume);
       }
     });
     highPitchPool.push(s);
@@ -66,7 +82,7 @@ export const playPop = (depth: number = 0) => {
   if (popSounds.length === 0) return; // not loaded yet
 
   // Convert depth→index (1-based depth → 0-based)
-  const raw = depth - 1;
+  const raw = depth;
   const idx = raw >= NUM_PITCHES ? NUM_PITCHES - 1 : Math.max(0, raw);
 
   // Prevent overlapping sounds at the same depth
@@ -79,7 +95,8 @@ export const playPop = (depth: number = 0) => {
   if (idx === NUM_PITCHES - 1) {
     const snd = highPitchPool[highPoolIndex];
     highPoolIndex = (highPoolIndex + 1) % HIGH_POOL_SIZE;
-
+    console.log("volume", globalVolume);
+    snd.setVolume(globalVolume);
     snd.stop(() => snd.play());
     return;
   }
@@ -87,8 +104,9 @@ export const playPop = (depth: number = 0) => {
   // --------------------------------------------------------
   // Normal sound (0–10)
   // --------------------------------------------------------
+  console.log("test", globalVolume);
   const snd = popSounds[idx];
   if (!snd) return;
-
+  snd.setVolume(globalVolume);
   snd.stop(() => snd.play());
 };

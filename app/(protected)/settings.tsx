@@ -8,11 +8,14 @@ import {
   loadColorPaletteOptions,
   loadCriteriaMap,
   loadIsMosaicMode,
+  loadPopSoundVolume,
   loadShowSquareCounter,
   saveColorIndex,
   saveIsMosaicMode,
   saveShowSquareCounter,
 } from "@/helper/asyncStorageHelper";
+//@ts-ignore
+import { setSoundVolume } from "@/helper/audio/soundManager";
 import { getColorPaletteOptions } from "@/helper/getColorPaletteOptions";
 import { getWindowHeight } from "@/helper/getWindowHeight";
 import Slider from "@react-native-community/slider";
@@ -90,12 +93,11 @@ export default function Settings() {
   const [isMosaic, setIsMosaic] = useState(false);
   const [showSquareCounter, setShowSquareCounter] = useState(false);
   const [unlockableProgressMdoal, setUnlockableProgressModal] = useState(false);
+  const [captureAudioLevel, setCaptureAudioLevel] = useState(0.25);
 
   const isSmallDevice = getWindowHeight() <= 720;
 
   const initialPage = Math.floor(selectedIndex / PAGE_SIZE);
-
-  console.log("what is this", colorPaletteOptions);
 
   useEffect(() => {
     loadInitialSettings();
@@ -140,6 +142,7 @@ export default function Settings() {
       const isMosaic = (await loadIsMosaicMode()) ?? false;
       const shouldShowSquareCounter = (await loadShowSquareCounter()) ?? true;
       const currentCriteriaMap = (await loadCriteriaMap()) ?? {};
+      const popAudioLevel = (await loadPopSoundVolume()) ?? 0.25;
       let colorOptions =
         (await loadColorPaletteOptions()) ??
         (await getColorPaletteOptions(currentCriteriaMap));
@@ -148,11 +151,14 @@ export default function Settings() {
       setSelectedIndex(savedIndex);
       setIsMosaic(isMosaic);
       setShowSquareCounter(shouldShowSquareCounter);
+      setCaptureAudioLevel(popAudioLevel);
     } catch (e) {
       setSelectedIndex(0);
       setSelectedColorPalette(null);
     }
   }
+
+  console.log("audio", captureAudioLevel);
 
   return (
     <ScrollView
@@ -298,24 +304,61 @@ export default function Settings() {
         </ThemedView>
       )}
       <ThemedView>
-        <ThemedText>Square Capture Audio</ThemedText>
-        <TouchableOpacity>
-          <IconSymbol
-            style={{ textAlign: "center" }}
-            name="speaker.slash.fill"
-            size={36}
-            color={"white"}
-          />
-          <Slider
-            style={{ width: 200, height: 40 }}
-            minimumValue={0}
-            maximumValue={1}
-            minimumTrackTintColor="#FFFFFF"
-            maximumTrackTintColor="#000000"
-          />
+        <ThemedText style={{ textAlign: "center" }}>
+          Square Capture Audio
+        </ThemedText>
+        <TouchableOpacity
+          onPress={() => {
+            if (captureAudioLevel > 0) {
+              setCaptureAudioLevel(0);
+              setSoundVolume(0, false);
+            } else {
+              setCaptureAudioLevel(0.1);
+              setSoundVolume(0.1, true);
+            }
+          }}
+        >
+          {captureAudioLevel === 0 && (
+            <IconSymbol
+              style={{ textAlign: "center" }}
+              name="speaker.slash.fill"
+              size={36}
+              color={"white"}
+            />
+          )}
+          {captureAudioLevel > 0 && captureAudioLevel < 0.125 && (
+            <IconSymbol
+              style={{ textAlign: "center" }}
+              name="speaker.1.fill"
+              size={36}
+              color={"white"}
+            />
+          )}
+          {captureAudioLevel >= 0.125 && (
+            <IconSymbol
+              style={{ textAlign: "center" }}
+              name="speaker.2.fill"
+              size={36}
+              color={"white"}
+            />
+          )}
         </TouchableOpacity>
+        <Slider
+          style={{ width: 200, height: 40 }}
+          value={captureAudioLevel}
+          minimumValue={0}
+          maximumValue={0.25}
+          minimumTrackTintColor="#FFFFFF"
+          maximumTrackTintColor="#000000"
+          onValueChange={(value) => setCaptureAudioLevel(value)}
+          onSlidingComplete={(value) => {
+            if (value !== 0) {
+              console.log("value", value);
+              setSoundVolume(value, true);
+            }
+          }}
+        />
       </ThemedView>
-
       {progressModalPalette && (
         <ColorPaletteProgressModal
           progressModalPalette={progressModalPalette}

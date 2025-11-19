@@ -15,6 +15,7 @@ const PROFILE_BACKGROUND_COLOR_KEY = "profile-color";
 const PROFILE_LETTER_COLOR_KEY = "profile-letter-color";
 const PROFILE_BANNER_COLOR_KEY = "profile-banner-color";
 const LEADERBOARD_REFRESH_KEY = "leaderboard-refresh";
+const POPSOUND_VOLUME_KEY = "pop-volume";
 
 export const FREEPLAY_OFFLINE_SCORES_KEY = "offline-scores";
 
@@ -133,4 +134,13 @@ export async function saveLeaderboardRefreshTime(time: number) {
 export async function loadLeaderboardRefreshTime(): Promise<number | null> {
   const saved = await AsyncStorage.getItem(LEADERBOARD_REFRESH_KEY);
   return saved !== null ? JSON.parse(saved) : null;
+}
+
+export async function savePopSoundVolume(volume: number) {
+  await AsyncStorage.setItem(POPSOUND_VOLUME_KEY, JSON.stringify(volume));
+}
+
+export async function loadPopSoundVolume(): Promise<number | null> {
+  const saved = await AsyncStorage.getItem(POPSOUND_VOLUME_KEY);
+  return saved !== null ? Number(saved) : null;
 }

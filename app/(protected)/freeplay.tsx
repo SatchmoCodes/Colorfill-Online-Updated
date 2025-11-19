@@ -14,6 +14,7 @@ import {
   loadShowSquareCounter,
   saveOfflineScores,
 } from "@/helper/asyncStorageHelper";
+//@ts-ignore
 import { playPop, resetPlayedDepths } from "@/helper/audio/soundManager";
 import { getUser } from "@/helper/commonQueries";
 import { getColorPaletteOptions } from "@/helper/getColorPaletteOptions";
@@ -279,6 +280,7 @@ export default function Freeplay() {
     const neighbors = getAdjacentSquares(currentSquare, board);
     for (const neighbor of neighbors) {
       if (neighbor && !neighbor.captured && neighbor.color === color) {
+        console.log("depth here", depth + 1);
         neighbor.captured = true;
         neighbor.depth = depth + 1;
         capturedCount += 1;
