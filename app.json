@@ -21,7 +21,7 @@
     },
     "splash": {
       "image": "./assets/images/ColorFill-Splash.png",
-      "resizeMode": "cover",
+      "resizeMode": "contain",
       "backgroundColor": "#151718",
       "imageWidth": "200"
     },

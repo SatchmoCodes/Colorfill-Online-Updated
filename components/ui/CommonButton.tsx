@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   createButtonText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "bold",
     color: "#fff",
     textAlign: "center",
