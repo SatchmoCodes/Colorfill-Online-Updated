@@ -16,7 +16,7 @@ const boardOptions: Record<number, { size: string; count: number }> = {
 };
 
 export const generateDailyBoard = onSchedule(
-  { schedule: "0 8 * * *", timeZone: "America/New_York" },
+  { schedule: "59 7 * * *", timeZone: "America/New_York" },
   async () => {
     const options = Object.values(boardOptions);
     const randomIndex = Math.floor(Math.random() * options.length);
