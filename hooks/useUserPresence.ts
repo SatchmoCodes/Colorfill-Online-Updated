@@ -77,42 +77,43 @@ export const useUserPresence = (user?: User | null) => {
 };
 
 const establishUserPresence = async (user: User) => {
-  const userDoc = await getUser(user.uid);
-  console.log("stupid", userDoc);
-  if (!userDoc) return;
-
-  const profileBackground =
-    userDoc.data.profileBackground ??
-    colors[Math.floor(Math.random() * colors.length)];
-  const profileLetter =
-    userDoc.data.profileLetter ??
-    colors[Math.floor(Math.random() * colors.length)];
-  const profileBanner =
-    userDoc.data.profileBanner ??
-    colors[Math.floor(Math.random() * colors.length)];
-
-  updateAsyncStorageValuesOnLoad({
-    ...userDoc.data,
-    profileBackground,
-    profileLetter,
-    profileBanner,
-  });
-
   uploadOfflineScores();
-
+  const userDoc = await getUser(user.uid);
   const userStatusRef = ref(rtdb, `/onlineUsers/${user.uid}`);
-  let updatedUserDocData: any = {
-    profileBackground,
-    profileBanner,
-    profileLetter,
-  };
+  let profileBackground = "gray";
+  let profileLetter = "white";
+  let profileBanner = "#313131ff";
+  if (userDoc) {
+    profileBackground =
+      userDoc.data.profileBackground ??
+      colors[Math.floor(Math.random() * colors.length)];
+    profileLetter =
+      userDoc.data.profileLetter ??
+      colors[Math.floor(Math.random() * colors.length)];
+    profileBanner =
+      userDoc.data.profileBanner ??
+      colors[Math.floor(Math.random() * colors.length)];
 
-  const expoToken = await registerForPushNotificationsAsync();
-  if (expoToken) {
-    updatedUserDocData.expoPushToken = expoToken;
+    updateAsyncStorageValuesOnLoad({
+      ...userDoc.data,
+      profileBackground,
+      profileLetter,
+      profileBanner,
+    });
+
+    let updatedUserDocData: any = {
+      profileBackground,
+      profileBanner,
+      profileLetter,
+    };
+
+    const expoToken = await registerForPushNotificationsAsync();
+    if (expoToken) {
+      updatedUserDocData.expoPushToken = expoToken;
+    }
+
+    await updateDoc(userDoc.ref, updatedUserDocData);
   }
-
-  await updateDoc(userDoc.ref, updatedUserDocData);
 
   const connectedRef = ref(rtdb, ".info/connected");
   onValue(connectedRef, (snap) => {
@@ -120,8 +121,8 @@ const establishUserPresence = async (user: User) => {
 
     // Set user online
     set(userStatusRef, {
-      displayName: user.displayName ?? userDoc.data.username ?? "Anonymous",
-      profileBackground,
+      displayName: user.displayName ?? "Anonymous",
+      profileBackground: profileBackground,
       profileLetter,
       profileBanner,
       online: true,

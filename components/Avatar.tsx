@@ -32,6 +32,10 @@ export default function Avatar(props: AvatarProps) {
     handleAvatarClick,
   } = props;
 
+  const displayLetter = [null, "Anonymous", "?", ""].includes(username)
+    ? "?"
+    : username[0].toUpperCase();
+
   if (handleAvatarClick) {
     return (
       <TouchableOpacity
@@ -52,7 +56,7 @@ export default function Avatar(props: AvatarProps) {
             { color: profileLetter ?? "#ffffff", fontSize: fontSizeMap[size] },
           ]}
         >
-          {username[0]?.toUpperCase()}
+          {displayLetter}
         </Text>
       </TouchableOpacity>
     );
@@ -75,7 +79,7 @@ export default function Avatar(props: AvatarProps) {
           { color: profileLetter ?? "#ffffff", fontSize: fontSizeMap[size] },
         ]}
       >
-        {username[0]?.toUpperCase()}
+        {displayLetter}
       </Text>
     </View>
   );

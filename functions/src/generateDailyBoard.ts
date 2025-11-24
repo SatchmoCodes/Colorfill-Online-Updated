@@ -36,7 +36,7 @@ export const generateDailyBoard = onSchedule(
       boardId,
       boardData,
       size: boardSelection.size,
-      generatedAt: yyyyMMdd,
+      generatedAt: admin.firestore.Timestamp.now(),
     });
 
     console.log("Daily board generated at 8 AM!", { yyyyMMdd, boardSelection });

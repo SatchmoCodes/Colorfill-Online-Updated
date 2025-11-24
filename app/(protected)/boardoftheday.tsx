@@ -1,3 +1,4 @@
+import BaseModal from "@/components/BaseModal";
 import ColorPaletteUnlockModal from "@/components/ColorPaletteUnlockModal";
 import SquareCounter, { resetSquareCount } from "@/components/SquareCounter";
 import { ThemedBackground } from "@/components/ThemedBackground";
@@ -16,6 +17,7 @@ import {
   saveCurrentBOTD,
   saveSolvedBOTDId,
 } from "@/helper/asyncStorageHelper";
+//@ts-ignore
 import { playPop, resetPlayedDepths } from "@/helper/audio/soundManager";
 import { getUser } from "@/helper/commonQueries";
 import { getColorPaletteOptions } from "@/helper/getColorPaletteOptions";
@@ -48,7 +50,6 @@ import {
   Animated,
   Dimensions,
   Easing,
-  Modal,
   PixelRatio,
   StyleSheet,
   TouchableOpacity,
@@ -318,39 +319,55 @@ export default function BoardoftheDay() {
         row.map((x) => x.defaultColor)
       );
       const createdAt = serverTimestamp();
-      const [userDoc] = await Promise.all([
-        getUser(user.uid),
+      if (user.displayName !== null) {
+        const [userDoc] = await Promise.all([
+          getUser(user.uid),
+          await addDoc(collection(db, "scores"), {
+            boardId: boardId,
+            score: score,
+            size: boardSize,
+            boardData: boardData,
+            createdBy: user?.displayName,
+            uid: user?.uid,
+            gamemode: "boardoftheday",
+            highScore: true,
+            createdAt,
+          }),
+        ]);
+        if (userDoc) {
+          await updateDoc(userDoc.ref, {
+            boardsOfTheDayCompleted: increment(1),
+          });
+          const updatedBOTDCompleted = userDoc.data.boardsOfTheDayCompleted + 1;
+          const prevCriteriaMap = (await loadCriteriaMap()) ?? {};
+          const newCriteriaMap = await updateCriteriaMap({
+            boardsOfTheDayCompleted: updatedBOTDCompleted,
+          });
+          const newlyUnlockedColorPalettes = await getUnlockedColorPalettes(
+            prevCriteriaMap,
+            newCriteriaMap
+          );
+          if (newlyUnlockedColorPalettes.length > 0) {
+            setUnlockedColorPalettes(newlyUnlockedColorPalettes);
+          }
+          await saveSolvedBOTDId(boardId);
+        }
+      } else {
         await addDoc(collection(db, "scores"), {
           boardId: boardId,
           score: score,
           size: boardSize,
           boardData: boardData,
-          createdBy: user?.displayName,
+          createdBy: "Anonymous",
           uid: user?.uid,
           gamemode: "boardoftheday",
           highScore: true,
           createdAt,
-        }),
-      ]);
-      if (userDoc) {
-        await updateDoc(userDoc.ref, {
-          boardsOfTheDayCompleted: increment(1),
         });
-        const updatedBOTDCompleted = userDoc.data.boardsOfTheDayCompleted + 1;
-        const prevCriteriaMap = (await loadCriteriaMap()) ?? {};
-        const newCriteriaMap = await updateCriteriaMap({
-          boardsOfTheDayCompleted: updatedBOTDCompleted,
-        });
-        const newlyUnlockedColorPalettes = await getUnlockedColorPalettes(
-          prevCriteriaMap,
-          newCriteriaMap
-        );
-        if (newlyUnlockedColorPalettes.length > 0) {
-          setUnlockedColorPalettes(newlyUnlockedColorPalettes);
-        }
-        await saveSolvedBOTDId(boardId);
-        setLoadingState("complete");
       }
+      await saveSolvedBOTDId(boardId);
+      setLoadingState("complete");
+      setShowBoardCompleteModal(false);
     } catch (error) {
       console.log("error submitting score", error);
     }
@@ -381,12 +398,17 @@ export default function BoardoftheDay() {
       }
 
       // --- 2. Time difference check (UTC-safe) ---
-      const generatedAtDate = new Date(
-        currentlySavedBOTD.generatedAt
-      ).getTime();
+
+      // Add +1 minute to generatedAt because cron triggers at 7:59
+      const generatedAtDate = new Date(currentlySavedBOTD.generatedAt);
+      generatedAtDate.setMinutes(generatedAtDate.getMinutes() + 1);
+
+      const generatedAtMs = generatedAtDate.getTime();
+      console.log("Adjusted generatedAt", generatedAtMs);
+
       const now = Date.now();
       const hoursSinceGenerated =
-        Math.abs(now - generatedAtDate) / (1000 * 60 * 60);
+        Math.abs(now - generatedAtMs) / (1000 * 60 * 60);
 
       if (isNaN(hoursSinceGenerated)) {
         console.warn("Invalid generatedAt date, fetching new BOTD.");
@@ -545,19 +567,30 @@ export default function BoardoftheDay() {
         </>
       )}
       {showBoardCompleteModal && (
-        <BoardCompleteModal
-          score={score}
-          setShowBoardCompleteModal={setShowBoardCompleteModal}
-          handleScoreSubmission={handleScoreSubmission}
-          resetBoardProcess={resetBoardProcess}
-        />
+        <BaseModal
+          visible={showBoardCompleteModal}
+          onClose={() => setShowBoardCompleteModal(false)}
+          showCloseButton={false}
+        >
+          <BoardCompleteModal
+            score={score}
+            setShowBoardCompleteModal={setShowBoardCompleteModal}
+            handleScoreSubmission={handleScoreSubmission}
+            resetBoardProcess={resetBoardProcess}
+          />
+        </BaseModal>
       )}
       {unlockedColorPalettes.length > 0 && (
-        <ColorPaletteUnlockModal
-          unlockedColorPalettes={unlockedColorPalettes}
-          isMosaic={isMosaic}
-          setUnlockedColorPalettes={setUnlockedColorPalettes}
-        />
+        <BaseModal
+          visible={unlockedColorPalettes.length > 0}
+          onClose={() => setUnlockedColorPalettes([])}
+        >
+          <ColorPaletteUnlockModal
+            unlockedColorPalettes={unlockedColorPalettes}
+            isMosaic={isMosaic}
+            setUnlockedColorPalettes={setUnlockedColorPalettes}
+          />
+        </BaseModal>
       )}
     </ThemedBackground>
   );
@@ -698,44 +731,50 @@ const BoardCompleteModal = (props: BoardCompleteProps) => {
     handleScoreSubmission,
     resetBoardProcess,
   } = props;
+
+  const [submitting, setSubmitting] = useState(false);
+
   return (
-    <Modal
-      transparent
-      onRequestClose={() => setShowBoardCompleteModal(false)}
-      animationType="slide"
-    >
-      <ThemedView style={styles.centeredView}>
-        <ThemedText
-          style={{ textAlign: "center", marginBottom: 10 }}
-          type="subtitle"
-        >
-          You completed the board in {score} turns!
-        </ThemedText>
-        <ThemedText style={{ textAlign: "center", marginBottom: 10 }}>
-          Would you like to submit this score or retry the board?
-        </ThemedText>
-        <ThemedView style={{ flexDirection: "row", gap: 10 }}>
-          <TouchableOpacity
-            style={[styles.submissionButtons, { backgroundColor: "green" }]}
-            onPress={() => {
-              handleScoreSubmission();
-              setShowBoardCompleteModal(false);
-            }}
-          >
-            <ThemedText style={{ textAlign: "center" }}>Submit</ThemedText>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.submissionButtons, { backgroundColor: "red" }]}
-            onPress={() => {
-              resetBoardProcess();
-              setShowBoardCompleteModal(false);
-            }}
-          >
-            <ThemedText style={{ textAlign: "center" }}>Retry</ThemedText>
-          </TouchableOpacity>
+    <ThemedView style={styles.centeredView}>
+      {submitting ? (
+        <ThemedView style={{ alignItems: "center" }}>
+          <ThemedText>Submitting Score...</ThemedText>
+          <ActivityIndicator />
         </ThemedView>
-      </ThemedView>
-    </Modal>
+      ) : (
+        <>
+          <ThemedText
+            style={{ textAlign: "center", marginBottom: 20 }}
+            type="subtitle"
+          >
+            You completed the board in {score} turns!
+          </ThemedText>
+          <ThemedText style={{ textAlign: "center", marginBottom: 10 }}>
+            Would you like to submit this score or retry the board?
+          </ThemedText>
+          <ThemedView style={{ flexDirection: "row", gap: 10 }}>
+            <TouchableOpacity
+              style={[styles.submissionButtons, { backgroundColor: "green" }]}
+              onPress={() => {
+                setSubmitting(true);
+                handleScoreSubmission();
+              }}
+            >
+              <ThemedText style={{ textAlign: "center" }}>Submit</ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.submissionButtons, { backgroundColor: "red" }]}
+              onPress={() => {
+                resetBoardProcess();
+                setShowBoardCompleteModal(false);
+              }}
+            >
+              <ThemedText style={{ textAlign: "center" }}>Retry</ThemedText>
+            </TouchableOpacity>
+          </ThemedView>
+        </>
+      )}
+    </ThemedView>
   );
 };
 
@@ -846,16 +885,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     margin: "auto",
-    borderRadius: 20,
-    padding: 35,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 2,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
   },
   submissionButtons: {
     borderRadius: 30,

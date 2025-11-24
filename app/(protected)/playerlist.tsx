@@ -1,6 +1,7 @@
 import Avatar from "@/components/Avatar";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
+import { TimerPie } from "@/components/ui/TimerPie";
 import { db } from "@/firebaseConfig";
 import { useUser } from "@/hooks/useFirebaseUser";
 import { PlayerList, useOnlinePlayerList } from "@/hooks/useOnlinePlayerList";
@@ -18,16 +19,22 @@ import {
   View,
 } from "react-native";
 import { Switch } from "react-native-paper";
+import Toast from "react-native-toast-message";
+
+interface InviteObj {
+  startTime: number;
+  endTime: number;
+}
+
+type InviteMap = Record<string, InviteObj>;
 
 export default function Playerlist() {
   const { docId } = useLocalSearchParams<{ docId: string }>();
   const user = useUser();
   const { playerList, onlinePlayerCount } = useOnlinePlayerList();
 
-  console.log("what is this", playerList);
-
-  // 👇 Track which player's popover is open
   const [openPlayerId, setOpenPlayerId] = useState<string | null>(null);
+  const [inviteMap, setInviteMap] = useState<InviteMap>({});
 
   const [showAllPlayers, setShowAllPlayers] = useState(false);
   const [searchText, setSearchText] = useState("");
@@ -101,17 +108,22 @@ export default function Playerlist() {
         data={filteredPlayerList}
         style={{ width: "100%", overflow: "visible" }}
         contentContainerStyle={{ overflow: "visible" }}
-        renderItem={({ item: player }) => (
-          <PlayerCard
-            key={player.id}
-            player={player}
-            isOpen={openPlayerId === player.id}
-            docId={docId}
-            onToggle={() =>
-              setOpenPlayerId(openPlayerId === player.id ? null : player.id)
-            }
-          />
-        )}
+        renderItem={({ item: player }) => {
+          const currentInviteMapItem = inviteMap[player.id];
+          return (
+            <PlayerCard
+              key={player.id}
+              player={player}
+              isOpen={openPlayerId === player.id}
+              docId={docId}
+              inviteItem={currentInviteMapItem}
+              setInviteMap={setInviteMap}
+              onToggle={() =>
+                setOpenPlayerId(openPlayerId === player.id ? null : player.id)
+              }
+            />
+          );
+        }}
       ></FlatList>
     </ThemedView>
   );
@@ -121,11 +133,15 @@ const PlayerCard = ({
   player,
   isOpen,
   docId,
+  inviteItem,
+  setInviteMap,
   onToggle,
 }: {
   player: PlayerList;
   isOpen: boolean;
   docId: string | null;
+  inviteItem: InviteObj;
+  setInviteMap: React.Dispatch<React.SetStateAction<InviteMap>>;
   onToggle: () => void;
 }) => {
   const [pressed, setPressed] = useState(false);
@@ -138,9 +154,21 @@ const PlayerCard = ({
         senderName: user.displayName,
         gameId: docId,
       });
+      setInviteMap((prev) => ({
+        ...prev,
+        [player.id]: { startTime: Date.now(), endTime: Date.now() + 3000 },
+      }));
+      showToast();
     } else {
       alert("error creating invitation");
     }
+  };
+
+  const showToast = () => {
+    Toast.show({
+      type: "success",
+      text1: "Invite Sent!",
+    });
   };
 
   return (
@@ -179,18 +207,39 @@ const PlayerCard = ({
                 height: "100%",
                 zIndex: 200,
                 position: "absolute",
-                backgroundColor: "rgba(0, 0, 0, 0.75)", // 🔥 use this instead of opacity
+                backgroundColor: "rgba(0, 0, 0, 0.75)",
                 justifyContent: "space-evenly",
                 alignItems: "center",
                 borderRadius: 20,
               }}
             >
               {user.displayName !== player.displayName && (
-                <TouchableOpacity onPress={() => docId && handleInvite()}>
-                  <ThemedText style={{ color: docId ? "white" : "gray" }}>
-                    Invite to Game
-                  </ThemedText>
-                </TouchableOpacity>
+                <View style={{ flexDirection: "row" }}>
+                  <TouchableOpacity
+                    style={{ opacity: inviteItem ? 0.25 : 1 }}
+                    onPress={() => docId && !inviteItem && handleInvite()}
+                  >
+                    <ThemedText style={{ color: docId ? "white" : "gray" }}>
+                      Invite to Game
+                    </ThemedText>
+                  </TouchableOpacity>
+                  {inviteItem && (
+                    <TimerPie
+                      duration={inviteItem.endTime - Date.now()}
+                      startTime={inviteItem.startTime}
+                      onComplete={() => {
+                        setInviteMap((prev) =>
+                          Object.fromEntries(
+                            Object.entries(prev).filter(
+                              ([key, value]) => key !== player.id
+                            )
+                          )
+                        );
+                      }}
+                      style={{ position: "absolute", right: -30 }}
+                    />
+                  )}
+                </View>
               )}
               <TouchableOpacity
                 onPress={() =>

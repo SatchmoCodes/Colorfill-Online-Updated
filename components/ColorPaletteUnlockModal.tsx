@@ -1,6 +1,6 @@
 import { PaletteObj } from "@/app/(protected)/settings";
 import React from "react";
-import { Modal, PixelRatio, StyleSheet, View } from "react-native";
+import { PixelRatio, StyleSheet, View } from "react-native";
 import { ThemedText } from "./ThemedText";
 import { ThemedView } from "./ThemedView";
 import CommonButton from "./ui/CommonButton";
@@ -17,87 +17,80 @@ export default function ColorPaletteUnlockModal(props: ModalProps) {
   const { unlockedColorPalettes, isMosaic, setUnlockedColorPalettes } = props;
 
   return (
-    <Modal
-      onRequestClose={() => setUnlockedColorPalettes([])}
-      transparent
-      animationType="fade"
-      style={styles.modalStyle}
-    >
-      <ThemedView style={styles.centeredView}>
-        <ThemedText type="subtitle">
-          {unlockedColorPalettes.length === 1
-            ? "You unlocked a new color palette!"
-            : `You unlocked ${unlockedColorPalettes.length} new color palettes!`}
-        </ThemedText>
-        <View style={styles.paletteContainer}>
-          {unlockedColorPalettes.map((item) => {
-            return (
-              <View style={styles.paletteCard} key={item.key}>
-                <View style={styles.paletteRow}>
-                  <View
-                    style={[
-                      styles.paletteSquare,
-                      {
-                        backgroundColor: item[3],
-                        borderColor: "black",
-                        borderWidth: isMosaic ? 1 : 0,
-                      },
-                    ]}
-                  ></View>
-                  <View
-                    style={[
-                      styles.paletteSquare,
-                      {
-                        backgroundColor: item[4],
-                        borderColor: "black",
-                        borderWidth: isMosaic ? 1 : 0,
-                      },
-                    ]}
-                  ></View>
-                </View>
-                <View style={styles.paletteRow}>
-                  <View
-                    style={[
-                      styles.paletteSquare,
-                      {
-                        backgroundColor: item[0],
-                        borderColor: "black",
-                        borderWidth: isMosaic ? 1 : 0,
-                      },
-                    ]}
-                  ></View>
-                  <View
-                    style={[
-                      styles.paletteSquare,
-                      {
-                        backgroundColor: item[1],
-                        borderColor: "black",
-                        borderWidth: isMosaic ? 1 : 0,
-                      },
-                    ]}
-                  ></View>
-                  <View
-                    style={[
-                      styles.paletteSquare,
-                      {
-                        backgroundColor: item[2],
-                        borderColor: "black",
-                        borderWidth: isMosaic ? 1 : 0,
-                      },
-                    ]}
-                  ></View>
-                </View>
+    <ThemedView style={styles.centeredView}>
+      <ThemedText type="subtitle">
+        {unlockedColorPalettes.length === 1
+          ? "You unlocked a new color palette!"
+          : `You unlocked ${unlockedColorPalettes.length} new color palettes!`}
+      </ThemedText>
+      <View style={styles.paletteContainer}>
+        {unlockedColorPalettes.map((item) => {
+          return (
+            <View style={styles.paletteCard} key={item.key}>
+              <View style={styles.paletteRow}>
+                <View
+                  style={[
+                    styles.paletteSquare,
+                    {
+                      backgroundColor: item[3],
+                      borderColor: "black",
+                      borderWidth: isMosaic ? 1 : 0,
+                    },
+                  ]}
+                ></View>
+                <View
+                  style={[
+                    styles.paletteSquare,
+                    {
+                      backgroundColor: item[4],
+                      borderColor: "black",
+                      borderWidth: isMosaic ? 1 : 0,
+                    },
+                  ]}
+                ></View>
               </View>
-            );
-          })}
-        </View>
-        <CommonButton
-          title="Close"
-          size={120}
-          handlePress={() => setUnlockedColorPalettes([])}
-        />
-      </ThemedView>
-    </Modal>
+              <View style={styles.paletteRow}>
+                <View
+                  style={[
+                    styles.paletteSquare,
+                    {
+                      backgroundColor: item[0],
+                      borderColor: "black",
+                      borderWidth: isMosaic ? 1 : 0,
+                    },
+                  ]}
+                ></View>
+                <View
+                  style={[
+                    styles.paletteSquare,
+                    {
+                      backgroundColor: item[1],
+                      borderColor: "black",
+                      borderWidth: isMosaic ? 1 : 0,
+                    },
+                  ]}
+                ></View>
+                <View
+                  style={[
+                    styles.paletteSquare,
+                    {
+                      backgroundColor: item[2],
+                      borderColor: "black",
+                      borderWidth: isMosaic ? 1 : 0,
+                    },
+                  ]}
+                ></View>
+              </View>
+            </View>
+          );
+        })}
+      </View>
+      <CommonButton
+        title="Close"
+        size={120}
+        handlePress={() => setUnlockedColorPalettes([])}
+      />
+    </ThemedView>
   );
 }
 
@@ -109,16 +102,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     margin: "auto",
-    borderRadius: 20,
-    padding: 35,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 2,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
   },
   paletteContainer: {
     paddingTop: 20,

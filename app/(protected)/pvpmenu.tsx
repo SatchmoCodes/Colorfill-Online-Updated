@@ -111,6 +111,12 @@ const PvpMenu = () => {
           Game List
         </ThemedText>
         <OnlinePlayerList />
+        <ThemedText
+          type="defaultSemiBold"
+          style={{ textAlign: "center", marginTop: 10 }}
+        >
+          Number of Games: {gameList.length}
+        </ThemedText>
 
         {gameList.map((game) => {
           return (

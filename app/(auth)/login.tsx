@@ -151,12 +151,12 @@ const LoginInputs = ({
         >
           <Text style={styles.buttonOutlineText}>Register Account</Text>
         </TouchableOpacity>
-        {/* <TouchableOpacity
+        <TouchableOpacity
           style={styles.button}
           onPress={() => handleGuestLogin()}
         >
           <Text style={styles.buttonText}>Sign in Anonymously</Text>
-        </TouchableOpacity> */}
+        </TouchableOpacity>
       </View>
     </View>
   );

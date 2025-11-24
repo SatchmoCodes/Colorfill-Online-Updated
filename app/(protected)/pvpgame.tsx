@@ -5,12 +5,14 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import ColorButton from "@/components/ui/ColorButton";
 import CommonButton from "@/components/ui/CommonButton";
+import { TimerDisplay } from "@/components/ui/PVPTimer";
 import { db, rtdb } from "@/firebaseConfig";
 import {
   loadColorIndex,
   loadColorPaletteOptions,
   loadIsMosaicMode,
 } from "@/helper/asyncStorageHelper";
+//@ts-ignore
 import { playPop, resetPlayedDepths } from "@/helper/audio/soundManager";
 import { getUser } from "@/helper/commonQueries";
 import { getColorPaletteOptions } from "@/helper/getColorPaletteOptions";
@@ -183,8 +185,8 @@ export default function PvpGame() {
   const gameCompletedRef = useRef(false);
   const moveInProgressRef = useRef(false);
 
-  const currentUser = user.displayName;
-  const currentUserType = currentUser === ownerName ? "owner" : "opponent";
+  const currentUser = user.uid;
+  const currentUserType = currentUser === ownerUid ? "owner" : "opponent";
 
   const gameRef = doc(db, "games", gameId as string);
 
@@ -230,9 +232,9 @@ export default function PvpGame() {
         const data = docSnapshot.data();
         if (!data || gameCompletedRef.current) return;
 
-        const currentUser = user?.displayName;
+        const currentUser = user?.uid;
         const currentUserType =
-          currentUser === data.ownerName ? "owner" : "opponent";
+          currentUser === data.ownerUid ? "owner" : "opponent";
 
         // Update board state when the opponent moves
         if (currentUserType === data.turn && boardLoaded) {
@@ -336,8 +338,8 @@ export default function PvpGame() {
       filteredColorIndexList[
         Math.floor(Math.random() * filteredColorIndexList.length)
       ];
-    const currentUser = user?.displayName;
-    const currentUserType = currentUser === ownerName ? "owner" : "opponent";
+    const currentUser = user?.uid;
+    const currentUserType = currentUser === ownerUid ? "owner" : "opponent";
 
     if (currentUserType === turn) {
       handleColorChange(randomColor);
@@ -637,84 +639,129 @@ export default function PvpGame() {
       getUser(opponentUid),
     ]);
 
-    if (!ownerUserDoc || !opponentUserDoc) return;
+    const isOwnerClient = currentUserType === "owner";
+    const isOpponentClient = currentUserType === "opponent";
 
-    // Determine which user this client represents
-    const isOwner = currentUserType === "owner";
+    const isWinnerOwner = winner === "owner";
+    const isWinnerOpponent = winner === "opponent";
 
-    const ownerNextStreak =
-      winner === "owner" ? ownerUserDoc.data.currentWinStreak + 1 : 0;
-    const opponentNextStreak =
-      winner === "opponent" ? opponentUserDoc.data.currentWinStreak + 1 : 0;
+    // unlock palettes stored separately
+    let ownerUnlocked: PaletteObj[] = [];
+    let opponentUnlocked: PaletteObj[] = [];
 
-    const [prevCriteriaMap, newCriteriaMap] = await Promise.all([
-      updateCriteriaMap({
-        wins: isOwner ? ownerUserDoc.data.wins : opponentUserDoc.data.wins,
-        totalGames: isOwner
-          ? ownerUserDoc.data.totalGames
-          : opponentUserDoc.data.totalGames,
-        bestWinStreak: isOwner
-          ? ownerUserDoc.data.bestWinStreak
-          : opponentUserDoc.data.bestWinStreak,
-      }),
-      updateCriteriaMap({
-        totalGames: isOwner
-          ? ownerUserDoc.data.totalGames + 1
-          : opponentUserDoc.data.totalGames + 1,
-        wins: isOwner
-          ? ownerUserDoc.data.wins + (winner === "owner" ? 1 : 0)
-          : opponentUserDoc.data.wins + (winner === "opponent" ? 1 : 0),
-        bestWinStreak: isOwner
-          ? Math.max(ownerUserDoc.data.bestWinStreak, ownerNextStreak)
-          : Math.max(opponentUserDoc.data.bestWinStreak, opponentNextStreak),
-      }),
-    ]);
-    const newlyUnlockedColorPalettes = await getUnlockedColorPalettes(
-      prevCriteriaMap,
-      newCriteriaMap
-    );
-    if (newlyUnlockedColorPalettes.length > 0) {
-      setUnlockedColorPalettes(newlyUnlockedColorPalettes);
-    }
-    // Only the winner performs the Firestore writes
-    if (winner === currentUserType) {
-      await Promise.all([
-        updateDoc(ownerUserDoc.ref, {
-          wins: winner === "owner" ? increment(1) : ownerUserDoc.data.wins,
-          losses:
-            winner === "opponent" ? increment(1) : ownerUserDoc.data.losses,
-          currentWinStreak: ownerNextStreak,
-          bestWinStreak: Math.max(
-            ownerNextStreak,
-            ownerUserDoc.data.bestWinStreak
-          ),
-          totalGames: increment(1),
-          winRate:
-            Math.round(
-              ((ownerUserDoc.data.wins + (winner === "owner" ? 1 : 0)) /
-                (ownerUserDoc.data.totalGames + 1)) *
-                10000
-            ) / 100,
+    // ----------------------------------------------------
+    // OWNER USER LOGIC
+    // ----------------------------------------------------
+    if (ownerUserDoc) {
+      const d = ownerUserDoc.data;
+      const nextStreak = isWinnerOwner ? d.currentWinStreak + 1 : 0;
+
+      const [prevCriteria, nextCriteria] = await Promise.all([
+        updateCriteriaMap({
+          wins: d.wins,
+          totalGames: d.totalGames,
+          bestWinStreak: d.bestWinStreak,
         }),
-        updateDoc(opponentUserDoc.ref, {
-          wins:
-            winner === "opponent" ? increment(1) : opponentUserDoc.data.wins,
-          losses:
-            winner === "owner" ? increment(1) : opponentUserDoc.data.losses,
-          currentWinStreak: opponentNextStreak,
-          bestWinStreak: Math.max(
-            opponentNextStreak,
-            opponentUserDoc.data.bestWinStreak
-          ),
-          totalGames: increment(1),
-          winRate:
-            Math.round(
-              ((opponentUserDoc.data.wins + (winner === "opponent" ? 1 : 0)) /
-                (opponentUserDoc.data.totalGames + 1)) *
-                10000
-            ) / 100,
+        updateCriteriaMap({
+          totalGames: d.totalGames + 1,
+          wins: d.wins + (isWinnerOwner ? 1 : 0),
+          bestWinStreak: Math.max(d.bestWinStreak, nextStreak),
         }),
       ]);
+
+      ownerUnlocked = await getUnlockedColorPalettes(
+        prevCriteria,
+        nextCriteria
+      );
+    }
+
+    // ----------------------------------------------------
+    // OPPONENT USER LOGIC
+    // ----------------------------------------------------
+    if (opponentUserDoc) {
+      const d = opponentUserDoc.data;
+      const nextStreak = isWinnerOpponent ? d.currentWinStreak + 1 : 0;
+
+      const [prevCriteria, nextCriteria] = await Promise.all([
+        updateCriteriaMap({
+          wins: d.wins,
+          totalGames: d.totalGames,
+          bestWinStreak: d.bestWinStreak,
+        }),
+        updateCriteriaMap({
+          totalGames: d.totalGames + 1,
+          wins: d.wins + (isWinnerOpponent ? 1 : 0),
+          bestWinStreak: Math.max(d.bestWinStreak, nextStreak),
+        }),
+      ]);
+
+      opponentUnlocked = await getUnlockedColorPalettes(
+        prevCriteria,
+        nextCriteria
+      );
+    }
+
+    // ----------------------------------------------------
+    // WINNER UPDATES ALL USER DOCUMENTS (owner + opponent)
+    // This ensures the loser gets their loss recorded even if they left
+    // ----------------------------------------------------
+    if (winner === currentUserType) {
+      const updates: Promise<any>[] = [];
+
+      // OWNER DOC UPDATE
+      if (ownerUserDoc) {
+        const d = ownerUserDoc.data;
+        const nextStreak = isWinnerOwner ? d.currentWinStreak + 1 : 0;
+
+        updates.push(
+          updateDoc(ownerUserDoc.ref, {
+            wins: isWinnerOwner ? increment(1) : d.wins,
+            losses: isWinnerOpponent ? increment(1) : d.losses,
+            currentWinStreak: nextStreak,
+            bestWinStreak: Math.max(nextStreak, d.bestWinStreak),
+            totalGames: increment(1),
+            winRate:
+              Math.round(
+                ((d.wins + (isWinnerOwner ? 1 : 0)) / (d.totalGames + 1)) *
+                  10000
+              ) / 100,
+          })
+        );
+      }
+
+      // OPPONENT DOC UPDATE
+      if (opponentUserDoc) {
+        const d = opponentUserDoc.data;
+        const nextStreak = isWinnerOpponent ? d.currentWinStreak + 1 : 0;
+
+        updates.push(
+          updateDoc(opponentUserDoc.ref, {
+            wins: isWinnerOpponent ? increment(1) : d.wins,
+            losses: isWinnerOwner ? increment(1) : d.losses,
+            currentWinStreak: nextStreak,
+            bestWinStreak: Math.max(nextStreak, d.bestWinStreak),
+            totalGames: increment(1),
+            winRate:
+              Math.round(
+                ((d.wins + (isWinnerOpponent ? 1 : 0)) / (d.totalGames + 1)) *
+                  10000
+              ) / 100,
+          })
+        );
+      }
+
+      await Promise.all(updates);
+    }
+
+    // ----------------------------------------------------
+    // APPLY PALETTE UNLOCKS TO CURRENT USER ONLY
+    // ----------------------------------------------------
+    if (isOwnerClient && ownerUnlocked.length > 0) {
+      setUnlockedColorPalettes(ownerUnlocked);
+    }
+
+    if (isOpponentClient && opponentUnlocked.length > 0) {
+      setUnlockedColorPalettes(opponentUnlocked);
     }
   };
 
@@ -1121,8 +1168,7 @@ const ScoreSection = (props: ScoreSectionProps) => {
         <ThemedText style={{ textAlign: "center", marginBottom: 10 }}>
           VS
         </ThemedText>
-
-        {/* <TimerDisplay
+        <TimerDisplay
           turnDeadline={turnDeadline}
           isGameStarted={isGameStarted}
           isGameCompleted={isGameCompleted}
@@ -1132,9 +1178,8 @@ const ScoreSection = (props: ScoreSectionProps) => {
           user={user}
           onEndOfTurn={onEndOfTurn}
           handlePlayerLeave={handlePlayerLeave}
-        /> */}
+        />
       </View>
-
       {/* Opponent */}
       <View style={{ alignItems: "center", flexGrow: 1 }}>
         <ThemedText style={{ textAlign: "center" }}>{opponentName}</ThemedText>

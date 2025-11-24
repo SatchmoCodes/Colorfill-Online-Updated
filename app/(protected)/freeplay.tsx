@@ -1,3 +1,4 @@
+import BaseModal from "@/components/BaseModal";
 import BoardSizeModal from "@/components/BoardSizeModal";
 import ColorPaletteUnlockModal from "@/components/ColorPaletteUnlockModal";
 import SquareCounter, { resetSquareCount } from "@/components/SquareCounter";
@@ -443,55 +444,70 @@ export default function Freeplay() {
     }
     console.log("boardid", boardId);
     console.log("current boardId", currentBoardId);
-    const [userDoc] = await Promise.all([
-      getUser(user.uid),
-      addDoc(collection(db, "scores"), {
+    console.log("bruh why", user.displayName);
+    if (user.displayName !== null) {
+      const [userDoc] = await Promise.all([
+        getUser(user.uid),
+        addDoc(collection(db, "scores"), {
+          boardId: boardId ? boardId : currentBoardId,
+          score: updatedScore,
+          size: boardSize,
+          boardData,
+          createdBy: user?.displayName ?? "Anonymous",
+          uid: user?.uid,
+          gamemode: "freeplay",
+          highScore: determineHighScore(updatedScore, currentBoardBestScore),
+          createdAt: serverTimestamp(),
+        }),
+      ]);
+      if (userDoc) {
+        const scoreField = scoreFieldMap[boardSize];
+        const currentBest = userDoc.data[scoreField];
+        const isBetterScore = determineIsBetterScore(
+          currentBest,
+          currentBoardBestScore,
+          updatedScore
+        );
+        const updatedScoreMap = Object.fromEntries(
+          Object.entries(scoreFieldMap).map(([key, value]) => {
+            if (boardSize === key && isBetterScore) {
+              return [value, updatedScore];
+            }
+            return [value, userDoc.data[value] ?? null]; // always default to null
+          })
+        );
+        await updateDoc(userDoc.ref, {
+          boardsCompleted: increment(1),
+          ...(isBetterScore ? { [scoreField]: updatedScore } : {}),
+        });
+        const prevCriteriaMap = (await loadCriteriaMap()) ?? {};
+        const newCriteriaMap = await updateCriteriaMap({
+          boardsCompleted: (userDoc.data.boardsCompleted ?? 0) + 1,
+          ...updatedScoreMap,
+        });
+        const newlyUnlockedColorPalettes = await getUnlockedColorPalettes(
+          prevCriteriaMap,
+          newCriteriaMap
+        );
+        if (newlyUnlockedColorPalettes.length > 0) {
+          setUnlockedColorPalettes(newlyUnlockedColorPalettes);
+        }
+        console.log("unlocked", newlyUnlockedColorPalettes);
+      }
+    } else {
+      await addDoc(collection(db, "scores"), {
         boardId: boardId ? boardId : currentBoardId,
         score: updatedScore,
         size: boardSize,
         boardData,
-        createdBy: user?.displayName,
+        createdBy: "Anonymous",
         uid: user?.uid,
         gamemode: "freeplay",
         highScore: determineHighScore(updatedScore, currentBoardBestScore),
         createdAt: serverTimestamp(),
-      }),
-    ]);
-    if (userDoc) {
-      const scoreField = scoreFieldMap[boardSize];
-      const currentBest = userDoc.data[scoreField];
-      const isBetterScore = determineIsBetterScore(
-        currentBest,
-        currentBoardBestScore,
-        updatedScore
-      );
-      const updatedScoreMap = Object.fromEntries(
-        Object.entries(scoreFieldMap).map(([key, value]) => {
-          if (boardSize === key && isBetterScore) {
-            return [value, updatedScore];
-          }
-          return [value, userDoc.data[value] ?? null]; // always default to null
-        })
-      );
-      await updateDoc(userDoc.ref, {
-        boardsCompleted: increment(1),
-        ...(isBetterScore ? { [scoreField]: updatedScore } : {}),
       });
-      const prevCriteriaMap = (await loadCriteriaMap()) ?? {};
-      const newCriteriaMap = await updateCriteriaMap({
-        boardsCompleted: (userDoc.data.boardsCompleted ?? 0) + 1,
-        ...updatedScoreMap,
-      });
-      const newlyUnlockedColorPalettes = await getUnlockedColorPalettes(
-        prevCriteriaMap,
-        newCriteriaMap
-      );
-      if (newlyUnlockedColorPalettes.length > 0) {
-        setUnlockedColorPalettes(newlyUnlockedColorPalettes);
-      }
-      console.log("unlocked", newlyUnlockedColorPalettes);
-      setLoadingSetScore(false);
     }
+    setLoadingSetScore(false);
   }
 
   return (
@@ -541,31 +557,47 @@ export default function Freeplay() {
       )}
 
       {showBoardSizeModal && (
-        <BoardSizeModal
-          boardSize={boardSize}
-          setShowBoardSizeModal={setShowBoardSizeModal}
-          setBoardSize={setBoardSize}
-          newBoardProcess={newBoardProcess}
-        />
+        <BaseModal
+          visible={showBoardSizeModal}
+          onClose={() => setShowBoardSizeModal(false)}
+        >
+          <BoardSizeModal
+            boardSize={boardSize}
+            setShowBoardSizeModal={setShowBoardSizeModal}
+            setBoardSize={setBoardSize}
+            newBoardProcess={newBoardProcess}
+          />
+        </BaseModal>
       )}
       {showBoardCompleteModal && (
-        <BoardCompleteModal
-          setShowBoardCompleteModal={setShowBoardCompleteModal}
-          newBoardProcess={newBoardProcess}
-          resetBoardProcess={resetBoardProcess}
-          boardSize={boardSize}
-          score={score}
-          currentBestScore={currentBestScore}
-          loadingSetScore={loadingSetScore}
-          isReplayingBoard={isReplayingBoard}
-        />
+        <BaseModal
+          visible={showBoardCompleteModal}
+          onClose={() => setShowBoardCompleteModal(false)}
+          showCloseButton={false}
+        >
+          <BoardCompleteModal
+            setShowBoardCompleteModal={setShowBoardCompleteModal}
+            newBoardProcess={newBoardProcess}
+            resetBoardProcess={resetBoardProcess}
+            boardSize={boardSize}
+            score={score}
+            currentBestScore={currentBestScore}
+            loadingSetScore={loadingSetScore}
+            isReplayingBoard={isReplayingBoard}
+          />
+        </BaseModal>
       )}
       {unlockedColorPalettes.length > 0 && (
-        <ColorPaletteUnlockModal
-          unlockedColorPalettes={unlockedColorPalettes}
-          isMosaic={isMosaic}
-          setUnlockedColorPalettes={setUnlockedColorPalettes}
-        />
+        <BaseModal
+          visible={unlockedColorPalettes.length > 0}
+          onClose={() => setUnlockedColorPalettes([])}
+        >
+          <ColorPaletteUnlockModal
+            unlockedColorPalettes={unlockedColorPalettes}
+            isMosaic={isMosaic}
+            setUnlockedColorPalettes={setUnlockedColorPalettes}
+          />
+        </BaseModal>
       )}
     </ThemedBackground>
   );

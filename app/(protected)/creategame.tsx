@@ -125,7 +125,7 @@ export default function CreateGame() {
           boardData[boardData.length - 1][boardData.length - 1].color,
         ownerScore: 1,
         opponentScore: 1,
-        ownerName: user?.displayName,
+        ownerName: user?.displayName ?? "Anonymous",
         ownerUid: user?.uid,
         opponentName: null,
         opponentUid: null,
@@ -133,8 +133,7 @@ export default function CreateGame() {
         fog: fogOfWar,
         winner: null,
         loser: null,
-        ownerProfileBackground:
-          (await loadProfileBackgroundColor()) ?? "313131ff",
+        ownerProfileBackground: (await loadProfileBackgroundColor()) ?? "gray",
         ownerProfileLetter: (await loadProfileLetterColor()) ?? "#ffffff",
         opponentProfileBackground: "",
         opponentProfileLetter: "",

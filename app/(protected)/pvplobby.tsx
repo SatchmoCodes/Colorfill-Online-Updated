@@ -57,7 +57,7 @@ export default function PvpLobby() {
   const { gameId } = useLocalSearchParams<{ gameId: string }>();
   const navigation = useNavigation();
 
-  const [ownerName, setOwnerName] = useState("");
+  const [ownerName, setOwnerName] = useState("?");
   const [opponentName, setOpponentName] = useState<string | null>(null);
   const [ownerUid, setOwnerUid] = useState("");
   const [opponentUid, setOpponentUid] = useState("");
@@ -177,10 +177,10 @@ export default function PvpLobby() {
     if (!leavingUser || !opponentRef.current || !ownerRef.current) return;
     const { name: leavingOpponentName, uid: leavingOpponentUid } =
       opponentRef.current;
-    const leavingOwnerName = ownerRef.current?.name;
+    const leavingOwnerUid = ownerRef.current?.uid;
 
     try {
-      if (leavingUser.displayName === leavingOwnerName) {
+      if (leavingUser.uid === leavingOwnerUid) {
         if (leavingOpponentName) {
           await updateDoc(gameRef, {
             ownerName: leavingOpponentName,
@@ -195,7 +195,7 @@ export default function PvpLobby() {
             status: "deleting",
           });
         }
-      } else if (leavingUser.displayName === leavingOpponentName) {
+      } else if (leavingUser.uid === leavingOpponentUid) {
         await updateDoc(gameRef, {
           opponentName: null,
           opponentUid: null,
@@ -249,7 +249,7 @@ export default function PvpLobby() {
             <CustomHeader
               title="PVP Lobby"
               routeName="pvplobby"
-              docId={user.displayName === ownerName ? docRef?.id : null}
+              docId={user.uid === ownerUid ? docRef?.id : null}
             />
           ),
         }}
@@ -266,10 +266,10 @@ export default function PvpLobby() {
           >
             <View style={{ flexBasis: "40%", alignItems: "center" }}>
               <Avatar
-                username={ownerName}
+                username={ownerName ?? "Anonymous"}
                 size="large"
-                profileBackground={ownerBackground}
-                profileLetter={ownerLetter}
+                profileBackground={ownerBackground ?? "gray"}
+                profileLetter={ownerLetter ?? "white"}
               />
               <ThemedText style={{ textAlign: "center" }} type="subtitle">
                 {ownerName}
@@ -310,10 +310,10 @@ export default function PvpLobby() {
                 }}
               >
                 <Avatar
-                  username={opponentName ?? ""}
+                  username={opponentName ?? "Anonymous"}
                   size="large"
-                  profileBackground={opponentBackground}
-                  profileLetter={opponentLetter}
+                  profileBackground={opponentBackground ?? "gray"}
+                  profileLetter={opponentLetter ?? "white"}
                 />
                 <ThemedText style={{ textAlign: "center" }} type="subtitle">
                   {opponentName}
@@ -346,7 +346,7 @@ export default function PvpLobby() {
           ))}
         </View>
         <View>
-          {user.displayName === ownerName && (
+          {user.uid === ownerUid && (
             <ThemedText
               type="subtitle"
               style={{ textAlign: "center", paddingBottom: 30 }}
@@ -354,7 +354,7 @@ export default function PvpLobby() {
               Code: {code}
             </ThemedText>
           )}
-          {user?.displayName === ownerName ? (
+          {user?.uid === ownerUid ? (
             <CommonButton
               title="Start Game"
               size={200}

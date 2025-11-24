@@ -24,7 +24,6 @@ export const setSoundVolume = async (
   v: number,
   shouldPlaySound: boolean = false
 ) => {
-  console.log("stupid retard", v);
   globalVolume = v; // clamp to [0–1]
   if (shouldPlaySound) {
     resetPlayedDepths();

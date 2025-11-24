@@ -24,10 +24,10 @@ export const handleJoinGame = async (docRef: DocumentReference, user: User) => {
         throw "Game has completed / no longer exists";
 
       transaction.update(docRef, {
-        opponentName: user?.displayName,
+        opponentName: user?.displayName ?? "Anonymous",
         opponentUid: user?.uid,
         opponentProfileBackground:
-          (await loadProfileBackgroundColor()) ?? "#313131ff",
+          (await loadProfileBackgroundColor()) ?? "gray",
         opponentProfileLetter: (await loadProfileLetterColor()) ?? "#ffffff",
       });
     });

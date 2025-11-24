@@ -18,6 +18,7 @@ import {
 import { setSoundVolume } from "@/helper/audio/soundManager";
 import { getColorPaletteOptions } from "@/helper/getColorPaletteOptions";
 import { getWindowHeight } from "@/helper/getWindowHeight";
+import { updateCriteriaMap } from "@/helper/updateCriteriaMap";
 import Slider from "@react-native-community/slider";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -141,11 +142,11 @@ export default function Settings() {
       const savedIndex = (await loadColorIndex()) ?? 0;
       const isMosaic = (await loadIsMosaicMode()) ?? false;
       const shouldShowSquareCounter = (await loadShowSquareCounter()) ?? true;
-      const currentCriteriaMap = (await loadCriteriaMap()) ?? {};
+      const currentCriteriaMap =
+        (await loadCriteriaMap()) ?? (await updateCriteriaMap({}));
       const popAudioLevel = (await loadPopSoundVolume()) ?? 0.25;
       let colorOptions =
-        (await loadColorPaletteOptions()) ??
-        (await getColorPaletteOptions(currentCriteriaMap));
+        (await loadColorPaletteOptions()) ?? (await getColorPaletteOptions({}));
       setSelectedColorPalette(colorOptions?.[savedIndex] ?? colorOptions[0]);
       setColorPaletteOptions(chunkArray(colorOptions, PAGE_SIZE));
       setSelectedIndex(savedIndex);

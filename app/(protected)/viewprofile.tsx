@@ -1,4 +1,5 @@
 import Avatar from "@/components/Avatar";
+import BaseModal from "@/components/BaseModal";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import EditProfile from "@/components/ui/EditProfile";
@@ -62,7 +63,8 @@ export default function ViewProfile() {
   return (
     <ThemedView style={styles.container}>
       <ThemedView style={{ position: "relative" }}>
-        {profile.displayName === user.displayName ? (
+        {profile.displayName === user.displayName &&
+        profile.displayName !== null ? (
           <>
             <Avatar
               profileBackground={profileBackground}
@@ -88,7 +90,7 @@ export default function ViewProfile() {
             profileBackground={profileBackground}
             profileLetter={profileLetter}
             size="xlarge"
-            username={profile.displayName}
+            username={profile.displayName ?? "?"}
           />
         )}
       </ThemedView>
@@ -190,16 +192,18 @@ export default function ViewProfile() {
         {loading === "error" && <ThemedText>Profile not found</ThemedText>}
       </>
       {openProfile && (
-        <EditProfile
-          user={user}
-          profileBackground={profileBackground}
-          profileLetter={profileLetter}
-          profileBanner={profileBanner}
-          setProfileBackground={setProfileBackground}
-          setProfileLetter={setProfileLetter}
-          setProfileBanner={setProfileBanner}
-          setOpenProfile={setOpenProfile}
-        />
+        <BaseModal visible={openProfile} onClose={() => setOpenProfile(false)}>
+          <EditProfile
+            user={user}
+            profileBackground={profileBackground}
+            profileLetter={profileLetter}
+            profileBanner={profileBanner}
+            setProfileBackground={setProfileBackground}
+            setProfileLetter={setProfileLetter}
+            setProfileBanner={setProfileBanner}
+            setOpenProfile={setOpenProfile}
+          />
+        </BaseModal>
       )}
     </ThemedView>
   );

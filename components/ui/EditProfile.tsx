@@ -11,14 +11,9 @@ import { LinearGradient } from "expo-linear-gradient";
 import { ref, update } from "firebase/database";
 import { updateDoc } from "firebase/firestore";
 import React, { useState } from "react";
-import {
-  Modal,
-  Platform,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Platform, StyleSheet, TouchableOpacity, View } from "react-native";
 import { ActivityIndicator } from "react-native-paper";
+import Toast from "react-native-toast-message";
 import Avatar from "../Avatar";
 import SimpleColorPicker from "../SimpleColorPicker";
 import { ThemedText } from "../ThemedText";
@@ -52,6 +47,11 @@ export default function EditProfile({
   const [bannerColor, setBannerColor] = useState(profileBanner);
   const [isSaving, setIsSaving] = useState(false);
 
+  const saveBlocked =
+    originalBackground === iconBackground &&
+    originalBannerColor === bannerColor &&
+    originalLetterColor === letterColor;
+
   async function updateColor() {
     const userStatusRef = ref(rtdb, `/onlineUsers/${user.uid}`);
     try {
@@ -79,7 +79,10 @@ export default function EditProfile({
       setProfileLetter(letterColor);
       setProfileBanner(bannerColor);
       setOpenProfile(false);
-      alert("Profile saved successfully!");
+      Toast.show({
+        type: "success",
+        text1: "Profile updated successfully!",
+      });
     } catch (error) {
       console.log("error saving");
     } finally {
@@ -88,73 +91,69 @@ export default function EditProfile({
   }
 
   return (
-    <Modal
-      onRequestClose={() => setOpenProfile(false)}
-      transparent
-      animationType="fade"
-      style={styles.modalStyle}
-    >
-      <ThemedView style={styles.centeredView}>
-        {isSaving ? (
-          <ActivityIndicator />
-        ) : (
-          <>
-            <LinearGradient
-              colors={[bannerColor, "#000000ff"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={[
-                styles.banner,
-                { ...(Platform.OS === "web" && { maxWidth: 350 }) },
-              ]}
-            >
-              <Avatar
-                profileBackground={iconBackground}
-                profileLetter={letterColor}
-                size="large"
-                username={user.displayName ?? "?"}
-              />
-              <ThemedText type="subtitle">{user.displayName}</ThemedText>
-            </LinearGradient>
+    <ThemedView style={styles.centeredView}>
+      {isSaving ? (
+        <ActivityIndicator />
+      ) : (
+        <>
+          <LinearGradient
+            colors={[bannerColor, "#000000ff"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[
+              styles.banner,
+              { ...(Platform.OS === "web" && { maxWidth: 350 }) },
+            ]}
+          >
+            <Avatar
+              profileBackground={iconBackground}
+              profileLetter={letterColor}
+              size="large"
+              username={user.displayName ?? "?"}
+            />
+            <ThemedText type="subtitle">{user.displayName}</ThemedText>
+          </LinearGradient>
 
-            <ThemedText>Select profile color</ThemedText>
-            <SimpleColorPicker
-              startingColor={originalBackground}
-              onSelectColor={setIconBackground}
-            />
-            <ThemedText>Select letter color</ThemedText>
-            <SimpleColorPicker
-              startingColor={originalLetterColor}
-              onSelectColor={setLetterColor}
-            />
-            <ThemedText>Select Banner Background</ThemedText>
-            <SimpleColorPicker
-              startingColor={originalBannerColor}
-              onSelectColor={setBannerColor}
-            />
-            <View style={{ flexDirection: "row", gap: 30, marginTop: 20 }}>
-              <TouchableOpacity
-                style={[styles.profileButton, { backgroundColor: "green" }]}
-                disabled={
-                  originalBackground === iconBackground &&
-                  originalLetterColor === letterColor &&
-                  originalBannerColor === bannerColor
-                }
-                onPress={() => updateColor()}
-              >
-                <ThemedText style={{ textAlign: "center" }}>Save</ThemedText>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.profileButton, { backgroundColor: "red" }]}
-                onPress={() => setOpenProfile(false)}
-              >
-                <ThemedText style={{ textAlign: "center" }}>Cancel</ThemedText>
-              </TouchableOpacity>
-            </View>
-          </>
-        )}
-      </ThemedView>
-    </Modal>
+          <ThemedText>Select profile color</ThemedText>
+          <SimpleColorPicker
+            startingColor={originalBackground}
+            onSelectColor={setIconBackground}
+          />
+          <ThemedText>Select letter color</ThemedText>
+          <SimpleColorPicker
+            startingColor={originalLetterColor}
+            onSelectColor={setLetterColor}
+          />
+          <ThemedText>Select Banner Background</ThemedText>
+          <SimpleColorPicker
+            startingColor={originalBannerColor}
+            onSelectColor={setBannerColor}
+          />
+          <View style={{ flexDirection: "row", gap: 30, marginTop: 20 }}>
+            <TouchableOpacity
+              style={[
+                styles.profileButton,
+                { backgroundColor: "green", opacity: saveBlocked ? 0.3 : 1 },
+              ]}
+              disabled={
+                originalBackground === iconBackground &&
+                originalLetterColor === letterColor &&
+                originalBannerColor === bannerColor
+              }
+              onPress={() => !saveBlocked && updateColor()}
+            >
+              <ThemedText style={{ textAlign: "center" }}>Save</ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.profileButton, { backgroundColor: "red" }]}
+              onPress={() => setOpenProfile(false)}
+            >
+              <ThemedText style={{ textAlign: "center" }}>Cancel</ThemedText>
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
+    </ThemedView>
   );
 }
 
@@ -166,19 +165,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     margin: "auto",
-    borderRadius: 20,
-    padding: 35,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 2,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-    borderWidth: 1,
-    minHeight: 300,
-    minWidth: 300,
   },
   banner: {
     flexDirection: "row",

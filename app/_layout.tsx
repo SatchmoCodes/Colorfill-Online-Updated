@@ -1,4 +1,5 @@
-import { loadSounds } from "@/helper/audio/soundManager"; // 👈 import your helper
+//@ts-ignore
+import { loadSounds } from "@/helper/audio/soundManager";
 import { useFirebaseUser } from "@/hooks/useFirebaseUser";
 import {
   DarkTheme,
@@ -9,6 +10,22 @@ import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import { useEffect } from "react";
 import { ActivityIndicator, useColorScheme, View } from "react-native";
+import Toast, { BaseToast, ToastProps } from "react-native-toast-message";
+
+const toastConfig = {
+  success: (props: ToastProps) => (
+    <BaseToast
+      {...props}
+      style={{ borderLeftColor: "green", backgroundColor: "#323333ff" }}
+      contentContainerStyle={{ paddingHorizontal: 15 }}
+      text1Style={{
+        fontSize: 15,
+        fontWeight: "400",
+        color: "white",
+      }}
+    />
+  ),
+};
 
 export default function RootLayout() {
   const { user, loading } = useFirebaseUser();
@@ -18,7 +35,6 @@ export default function RootLayout() {
   });
   const colorScheme = useColorScheme();
 
-  // ✅ Load sounds once at startup
   useEffect(() => {
     loadSounds();
   }, []);
@@ -61,6 +77,7 @@ export default function RootLayout() {
           <Stack.Screen name="(auth)" />
         )}
       </Stack>
+      <Toast config={toastConfig} />
     </ThemeProvider>
   );
 }

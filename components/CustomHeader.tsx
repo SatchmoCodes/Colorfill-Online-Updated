@@ -126,7 +126,7 @@ export default function CustomHeader({
       )}
       {!isProfileIconHidden && (
         <Avatar
-          username={user.displayName ?? "?"}
+          username={user.displayName ?? "Anonymous"}
           profileBackground={profileBackground}
           profileLetter={profileLetter}
           size="small"

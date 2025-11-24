@@ -21,7 +21,7 @@ export const getColorPaletteOptions = async (criteriaMap: Unlockables = {}) => {
       1: "#dc2e28",
       2: "#0a4f99",
       3: "#636363",
-      4: "#242424",
+      4: "#1b1b1bff",
     },
     {
       0: "#05d69e",
