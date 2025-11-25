@@ -9,6 +9,7 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
+    "prepare:android": "node prepare-android-assets.js",
     "prebuild-android": "npx expo prebuild --clean && npm run prepare:android"
   },
   "dependencies": {
