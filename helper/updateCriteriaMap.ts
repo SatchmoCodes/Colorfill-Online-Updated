@@ -142,13 +142,13 @@ export const updateCriteriaMap = async ({
     },
     botd_completed_1: {
       locked:
-        (boardsOfTheDayCompleted === null || boardsOfTheDayCompleted < 5) &&
+        (boardsOfTheDayCompleted === null || boardsOfTheDayCompleted < 10) &&
         savedCriteriaMap["botd_completed_1"]?.locked !== false,
-      message: "Complete 5 boards of the day to unlock this color scheme",
+      message: "Complete 10 boards of the day to unlock this color scheme",
       progress:
         boardsOfTheDayCompleted === null
           ? "n/a"
-          : `${boardsOfTheDayCompleted} / 5`,
+          : `${boardsOfTheDayCompleted} / 10`,
     },
     botd_completed_2: {
       locked:
@@ -162,13 +162,13 @@ export const updateCriteriaMap = async ({
     },
     botd_completed_3: {
       locked:
-        (boardsOfTheDayCompleted === null || boardsOfTheDayCompleted < 60) &&
+        (boardsOfTheDayCompleted === null || boardsOfTheDayCompleted < 30) &&
         savedCriteriaMap["botd_completed_3"]?.locked !== false,
-      message: "Complete 60 boards of the day to unlock this color scheme",
+      message: "Complete 30 boards of the day to unlock this color scheme",
       progress:
         boardsOfTheDayCompleted === null
           ? "n/a"
-          : `${boardsOfTheDayCompleted} / 60`,
+          : `${boardsOfTheDayCompleted} / 30`,
     },
     total_games_1: {
       locked:

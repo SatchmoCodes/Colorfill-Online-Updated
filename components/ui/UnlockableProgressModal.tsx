@@ -178,6 +178,7 @@ const styles = StyleSheet.create({
   modalBody: {
     width: "100%",
     flex: 1,
+    margin: "auto",
   },
   paletteRow: {
     flexDirection: "row",

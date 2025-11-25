@@ -71,19 +71,19 @@ export default function ViewScore() {
           ) : (
             <View style={styles.infoCard}>
               {[
+                { id: "holder", label: "Score Holder", value: createdBy },
+                { id: "score", label: "Best Score", value: bestScore },
                 {
                   id: "creator",
                   label: "Created by",
                   value: originalCreator.createdBy ?? "",
                 },
-                { id: "createdAt", label: "Created At", value: createdAt },
-                { id: "holder", label: "Score Holder", value: createdBy },
                 {
                   id: "size",
                   label: "Board size",
                   value: boardSize[0].toUpperCase() + boardSize.slice(1),
                 },
-                { id: "score", label: "Best Score", value: bestScore },
+                { id: "createdAt", label: "Created At", value: createdAt },
               ].map((row) => (
                 <View key={row.id} style={styles.infoRow}>
                   <ThemedText style={styles.infoLabel}>{row.label}:</ThemedText>

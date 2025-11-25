@@ -146,7 +146,8 @@ export default function Settings() {
         (await loadCriteriaMap()) ?? (await updateCriteriaMap({}));
       const popAudioLevel = (await loadPopSoundVolume()) ?? 0.25;
       let colorOptions =
-        (await loadColorPaletteOptions()) ?? (await getColorPaletteOptions({}));
+        (await loadColorPaletteOptions()) ??
+        (await getColorPaletteOptions(currentCriteriaMap));
       setSelectedColorPalette(colorOptions?.[savedIndex] ?? colorOptions[0]);
       setColorPaletteOptions(chunkArray(colorOptions, PAGE_SIZE));
       setSelectedIndex(savedIndex);
