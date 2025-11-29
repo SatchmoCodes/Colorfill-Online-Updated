@@ -122,6 +122,14 @@ export default function ProtectedLayout() {
               contentStyle: { backgroundColor: "transparent" },
             }}
           />
+          <Stack.Screen
+            name="howtoplay"
+            options={{
+              title: "How to Play",
+              animation: Platform.OS === "ios" ? "slide_from_right" : "fade",
+              contentStyle: { backgroundColor: "transparent" },
+            }}
+          />
         </Stack>
       </ThemedBackground>
     </UserContext.Provider>

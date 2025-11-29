@@ -1,5 +1,3 @@
-import { Image, Pressable, StyleSheet, View } from "react-native";
-
 import { ThemedText } from "@/components/ThemedText";
 import { auth, rtdb } from "@/firebaseConfig";
 import { useUser } from "@/hooks/useFirebaseUser";
@@ -8,6 +6,7 @@ import * as Network from "expo-network";
 import { router } from "expo-router";
 import { ref, serverTimestamp, update } from "firebase/database";
 import { useState } from "react";
+import { Image, Pressable, StyleSheet, View } from "react-native";
 
 export default function HomeScreen() {
   const user = useUser();
@@ -30,19 +29,27 @@ export default function HomeScreen() {
           resizeMode="contain"
         />
       </View>
-      <NavButton
-        title="Free Play"
-        handlePress={() => router.push("/freeplay")}
-      />
-      <NavButton
-        title="Board of the Day"
-        handlePress={() => router.push("/boardoftheday")}
-      />
-      <NavButton
-        title="Player vs Player"
-        handlePress={() => router.push("/pvpmenu")}
-      />
-      <NavButton title="Logout" handlePress={() => handleSignOut()} />
+      <View>
+        <NavButton
+          title="Free Play"
+          handlePress={() => router.push("/freeplay")}
+        />
+        <NavButton
+          title="Board of the Day"
+          handlePress={() => router.push("/boardoftheday")}
+        />
+        <NavButton
+          title="Player vs Player"
+          handlePress={() => router.push("/pvpmenu")}
+        />
+        <View style={{ paddingTop: 30 }}>
+          <NavButton
+            title="How to Play"
+            handlePress={() => router.push("/howtoplay")}
+          />
+          <NavButton title="Logout" handlePress={() => handleSignOut()} />
+        </View>
+      </View>
     </View>
   );
 }
@@ -101,6 +108,8 @@ const styles = StyleSheet.create({
     padding: 10,
     backgroundColor: "#448ee2ff",
     borderRadius: 5,
+    marginTop: 10,
+    marginBottom: 10,
   },
   navText: {
     fontWeight: "bold",
