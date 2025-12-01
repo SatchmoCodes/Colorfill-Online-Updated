@@ -1,6 +1,10 @@
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
+import {
+  loadHasAskedNotificationPermission,
+  saveHasAskedNotificationPermission,
+} from "./asyncStorageHelper";
 
 export async function registerForPushNotificationsAsync() {
   if (!Device.isDevice || Platform.OS === "web") return null;
@@ -8,10 +12,16 @@ export async function registerForPushNotificationsAsync() {
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
 
+  const hasAsked = await loadHasAskedNotificationPermission();
+
   // Only ask if permission not yet granted or denied
-  if (existingStatus !== "granted" && existingStatus !== "denied") {
+  if (
+    (existingStatus !== "granted" && existingStatus !== "denied") ||
+    !hasAsked
+  ) {
     const { status } = await Notifications.requestPermissionsAsync();
     finalStatus = status;
+    await saveHasAskedNotificationPermission(true);
   }
 
   if (finalStatus !== "granted") {
