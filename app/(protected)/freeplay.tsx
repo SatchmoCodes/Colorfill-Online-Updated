@@ -281,7 +281,6 @@ export default function Freeplay() {
     const neighbors = getAdjacentSquares(currentSquare, board);
     for (const neighbor of neighbors) {
       if (neighbor && !neighbor.captured && neighbor.color === color) {
-        console.log("depth here", depth + 1);
         neighbor.captured = true;
         neighbor.depth = depth + 1;
         capturedCount += 1;
@@ -333,6 +332,7 @@ export default function Freeplay() {
     );
     if (currentBestScore !== 0 && hasCreatedScore) {
       setCurrentBestScore(score < currentBestScore ? score : currentBestScore);
+      setIsReplayingBoard(true);
     }
     resetSquareCount(resetBoard, capturedCount, setSquaresRemaining);
     setBoardState(resetBoard);
@@ -340,7 +340,6 @@ export default function Freeplay() {
     setBoardVersion((prev) => prev + 1);
     setUnlockedColorPalettes([]);
     setBoardComplete(false);
-    setIsReplayingBoard(true);
     setScore(0);
   };
 
@@ -442,9 +441,6 @@ export default function Freeplay() {
       currentBoardBestScore = updatedScore;
       setCurrentBestScore(currentBoardBestScore);
     }
-    console.log("boardid", boardId);
-    console.log("current boardId", currentBoardId);
-    console.log("bruh why", user.displayName);
     if (user.displayName !== null) {
       const [userDoc] = await Promise.all([
         getUser(user.uid),
@@ -583,7 +579,7 @@ export default function Freeplay() {
             score={score}
             currentBestScore={currentBestScore}
             loadingSetScore={loadingSetScore}
-            isReplayingBoard={isReplayingBoard}
+            isReplayingBoard={isReplayingBoard || boardId === currentBoardId}
           />
         </BaseModal>
       )}

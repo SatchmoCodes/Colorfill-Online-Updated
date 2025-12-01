@@ -399,9 +399,7 @@ export default function BoardoftheDay() {
 
       // --- 2. Time difference check (UTC-safe) ---
 
-      // Add +1 minute to generatedAt because cron triggers at 7:59
       const generatedAtDate = new Date(currentlySavedBOTD.generatedAt);
-      generatedAtDate.setMinutes(generatedAtDate.getMinutes() + 1);
 
       const generatedAtMs = generatedAtDate.getTime();
       console.log("Adjusted generatedAt", generatedAtMs);

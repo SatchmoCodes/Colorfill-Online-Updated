@@ -71,20 +71,40 @@ export const pvpSquareGenerator = (
 };
 
 const createRandomColorList = (numberOfSquares: number) => {
-  return new Array(numberOfSquares).fill(null).map((_) => {
-    return Math.floor(Math.random() * 5);
-  });
+  const rowSize = Math.sqrt(numberOfSquares);
+
+  const colorArr = new Array(numberOfSquares)
+    .fill(null)
+    .map(() => generateRandomNumber());
+
+  // Ensure different starting colors
+  const [ownerFirst, ownerSecond] = getTwoDifferentColors();
+  const [opFirst, opSecond] = getTwoDifferentColors();
+
+  // Assign them directly
+  colorArr[1] = ownerFirst;
+  colorArr[rowSize] = ownerSecond;
+
+  colorArr[numberOfSquares - 2] = opFirst;
+  colorArr[numberOfSquares - rowSize] = opSecond;
+
+  return colorArr;
 };
 
 const createMirroredColorList = (numberOfSquares: number) => {
+  const rowSize = Math.sqrt(numberOfSquares);
   const boardHalf = new Array((numberOfSquares - 1) / 2).fill(null).map((_) => {
     return Math.floor(Math.random() * 5);
   });
+  const [firstOption, secondOption] = getTwoDifferentColors();
+  boardHalf[1] = firstOption;
+  boardHalf[rowSize] = secondOption;
   const boardCenterColor = Math.floor(Math.random() * 5);
   return [...boardHalf, boardCenterColor, ...boardHalf.reverse()];
 };
 
 const createPartialMirrorColorList = (numberOfSquares: number) => {
+  const rowSize = Math.sqrt(numberOfSquares);
   const excludedIndexes = [
     0,
     1,
@@ -96,6 +116,9 @@ const createPartialMirrorColorList = (numberOfSquares: number) => {
   const boardHalf = new Array((numberOfSquares - 1) / 2).fill(null).map((_) => {
     return Math.floor(Math.random() * 5);
   });
+  const [firstOption, secondOption] = getTwoDifferentColors();
+  boardHalf[1] = firstOption;
+  boardHalf[rowSize] = secondOption;
   const boardCenterColor = Math.floor(Math.random() * 5);
   return [...boardHalf, boardCenterColor, ...boardHalf.reverse()].map(
     (color, i) => {
@@ -139,4 +162,13 @@ const checkSurroundingSquares = (colorData: number[], length: number) => {
 
 const generateRandomNumber = () => {
   return Math.floor(Math.random() * 5);
+};
+
+const getTwoDifferentColors = () => {
+  const first = generateRandomNumber();
+  let second = generateRandomNumber();
+  while (second === first) {
+    second = generateRandomNumber();
+  }
+  return [first, second];
 };

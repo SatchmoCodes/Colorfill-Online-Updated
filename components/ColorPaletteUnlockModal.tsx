@@ -18,7 +18,7 @@ export default function ColorPaletteUnlockModal(props: ModalProps) {
 
   return (
     <ThemedView style={styles.centeredView}>
-      <ThemedText type="subtitle">
+      <ThemedText type="subtitle" style={{ textAlign: "center" }}>
         {unlockedColorPalettes.length === 1
           ? "You unlocked a new color palette!"
           : `You unlocked ${unlockedColorPalettes.length} new color palettes!`}

@@ -57,27 +57,31 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider
-      value={{
-        ...(colorScheme === "dark" ? DarkTheme : DefaultTheme),
-        colors: {
-          ...(colorScheme === "dark" ? DarkTheme.colors : DefaultTheme.colors),
-          background: "transparent",
-        },
-      }}
-    >
-      <Stack
-        screenOptions={{
-          headerShown: false,
+    <View style={{ flex: 1, backgroundColor: "#151718" }}>
+      <ThemeProvider
+        value={{
+          ...(colorScheme === "dark" ? DarkTheme : DefaultTheme),
+          colors: {
+            ...(colorScheme === "dark"
+              ? DarkTheme.colors
+              : DefaultTheme.colors),
+            background: "transparent",
+          },
         }}
       >
-        {user ? (
-          <Stack.Screen name="(protected)" />
-        ) : (
-          <Stack.Screen name="(auth)" />
-        )}
-      </Stack>
-      <Toast config={toastConfig} />
-    </ThemeProvider>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+          }}
+        >
+          {user ? (
+            <Stack.Screen name="(protected)" />
+          ) : (
+            <Stack.Screen name="(auth)" />
+          )}
+        </Stack>
+        <Toast config={toastConfig} />
+      </ThemeProvider>
+    </View>
   );
 }

@@ -1,8 +1,10 @@
+import BaseModal from "@/components/BaseModal";
 import ThemedDropDown from "@/components/ThemedDropDown";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import CommonButton from "@/components/ui/CommonButton";
 import { IconSymbol } from "@/components/ui/IconSymbol";
+import { TimerPie } from "@/components/ui/TimerPie";
 import { db } from "@/firebaseConfig";
 import {
   loadLeaderboardRefreshTime,
@@ -24,11 +26,13 @@ import {
   startAfter,
   where,
 } from "firebase/firestore";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
+  Easing,
   FlatList,
-  Modal,
+  Platform,
   StyleSheet,
   TouchableOpacity,
   View,
@@ -151,6 +155,7 @@ export default function Leaderboard() {
     try {
       if (gamemode !== queryGamemode) {
         setLoadingQuery(true);
+        setTableData([]);
       }
       let snapshot = null;
 
@@ -361,19 +366,19 @@ export default function Leaderboard() {
 
   return (
     <View style={styles.container}>
-      <ThemedText style={{ marginTop: 20, marginBottom: 20 }} type="title">
-        Leaderboard
-      </ThemedText>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+        <ThemedText style={{ marginTop: 20, marginBottom: 20 }} type="title">
+          Leaderboard
+        </ThemedText>
+        <TouchableOpacity
+          onPress={() =>
+            setOpenLeaderboardOptionsModal(!openLeaderboardOptionsModal)
+          }
+        >
+          <IconSymbol name="slider.horizontal.3" size={24} color={"white"} />
+        </TouchableOpacity>
+      </View>
 
-      {/* Sort Options Button */}
-      <CommonButton
-        title="Sort Options"
-        size={150}
-        style={{ marginBottom: 10 }}
-        handlePress={() =>
-          setOpenLeaderboardOptionsModal(!openLeaderboardOptionsModal)
-        }
-      />
       <RefreshButton fetchRefreshData={fetchRefreshData} />
 
       {/* Leaderboard Table */}
@@ -399,26 +404,31 @@ export default function Leaderboard() {
 
       {/* Options Modal */}
       {openLeaderboardOptionsModal && (
-        <OptionsModal
-          gamemode={gamemode}
-          size={size}
-          pvpQueryParameter={pvpQueryParameter}
-          year={year}
-          month={month}
-          day={day}
-          botdDateOptions={botdDateOptions}
-          lastDoc={lastDoc}
-          setGamemode={setGamemode}
-          setSize={setSize}
-          setPvpQueryParameter={setPvpQueryParameter}
-          setOpenLeaderboardOptionsModal={setOpenLeaderboardOptionsModal}
-          setYear={setYear}
-          setMonth={setMonth}
-          setDay={setDay}
-          setBotdId={setBotdId}
-          setLastDoc={setLastDoc}
-          getQueryResults={getQueryResults}
-        />
+        <BaseModal
+          visible={openLeaderboardOptionsModal}
+          onClose={() => setOpenLeaderboardOptionsModal(false)}
+        >
+          <OptionsModal
+            gamemode={gamemode}
+            size={size}
+            pvpQueryParameter={pvpQueryParameter}
+            year={year}
+            month={month}
+            day={day}
+            botdDateOptions={botdDateOptions}
+            lastDoc={lastDoc}
+            setGamemode={setGamemode}
+            setSize={setSize}
+            setPvpQueryParameter={setPvpQueryParameter}
+            setOpenLeaderboardOptionsModal={setOpenLeaderboardOptionsModal}
+            setYear={setYear}
+            setMonth={setMonth}
+            setDay={setDay}
+            setBotdId={setBotdId}
+            setLastDoc={setLastDoc}
+            getQueryResults={getQueryResults}
+          />
+        </BaseModal>
       )}
     </View>
   );
@@ -453,6 +463,7 @@ const SelectedParameters = ({
     <View
       style={{
         width: "100%",
+        maxWidth: 700,
         marginLeft: "auto",
         marginRight: "auto",
         marginBottom: 10,
@@ -460,10 +471,10 @@ const SelectedParameters = ({
         flexDirection: "row",
       }}
     >
-      <ThemedText>
+      <ThemedText type="subtitle">
         {gamemodeOptions.find((x) => x.value === gamemode)?.label}
       </ThemedText>
-      <ThemedText>{getParameterLabel(gamemode)}</ThemedText>
+      <ThemedText type="subtitle">{getParameterLabel(gamemode)}</ThemedText>
     </View>
   );
 };
@@ -505,6 +516,7 @@ const Table = ({
   handlePagination: () => void;
 }) => {
   // console.log("data", tableData);
+  const translateX = useShimmer();
 
   const displayValue = (item: any, parameter: string) => {
     if (parameter === "winRate") {
@@ -523,17 +535,69 @@ const Table = ({
     return "white";
   };
 
+  const getRowColor = (index: number) => {
+    if (index === 0) return ["#c4b214ff", "#504803ff"];
+    if (index === 1) return ["#b9b9b9ff", "rgba(100, 100, 99, 1)"];
+    if (index === 2) return ["#ac691dff", "#5e370bff"];
+    if (index % 2 === 0) return ["#8eb7faff", "#053070ff"];
+    return ["#266bdbff", "#031736ff"];
+  };
+
+  const webScrollLock = useRef(false);
+  const nativeEndReachedLock = useRef(false);
+
+  // make sure you pass handlePagination from parent
+  const WEB_THRESHOLD_PX = 150; // how close to bottom (px) to trigger on web
+  const NATIVE_THRESHOLD = 0.1; // keep small
+
+  // web onScroll handler
+  const handleWebScroll = (e: any) => {
+    // nativeEvent has layoutMeasurement, contentOffset, contentSize on RN web too
+    const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+
+    const distanceFromBottom =
+      contentSize.height - (layoutMeasurement.height + contentOffset.y);
+
+    if (distanceFromBottom <= WEB_THRESHOLD_PX) {
+      if (!webScrollLock.current) {
+        webScrollLock.current = true;
+        handlePagination();
+        // unlock after a short delay — adjust depending on your load speed
+        setTimeout(() => {
+          webScrollLock.current = false;
+        }, 800);
+      }
+    }
+  };
+
   return (
-    <>
+    <View style={{ flex: 1 }}>
       <FlatList
         data={tableData}
-        keyExtractor={(item) => item.id}
-        ListHeaderComponent={<TopRow gamemode={gamemode} />}
-        onEndReached={handlePagination}
-        onEndReachedThreshold={0.5}
-        stickyHeaderIndices={[0]}
+        keyExtractor={(item) => item.id?.toString() ?? Math.random().toString()}
+        initialNumToRender={20}
+        maxToRenderPerBatch={20}
+        windowSize={10}
+        onEndReached={
+          Platform.OS !== "web"
+            ? () => {
+                // native lock to avoid duplicates across events
+                if (!nativeEndReachedLock.current) {
+                  nativeEndReachedLock.current = true;
+                  handlePagination();
+                  setTimeout(() => (nativeEndReachedLock.current = false), 800);
+                }
+              }
+            : undefined
+        }
+        onEndReachedThreshold={NATIVE_THRESHOLD}
+        // web fallback:
+        onScroll={Platform.OS === "web" ? handleWebScroll : undefined}
+        scrollEventThrottle={16}
+        contentContainerStyle={{ paddingBottom: 20 }}
+        style={{ flex: 1 }} // IMPORTANT: ensure parent / list is flexible so scrolling works
         ListFooterComponent={
-          loadingMore ? <ActivityIndicator size="small" color="blue" /> : null
+          loadingMore ? <ActivityIndicator size="small" /> : null
         }
         renderItem={({ item, index }) => {
           let readableDate = "";
@@ -551,9 +615,16 @@ const Table = ({
           } else {
             readableDate = "N/A";
           }
+          const firstRowColor = getRowColor(index)[0];
+          const secondRowColor = getRowColor(index)[1];
 
           return (
             <TouchableOpacity
+              style={{
+                marginTop: 5,
+                marginBottom: 5,
+                position: "relative",
+              }}
               onPress={() =>
                 gamemode === "freeplay" &&
                 router.push({
@@ -573,22 +644,22 @@ const Table = ({
               {/* ... Rest of your rendering logic remains the same ... */}
               <LinearGradient
                 style={styles.row}
-                colors={
-                  index % 2 === 0
-                    ? ["#1b1b1bff", "#1b1b1bff"]
-                    : ["#383838ff", "#383838ff"]
-                }
+                colors={[firstRowColor, secondRowColor]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
               >
+                {index < 3 && <ShimmerOverlay translateX={translateX} />}
+
                 <ThemedView style={[styles.cell, { width: "20%" }]}>
                   <ThemedText style={styles.cellText}>{index + 1}</ThemedText>
                 </ThemedView>
+
                 <ThemedView style={[styles.cell, { width: "55%" }]}>
                   <ThemedText style={styles.cellText}>
                     {gamemode === "pvp" ? item.username : item.createdBy}
                   </ThemedText>
                 </ThemedView>
+
                 <ThemedView style={[styles.cell, { width: "25%" }]}>
                   <ThemedText
                     style={[
@@ -611,8 +682,53 @@ const Table = ({
           );
         }}
       />
-    </>
+    </View>
   );
+};
+
+const ShimmerOverlay = ({ translateX }: { translateX: any }) => (
+  <Animated.View
+    pointerEvents="none"
+    style={{
+      position: "absolute",
+      top: 0,
+      bottom: 0,
+      width: 150,
+      transform: [{ translateX }],
+      opacity: 0.5,
+    }}
+  >
+    <LinearGradient
+      colors={["transparent", "white", "transparent"]}
+      start={{ x: 0, y: 0.5 }}
+      end={{ x: 1, y: 0.5 }}
+      style={{ flex: 1 }}
+    />
+  </Animated.View>
+);
+
+const useShimmer = () => {
+  const shimmer = useRef(new Animated.Value(0)).current;
+  const cardWidth = Platform.OS === "web" ? 900 : 500;
+
+  useEffect(() => {
+    const loop = () => {
+      shimmer.setValue(0);
+      Animated.timing(shimmer, {
+        toValue: 1,
+        duration: 2000,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }).start(() => loop());
+    };
+
+    loop();
+  }, []);
+
+  return shimmer.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-200, cardWidth],
+  });
 };
 
 const OptionsModal = ({
@@ -737,113 +853,98 @@ const OptionsModal = ({
   }, [tempYear, tempMonth, tempDay]);
 
   return (
-    <Modal transparent animationType="fade">
-      <View style={styles.modalContainer}>
-        <ThemedView style={styles.modalCard}>
-          {/* Close button */}
-          <TouchableOpacity
-            style={{ position: "absolute", top: 10, right: 10 }}
-            onPress={() => setOpenLeaderboardOptionsModal(false)}
-          >
-            <IconSymbol size={28} name="clear.fill" color={"white"} />
-          </TouchableOpacity>
+    <View style={styles.modalContainer}>
+      <ThemedText style={{ marginBottom: 20 }} type="title">
+        Options
+      </ThemedText>
 
-          <ThemedText style={{ marginBottom: 20 }} type="title">
-            Options
-          </ThemedText>
-
+      <ThemedText style={{ marginBottom: 10, marginTop: 10 }} type="subtitle">
+        Gamemode
+      </ThemedText>
+      <ThemedDropDown
+        options={gamemodeOptions}
+        value={tempGamemode}
+        onSetValue={setTempGamemode}
+        placeholder="Select Gamemode..."
+      />
+      {tempGamemode === "freeplay" && (
+        <>
           <ThemedText
             style={{ marginBottom: 10, marginTop: 10 }}
             type="subtitle"
           >
-            Gamemode
+            Board Size
           </ThemedText>
           <ThemedDropDown
-            options={gamemodeOptions}
-            value={tempGamemode}
-            onSetValue={setTempGamemode}
-            placeholder="Select Gamemode..."
+            options={sizeOptions}
+            value={tempSize}
+            onSetValue={setTempSize}
+            placeholder="Select Size..."
           />
-          {tempGamemode === "freeplay" && (
-            <>
-              <ThemedText
-                style={{ marginBottom: 10, marginTop: 10 }}
-                type="subtitle"
-              >
-                Board Size
-              </ThemedText>
-              <ThemedDropDown
-                options={sizeOptions}
-                value={tempSize}
-                onSetValue={setTempSize}
-                placeholder="Select Size..."
-              />
-            </>
-          )}
-          {tempGamemode === "boardoftheday" && (
-            <>
-              <ThemedText
-                style={{ marginBottom: 10, marginTop: 10 }}
-                type="subtitle"
-              >
-                Year
-              </ThemedText>
-              <ThemedDropDown
-                options={yearOptions}
-                value={tempYear}
-                onSetValue={setTempYear}
-                placeholder="Select Year..."
-              />
-              <ThemedText
-                style={{ marginBottom: 10, marginTop: 10 }}
-                type="subtitle"
-              >
-                Month
-              </ThemedText>
-              <ThemedDropDown
-                options={monthOptions}
-                value={tempMonth}
-                onSetValue={setTempMonth}
-                placeholder="Select Month..."
-              />
-              <ThemedText
-                style={{ marginBottom: 10, marginTop: 10 }}
-                type="subtitle"
-              >
-                Day
-              </ThemedText>
-              <ThemedDropDown
-                options={dayOptions ?? []}
-                value={tempDay}
-                onSetValue={setTempDay}
-                placeholder="Select Day..."
-              />
-            </>
-          )}
-          {tempGamemode === "pvp" && (
-            <>
-              <ThemedText
-                style={{ marginBottom: 10, marginTop: 10 }}
-                type="subtitle"
-              >
-                Query Parameters
-              </ThemedText>
-              <ThemedDropDown
-                options={PVPQueryOptions}
-                value={tempPvpQueryParameter}
-                onSetValue={setTempPvpQueryParameter}
-                placeholder="Select Option..."
-              />
-            </>
-          )}
+        </>
+      )}
+      {tempGamemode === "boardoftheday" && (
+        <>
+          <ThemedText
+            style={{ marginBottom: 10, marginTop: 10 }}
+            type="subtitle"
+          >
+            Year
+          </ThemedText>
+          <ThemedDropDown
+            options={yearOptions}
+            value={tempYear}
+            onSetValue={setTempYear}
+            placeholder="Select Year..."
+          />
+          <ThemedText
+            style={{ marginBottom: 10, marginTop: 10 }}
+            type="subtitle"
+          >
+            Month
+          </ThemedText>
+          <ThemedDropDown
+            options={monthOptions}
+            value={tempMonth}
+            onSetValue={setTempMonth}
+            placeholder="Select Month..."
+          />
+          <ThemedText
+            style={{ marginBottom: 10, marginTop: 10 }}
+            type="subtitle"
+          >
+            Day
+          </ThemedText>
+          <ThemedDropDown
+            options={dayOptions ?? []}
+            value={tempDay}
+            onSetValue={setTempDay}
+            placeholder="Select Day..."
+          />
+        </>
+      )}
+      {tempGamemode === "pvp" && (
+        <>
+          <ThemedText
+            style={{ marginBottom: 10, marginTop: 10 }}
+            type="subtitle"
+          >
+            Query Parameters
+          </ThemedText>
+          <ThemedDropDown
+            options={PVPQueryOptions}
+            value={tempPvpQueryParameter}
+            onSetValue={setTempPvpQueryParameter}
+            placeholder="Select Option..."
+          />
+        </>
+      )}
 
-          {/* Apply Button */}
-          <View style={{ marginTop: 30 }}>
-            <CommonButton title="Apply" size={200} handlePress={handleApply} />
-          </View>
-        </ThemedView>
+      {/* Apply Button */}
+      <View style={{ marginTop: 30 }}>
+        <CommonButton title="Apply" size={200} handlePress={handleApply} />
       </View>
-    </Modal>
+    </View>
   );
 };
 
@@ -852,31 +953,8 @@ const RefreshButton = ({
 }: {
   fetchRefreshData: () => Promise<void>;
 }) => {
-  const [remainingTime, setRemainingTime] = useState<number>(0);
-
-  // Interval to update cooldown timer
-  useEffect(() => {
-    let interval = null;
-
-    const updateRemaining = async () => {
-      const lastRefresh = await loadLeaderboardRefreshTime();
-      if (lastRefresh) {
-        const currentTime = Date.now();
-        const diff = (currentTime - lastRefresh) / 1000;
-        const remaining = Math.max(0, COOLDOWN_SECONDS - diff);
-        setRemainingTime(remaining);
-      } else {
-        setRemainingTime(0);
-      }
-    };
-
-    updateRemaining(); // run immediately
-    interval = setInterval(updateRemaining, 1000); // update every second
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, []);
+  const [startTime, setStartTime] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   async function handleClickRefresh() {
     const lastRefresh = await loadLeaderboardRefreshTime();
@@ -887,33 +965,41 @@ const RefreshButton = ({
       if (diff > COOLDOWN_SECONDS) {
         await fetchRefreshData();
         await saveLeaderboardRefreshTime(currentTime);
-        setRemainingTime(COOLDOWN_SECONDS); // reset cooldown
-      } else {
-        alert(
-          `Please wait ${Math.ceil(
-            COOLDOWN_SECONDS - diff
-          )} seconds to refresh scores`
-        );
+        setStartTime(currentTime);
+        setIsRefreshing(true);
       }
     } else {
       await fetchRefreshData();
       await saveLeaderboardRefreshTime(currentTime);
-      setRemainingTime(COOLDOWN_SECONDS);
+      setStartTime(currentTime);
+      setIsRefreshing(true);
     }
   }
 
   // Change color based on cooldown
-  const iconColor = remainingTime > 0 ? "#888888" : "#ffffff"; // gray when waiting
-  const iconOpacity = remainingTime > 0 ? 0.5 : 1;
+  const iconColor = isRefreshing ? "#888888" : "#ffffff"; // gray when waiting
+  const iconOpacity = isRefreshing ? 0.5 : 1;
+
+  console.log(startTime + 15000 - Date.now());
 
   return (
-    <TouchableOpacity
-      onPress={handleClickRefresh}
-      disabled={remainingTime > 0}
-      style={{ opacity: iconOpacity }}
-    >
-      <IconSymbol size={25} name="arrow.clockwise" color={iconColor} />
-    </TouchableOpacity>
+    <View style={{ position: "relative" }}>
+      <TouchableOpacity
+        onPress={() => !isRefreshing && handleClickRefresh()}
+        style={{ opacity: iconOpacity }}
+      >
+        <IconSymbol size={25} name="arrow.clockwise" color={iconColor} />
+        {isRefreshing && (
+          <TimerPie
+            duration={startTime + 15000 - Date.now()}
+            startTime={startTime}
+            onComplete={() => setIsRefreshing(false)}
+            style={{ position: "absolute", right: -30 }}
+            size={20}
+          />
+        )}
+      </TouchableOpacity>
+    </View>
   );
 };
 
@@ -949,15 +1035,12 @@ const styles = StyleSheet.create({
     flex: 1,
     width: "95%",
     borderRadius: 12,
-    // overflow: "hidden",
-    shadowColor: "#000",
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
   },
   topRow: {
     flexDirection: "row",
     width: "100%",
+    borderRadius: 10,
+    padding: 10,
   },
   topRowCell: {
     padding: 10,
@@ -971,7 +1054,13 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: "row",
+    padding: 10,
+    borderWidth: 1,
+    borderRadius: 10,
+    overflow: "hidden",
     width: "100%",
+    maxWidth: 700,
+    margin: "auto",
   },
   cell: {
     // This is the cell content wrapper
@@ -987,16 +1076,6 @@ const styles = StyleSheet.create({
   },
   // Modal
   modalContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.6)",
-  },
-  modalCard: {
-    width: "80%",
-    padding: 20,
-    borderRadius: 16,
-    backgroundColor: "#1e1e1e",
     alignItems: "center",
   },
   // Apply button

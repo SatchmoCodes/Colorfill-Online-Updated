@@ -40,7 +40,7 @@ export default function BoardCompleteModal(props: ModalProps) {
       ) : (
         <>
           {isReplayingBoard && currentBestScore > 0 ? (
-            <ThemedText>
+            <ThemedText style={{ textAlign: "center" }}>
               {score < currentBestScore
                 ? `You beat the previous best score in ${score} turns!`
                 : "You did not beat the previous best score!"}

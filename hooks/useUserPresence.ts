@@ -3,11 +3,16 @@ import { db, rtdb } from "@/firebaseConfig";
 import {
   FREEPLAY_OFFLINE_SCORES_KEY,
   loadOfflineScores,
+  loadPopSoundVolume,
+  saveColorPaletteOptions,
   saveProfileBackgroundColor,
   saveProfileBannerColor,
   saveProfileLetterColor,
 } from "@/helper/asyncStorageHelper";
+//@ts-ignore
+import { setSoundVolume } from "@/helper/audio/soundManager";
 import { getUser } from "@/helper/commonQueries";
+import { getColorPaletteOptions } from "@/helper/getColorPaletteOptions";
 import { registerForPushNotificationsAsync } from "@/helper/registerForPushNotifications";
 import { updateCriteriaMap } from "@/helper/updateCriteriaMap";
 import { UserDoc } from "@/schema/userDocModel";
@@ -114,6 +119,8 @@ const establishUserPresence = async (user: User) => {
 
     await updateDoc(userDoc.ref, updatedUserDocData);
   }
+  const savedCaptureAudioLevel = await loadPopSoundVolume();
+  await setSoundVolume(savedCaptureAudioLevel ?? 0.25);
 
   const connectedRef = ref(rtdb, ".info/connected");
   onValue(connectedRef, (snap) => {
@@ -128,18 +135,21 @@ const establishUserPresence = async (user: User) => {
       online: true,
       lastSeen: serverTimestamp(),
     });
-
-    // Ensure proper cleanup on disconnect
-    onDisconnect(userStatusRef).update({
-      online: false,
-      lastSeen: serverTimestamp(),
-    });
+    if (!user.displayName) {
+      onDisconnect(userStatusRef).remove();
+    } else {
+      // Ensure proper cleanup on disconnect
+      onDisconnect(userStatusRef).update({
+        online: false,
+        lastSeen: serverTimestamp(),
+      });
+    }
   });
 };
 
 const updateAsyncStorageValuesOnLoad = async (userDoc: UserDoc) => {
   try {
-    await updateCriteriaMap({
+    const updatedCriteriaMap = await updateCriteriaMap({
       boardsCompleted: userDoc.boardsCompleted,
       boardsOfTheDayCompleted: userDoc.boardsOfTheDayCompleted,
       bestSmallScore: userDoc.bestSmallScore,
@@ -150,6 +160,10 @@ const updateAsyncStorageValuesOnLoad = async (userDoc: UserDoc) => {
       wins: userDoc.wins,
       bestWinStreak: userDoc.bestWinStreak,
     });
+    const updatedColorPaletteOptions = await getColorPaletteOptions(
+      updatedCriteriaMap
+    );
+    await saveColorPaletteOptions(updatedColorPaletteOptions);
     await saveProfileBackgroundColor(userDoc.profileBackground);
     await saveProfileLetterColor(userDoc.profileLetter);
     await saveProfileBannerColor(userDoc.profileBanner);

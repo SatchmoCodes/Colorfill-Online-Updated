@@ -13,6 +13,7 @@ import {
   FlatList,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   TextInput,
   TouchableOpacity,
@@ -104,27 +105,48 @@ export default function Playerlist() {
           ></TextInput>
         </ThemedView>
       </ThemedView>
-      <FlatList
-        data={filteredPlayerList}
-        style={{ width: "100%", overflow: "visible" }}
-        contentContainerStyle={{ overflow: "visible" }}
-        renderItem={({ item: player }) => {
-          const currentInviteMapItem = inviteMap[player.id];
-          return (
-            <PlayerCard
-              key={player.id}
-              player={player}
-              isOpen={openPlayerId === player.id}
-              docId={docId}
-              inviteItem={currentInviteMapItem}
-              setInviteMap={setInviteMap}
-              onToggle={() =>
-                setOpenPlayerId(openPlayerId === player.id ? null : player.id)
-              }
-            />
-          );
-        }}
-      ></FlatList>
+      {Platform.OS !== "web" ? (
+        <FlatList
+          data={filteredPlayerList}
+          style={{ width: "100%", overflow: "visible", flex: 1 }}
+          contentContainerStyle={{ overflow: "visible" }}
+          renderItem={({ item: player }) => {
+            const currentInviteMapItem = inviteMap[player.id];
+            return (
+              <PlayerCard
+                key={player.id}
+                player={player}
+                isOpen={openPlayerId === player.id}
+                docId={docId}
+                inviteItem={currentInviteMapItem}
+                setInviteMap={setInviteMap}
+                onToggle={() =>
+                  setOpenPlayerId(openPlayerId === player.id ? null : player.id)
+                }
+              />
+            );
+          }}
+        />
+      ) : (
+        <ScrollView style={{ width: "100%", flex: 1 }}>
+          {filteredPlayerList.map((player) => {
+            const currentInviteMapItem = inviteMap[player.id];
+            return (
+              <PlayerCard
+                key={player.id}
+                player={player}
+                isOpen={openPlayerId === player.id}
+                docId={docId}
+                inviteItem={currentInviteMapItem}
+                setInviteMap={setInviteMap}
+                onToggle={() =>
+                  setOpenPlayerId(openPlayerId === player.id ? null : player.id)
+                }
+              />
+            );
+          })}
+        </ScrollView>
+      )}
     </ThemedView>
   );
 }

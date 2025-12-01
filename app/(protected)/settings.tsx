@@ -160,8 +160,6 @@ export default function Settings() {
     }
   }
 
-  console.log("audio", captureAudioLevel);
-
   return (
     <ScrollView
       contentContainerStyle={{ alignItems: "center" }}
@@ -305,7 +303,7 @@ export default function Settings() {
           />
         </ThemedView>
       )}
-      <ThemedView>
+      <ThemedView style={{ paddingBottom: 30 }}>
         <ThemedText style={{ textAlign: "center" }}>
           Square Capture Audio
         </ThemedText>
@@ -818,7 +816,11 @@ const ColorPaletteProgressModal = (props: ColorPaletteModalProps) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: "#151718" },
+  container: {
+    flex: 1,
+    padding: 20,
+    backgroundColor: "#151718",
+  },
   centeredView: {
     justifyContent: "center",
     alignItems: "center",

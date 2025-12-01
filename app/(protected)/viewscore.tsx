@@ -74,14 +74,14 @@ export default function ViewScore() {
                 { id: "holder", label: "Score Holder", value: createdBy },
                 { id: "score", label: "Best Score", value: bestScore },
                 {
-                  id: "creator",
-                  label: "Created by",
-                  value: originalCreator.createdBy ?? "",
-                },
-                {
                   id: "size",
                   label: "Board size",
                   value: boardSize[0].toUpperCase() + boardSize.slice(1),
+                },
+                {
+                  id: "creator",
+                  label: "Created by",
+                  value: originalCreator.createdBy ?? "",
                 },
                 { id: "createdAt", label: "Created At", value: createdAt },
               ].map((row) => (
@@ -137,6 +137,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 6,
+    maxWidth: 600,
   },
   infoRow: {
     flexDirection: "row",

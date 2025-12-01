@@ -837,15 +837,14 @@ export default function PvpGame() {
               onEndOfTurn={handleEndOfTurn}
               handlePlayerLeave={handlePlayerLeave}
             />
-
-            {!isSmallDevice && (
+            {/* {!isSmallDevice && (
               <FakeColorRowButtons
                 selectedColorPalette={selectedColorPalette}
                 activeColor={[ownerSelectedColor, opponentSelectedColor]}
                 turn={turn}
                 currentUserType={currentUserType}
               />
-            )}
+            )} */}
             <GameBoard
               boardState={boardState}
               boardSize={boardSize}
@@ -1010,7 +1009,11 @@ const Square = (props: PVPSquareViewProps) => {
       ]}
     >
       <View
-        style={{ zIndex: 1000, justifyContent: "center", alignItems: "center" }}
+        style={{
+          zIndex: 1000,
+          justifyContent: "center",
+          alignItems: "center",
+        }}
       ></View>
       {/* Base = unrevealed gray */}
       <View

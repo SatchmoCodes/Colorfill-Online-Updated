@@ -135,7 +135,7 @@ export const updateCriteriaMap = async ({
     },
     boards_completed_3: {
       locked:
-        (boardsCompleted === null || boardsCompleted < 250) &&
+        (boardsCompleted === null || boardsCompleted < 200) &&
         savedCriteriaMap["boards_completed_3"]?.locked !== false,
       message: "Play 200 boards to unlock this color scheme",
       progress: boardsCompleted === null ? "n/a" : `${boardsCompleted} / 200`,
