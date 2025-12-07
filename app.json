@@ -51,11 +51,14 @@
         {
           "icon": "./assets/images/ColorFill-Android-Notification.png",
           "color": "#ffffff"
-        },
+        }
+      ],
+      [
         "react-native-google-mobile-ads",
         {
-          "androidAppId": "ca-app-pub-9033965220201005~4063865488",
-          "iosAppId": "ca-app-pub-9033965220201005~6390823538"
+          "androidAppId": "ca-app-pub-3940256099942544~3347511713",
+          "iosAppId": "ca-app-pub-3940256099942544~3347511713",
+          "userTrackingUsageDescription": "This identifier will be used to deliver personalized ads to you."
         }
       ],
       "expo-web-browser"
