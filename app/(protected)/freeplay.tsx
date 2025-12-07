@@ -330,10 +330,7 @@ export default function Freeplay() {
       resetBoard[0][0].color,
       new Set()
     );
-    if (currentBestScore !== 0 && hasCreatedScore) {
-      setCurrentBestScore(score < currentBestScore ? score : currentBestScore);
-      setIsReplayingBoard(true);
-    }
+    setIsReplayingBoard(true);
     resetSquareCount(resetBoard, capturedCount, setSquaresRemaining);
     setBoardState(resetBoard);
     setActiveColor(resetBoard[0][0].color);
@@ -382,7 +379,10 @@ export default function Freeplay() {
     updatedScore: number,
     currentBoardBestScore: number
   ) => {
-    if (!boardId) return true;
+    if (!boardId) {
+      if (!isReplayingBoard) return true;
+      return updatedScore < currentBoardBestScore;
+    }
     return updatedScore < currentBoardBestScore;
   };
 
@@ -426,6 +426,7 @@ export default function Freeplay() {
       );
       if (!currentBestScoreDocs.empty) {
         currentBoardBestScore = currentBestScoreDocs.docs[0].data().score;
+        console.log("this should be running", currentBoardBestScore);
         setCurrentBestScore(currentBoardBestScore);
         if (updatedScore < currentBoardBestScore) {
           await Promise.all(
@@ -441,6 +442,18 @@ export default function Freeplay() {
       currentBoardBestScore = updatedScore;
       setCurrentBestScore(currentBoardBestScore);
     }
+    console.log(
+      "is replaying",
+      isReplayingBoard,
+      determineHighScore(updatedScore, currentBoardBestScore),
+      currentBoardBestScore,
+      updatedScore
+    );
+    setCurrentBestScore(
+      updatedScore < currentBoardBestScore
+        ? updatedScore
+        : currentBoardBestScore
+    );
     if (user.displayName !== null) {
       const [userDoc] = await Promise.all([
         getUser(user.uid),
