@@ -10,11 +10,6 @@ import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import { useEffect } from "react";
 import { ActivityIndicator, useColorScheme, View } from "react-native";
-import {
-  BannerAd,
-  BannerAdSize,
-  TestIds,
-} from "react-native-google-mobile-ads";
 import Toast, { BaseToast, ToastProps } from "react-native-toast-message";
 
 const toastConfig = {
@@ -86,15 +81,6 @@ export default function RootLayout() {
           )}
         </Stack>
         <Toast config={toastConfig} />
-        <BannerAd
-          unitId={TestIds.ADAPTIVE_BANNER}
-          size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
-          requestOptions={{
-            networkExtras: {
-              collapsible: "bottom",
-            },
-          }}
-        />
       </ThemeProvider>
     </View>
   );

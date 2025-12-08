@@ -1139,7 +1139,7 @@ const ScoreSection = (props: ScoreSectionProps) => {
         justifyContent: "space-evenly",
         alignItems: "center",
         width: "100%",
-        marginBottom: 10,
+        marginBottom: 30,
       }}
     >
       {/* Owner */}
