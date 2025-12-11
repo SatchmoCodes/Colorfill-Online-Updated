@@ -5,7 +5,7 @@ import {
   loadProfileLetterColor,
 } from "@/helper/asyncStorageHelper";
 import { useUser } from "@/hooks/useFirebaseUser";
-import { router, useFocusEffect, useNavigation } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   DeviceEventEmitter,
@@ -22,6 +22,7 @@ interface CustomHeaderProps {
   title: string;
   routeName: string;
   docId?: string | null;
+  onLeave?: (() => Promise<void>) | null;
   // Add other props you might need, like iconName, iconColor, etc.
 }
 
@@ -29,9 +30,9 @@ export default function CustomHeader({
   title,
   routeName,
   docId = null,
+  onLeave = null,
 }: CustomHeaderProps) {
   const user = useUser();
-  const navigation = useNavigation();
   const theme = useColorScheme() ?? "light";
   const isGearIconHidden = ["settings", "playerlist", "viewprofile"].includes(
     routeName
@@ -89,10 +90,18 @@ export default function CustomHeader({
   return (
     <ThemedView style={styles.headerContainer}>
       {/* Back button */}
-      {navigation.canGoBack() && (
+      {router.canGoBack() && (
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => navigation.goBack()}
+          onPress={async () => {
+            console.log("is onleave cool", onLeave);
+            if (onLeave) {
+              await onLeave();
+              router.back();
+            } else {
+              router.back();
+            }
+          }}
         >
           <IconSymbol name="backward" size={24} color="white" />
         </TouchableOpacity>

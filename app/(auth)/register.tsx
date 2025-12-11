@@ -128,7 +128,13 @@ const Register = () => {
                 onPress={handleSignUp}
                 style={[styles.button, styles.buttonOutline]}
               >
-                <Text style={styles.buttonOutlineText}>Register</Text>
+                <Text style={styles.buttonOutlineText}>Register Account</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, { marginTop: 10 }]}
+                onPress={() => router.push("/login")}
+              >
+                <Text style={styles.buttonText}>Back to Login Page</Text>
               </TouchableOpacity>
             </View>
           </View>

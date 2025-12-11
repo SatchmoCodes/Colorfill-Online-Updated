@@ -3,7 +3,7 @@ import CustomHeader from "@/components/CustomHeader";
 import { ThemedBackground } from "@/components/ThemedBackground";
 import { ThemedText } from "@/components/ThemedText";
 import CommonButton from "@/components/ui/CommonButton";
-import { db, rtdb } from "@/firebaseConfig";
+import { db } from "@/firebaseConfig";
 import { useUser } from "@/hooks/useFirebaseUser";
 import {
   router,
@@ -13,7 +13,6 @@ import {
   useNavigation,
 } from "expo-router";
 import { User } from "firebase/auth";
-import { ref, remove } from "firebase/database";
 import {
   doc,
   DocumentReference,
@@ -116,29 +115,29 @@ export default function PvpLobby() {
     }, [gameId])
   );
 
-  useEffect(() => {
-    if (user && gameId) {
-      const gameRef = doc(db, "games", gameId);
-      const gamePresenceRef = ref(rtdb, `/gamePresence/${gameId}/${user.uid}`);
+  // useEffect(() => {
+  //   if (user && gameId) {
+  //     const gameRef = doc(db, "games", gameId);
+  //     const gamePresenceRef = ref(rtdb, `/gamePresence/${gameId}/${user.uid}`);
 
-      const beforeRemove = navigation.addListener("beforeRemove", async (e) => {
-        const targetRoute = (e.data?.action as any)?.payload?.name;
+  //     const beforeRemove = navigation.addListener("beforeRemove", async (e) => {
+  //       const targetRoute = (e.data?.action as any)?.payload?.name;
 
-        // Prevent leave handling if navigating into the actual game
-        if (["settings", "pvpgame"].includes(targetRoute)) {
-          return;
-        }
+  //       // Prevent leave handling if navigating into the actual game
+  //       if (["settings", "pvpgame"].includes(targetRoute)) {
+  //         return;
+  //       }
 
-        const leavingUser = user;
-        await handlePlayerLeave(gameRef, leavingUser);
-        remove(gamePresenceRef);
-      });
+  //       const leavingUser = user;
+  //       await handlePlayerLeave(gameRef, leavingUser);
+  //       remove(gamePresenceRef);
+  //     });
 
-      return () => {
-        beforeRemove();
-      };
-    }
-  }, [user, gameId, navigation]);
+  //     return () => {
+  //       beforeRemove();
+  //     };
+  //   }
+  // }, [user, gameId, navigation]);
 
   useEffect(() => {
     ownerRef.current = {
@@ -250,6 +249,10 @@ export default function PvpLobby() {
               title="PVP Lobby"
               routeName="pvplobby"
               docId={user.uid === ownerUid ? docRef?.id : null}
+              onLeave={async () => {
+                const gameRef = doc(db, "games", gameId);
+                await handlePlayerLeave(gameRef, user);
+              }}
             />
           ),
         }}
@@ -290,7 +293,9 @@ export default function PvpLobby() {
             </Animated.Text>
             {!opponentName ? (
               <View style={{ flexBasis: "40%", alignItems: "center" }}>
-                <ThemedText>Waiting on player</ThemedText>
+                <ThemedText style={{ textAlign: "center" }}>
+                  Waiting on player
+                </ThemedText>
                 <ActivityIndicator />
               </View>
             ) : (
@@ -358,7 +363,7 @@ export default function PvpLobby() {
             <CommonButton
               title="Start Game"
               size={200}
-              handlePress={() => handleGameStart()}
+              handlePress={() => opponentName && handleGameStart()}
               style={{ opacity: opponentName ? 1 : 0.5 }}
             />
           ) : (

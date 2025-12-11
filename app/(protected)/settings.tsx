@@ -317,6 +317,7 @@ export default function Settings() {
               setSoundVolume(0.1, true);
             }
           }}
+          style={{ alignItems: "center", justifyContent: "center" }}
         >
           {captureAudioLevel === 0 && (
             <IconSymbol

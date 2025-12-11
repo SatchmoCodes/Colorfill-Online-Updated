@@ -11,14 +11,21 @@ import {
   View,
 } from "react-native";
 // import firebase from '@react-native-firebase/app'
-import { auth, db } from "@/firebaseConfig";
+import { auth } from "@/firebaseConfig";
 import { router } from "expo-router";
-import { signInAnonymously, signInWithEmailAndPassword } from "firebase/auth";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { sendPasswordResetEmail } from "firebase/auth";
+import Toast from "react-native-toast-message";
 
-const LoginScreen = ({}) => {
+const showToast = () => {
+  Toast.show({
+    type: "success",
+    text1: "Email Sent Successfully!",
+    text2: "Check your spam folder if you do not see a link.",
+  });
+};
+
+const ResetPassword = ({}) => {
   const [emailOrUsername, setEmailOrUsername] = useState("");
-  const [password, setPassword] = useState("");
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
@@ -29,39 +36,13 @@ const LoginScreen = ({}) => {
     return unsubscribe;
   }, []);
 
-  const handleSignIn = async (email: string, password: string) => {
+  const handleSendEmail = async () => {
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await sendPasswordResetEmail(auth, emailOrUsername);
+      showToast();
     } catch (error) {
       alert(error);
-    }
-  };
-
-  const handleLogin = async () => {
-    let email;
-    if (emailOrUsername.includes("@")) {
-      email = emailOrUsername;
-      handleSignIn(email, password);
-    } else {
-      const q = query(
-        collection(db, "users"),
-        where("username", "==", emailOrUsername)
-      );
-      const querySnapshot = await getDocs(q);
-      if (!querySnapshot.empty) {
-        email = querySnapshot.docs[0].data().email;
-        handleSignIn(email, password);
-      } else {
-        alert("no account registered with that username");
-      }
-    }
-  };
-
-  const handleGuestLogin = async () => {
-    try {
-      await signInAnonymously(auth);
-    } catch (error) {
-      console.log("error signing in anonymously", error);
+      console.error("Email could not be sent: ", error);
     }
   };
 
@@ -86,11 +67,8 @@ const LoginScreen = ({}) => {
           <LoginInputs
             // ... (props)
             emailOrUsername={emailOrUsername}
-            password={password}
             setEmailOrUsername={setEmailOrUsername}
-            setPassword={setPassword}
-            handleLogin={handleLogin}
-            handleGuestLogin={handleGuestLogin}
+            handleSendEmail={handleSendEmail}
           />
         </KeyboardAvoidingView>
       </View>
@@ -100,69 +78,43 @@ const LoginScreen = ({}) => {
 
 const LoginInputs = ({
   emailOrUsername,
-  password,
   setEmailOrUsername,
-  setPassword,
-  handleLogin,
-  handleGuestLogin,
+  handleSendEmail,
 }: {
   emailOrUsername: string;
-  password: string;
   setEmailOrUsername: React.Dispatch<React.SetStateAction<string>>;
-  setPassword: React.Dispatch<React.SetStateAction<string>>;
-  handleLogin: () => void;
-  handleGuestLogin: () => void;
+  handleSendEmail: () => void;
 }) => {
   return (
     <View style={styles.bottom}>
       <View style={styles.inputContainer}>
         <TextInput
-          placeholder="Email or Username"
+          placeholder="Email"
           placeholderTextColor="black"
           value={emailOrUsername}
           onChangeText={(text) => setEmailOrUsername(text)}
           style={styles.input}
         />
-        <TextInput
-          placeholder="Password"
-          placeholderTextColor="black"
-          value={password}
-          onChangeText={(text) => setPassword(text)}
-          style={styles.input}
-          secureTextEntry
-        />
-        <TouchableOpacity
-          style={{ marginTop: 10 }}
-          onPress={() => router.push("/resetpassword")}
-        >
-          <Text style={{ textAlign: "center", color: "blue", fontSize: 15 }}>
-            Forgot Password?
-          </Text>
-        </TouchableOpacity>
       </View>
-
       <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.button} onPress={() => handleLogin()}>
-          <Text style={styles.buttonText}>Login</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.button, styles.buttonOutline]}
-          onPress={() => router.push("/register")}
-        >
-          <Text style={styles.buttonOutlineText}>Register Account</Text>
-        </TouchableOpacity>
         <TouchableOpacity
           style={styles.button}
-          onPress={() => handleGuestLogin()}
+          onPress={() => handleSendEmail()}
         >
-          <Text style={styles.buttonText}>Sign in Anonymously</Text>
+          <Text style={styles.buttonText}>Send Email</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.button, styles.buttonOutline, { marginTop: 10 }]}
+          onPress={() => router.push("/login")}
+        >
+          <Text style={styles.buttonOutlineText}>Back to Login Page</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 };
 
-export default LoginScreen;
+export default ResetPassword;
 
 const styles = StyleSheet.create({
   backgroundImage: {
