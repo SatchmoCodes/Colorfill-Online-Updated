@@ -1,7 +1,6 @@
 import CustomHeader from "@/components/CustomHeader";
 import { ThemedBackground } from "@/components/ThemedBackground";
 //@ts-ignore
-import { BannerAdWrapper } from "@/components/ui/BannerAdWrapper";
 import { UserContext, useRequiredUser } from "@/hooks/useFirebaseUser";
 //@ts-ignore
 import { useMobileAds } from "@/hooks/useMobileAds";
@@ -137,7 +136,6 @@ export default function ProtectedLayout() {
           />
         </Stack>
       </ThemedBackground>
-      {Platform.OS !== "web" && <BannerAdWrapper />}
     </UserContext.Provider>
   );
 }
