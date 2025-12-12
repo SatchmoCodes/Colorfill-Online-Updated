@@ -1,5 +1,5 @@
 export const buildBOTDDateOptions = () => {
-  const firstGeneratedDate = new Date("2025-09-30");
+  const firstGeneratedDate = new Date("2025-12-12");
   const today = new Date();
 
   const botdDateOptions: Record<

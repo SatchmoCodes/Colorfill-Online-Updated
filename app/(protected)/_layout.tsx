@@ -1,9 +1,6 @@
 import CustomHeader from "@/components/CustomHeader";
 import { ThemedBackground } from "@/components/ThemedBackground";
-//@ts-ignore
 import { UserContext, useRequiredUser } from "@/hooks/useFirebaseUser";
-//@ts-ignore
-import { useMobileAds } from "@/hooks/useMobileAds";
 import { useNotificationResponse } from "@/hooks/useNotificationResponse";
 import { useUserPresence } from "@/hooks/useUserPresence";
 import * as Notifications from "expo-notifications";
@@ -21,7 +18,6 @@ Notifications.setNotificationHandler({
 
 export default function ProtectedLayout() {
   const { user, loading } = useRequiredUser();
-  useMobileAds();
 
   useUserPresence(user);
   useNotificationResponse(user);
