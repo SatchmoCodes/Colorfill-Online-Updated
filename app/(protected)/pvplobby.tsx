@@ -23,6 +23,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
+  BackHandler,
   Easing,
   StyleSheet,
   View,
@@ -115,29 +116,16 @@ export default function PvpLobby() {
     }, [gameId])
   );
 
-  // useEffect(() => {
-  //   if (user && gameId) {
-  //     const gameRef = doc(db, "games", gameId);
-  //     const gamePresenceRef = ref(rtdb, `/gamePresence/${gameId}/${user.uid}`);
+  useFocusEffect(
+    useCallback(() => {
+      const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+        // block navigation
+        return true; // <- prevents default behavior
+      });
 
-  //     const beforeRemove = navigation.addListener("beforeRemove", async (e) => {
-  //       const targetRoute = (e.data?.action as any)?.payload?.name;
-
-  //       // Prevent leave handling if navigating into the actual game
-  //       if (["settings", "pvpgame"].includes(targetRoute)) {
-  //         return;
-  //       }
-
-  //       const leavingUser = user;
-  //       await handlePlayerLeave(gameRef, leavingUser);
-  //       remove(gamePresenceRef);
-  //     });
-
-  //     return () => {
-  //       beforeRemove();
-  //     };
-  //   }
-  // }, [user, gameId, navigation]);
+      return () => sub.remove();
+    }, [])
+  );
 
   useEffect(() => {
     ownerRef.current = {
@@ -244,6 +232,7 @@ export default function PvpLobby() {
         options={{
           contentStyle: { backgroundColor: "transparent" },
           animation: "fade",
+          gestureEnabled: false,
           header: () => (
             <CustomHeader
               title="PVP Lobby"
