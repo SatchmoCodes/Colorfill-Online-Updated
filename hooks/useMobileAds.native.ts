@@ -1,7 +1,7 @@
-import { useEffect } from "react";
+// import { useEffect } from "react";
 
-export function useMobileAds() {
-  useEffect(() => {
-    const ads = require("react-native-google-mobile-ads");
-  }, []);
-}
+// export function useMobileAds() {
+//   useEffect(() => {
+//     const ads = require("react-native-google-mobile-ads");
+//   }, []);
+// }
