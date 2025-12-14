@@ -7,7 +7,7 @@
     "icon": "./assets/images/ColorFill-iOS.png",
     "scheme": "colorfillonlineupdated",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true,
       "googleServicesFile": "./GoogleService-Info.plist",
@@ -36,7 +36,7 @@
         "foregroundImage": "./assets/images/ColorFill-Android.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true,
+      "edgeToEdgeEnabled": false,
       "versionCode": 2
     },
     "web": {
