@@ -20,12 +20,19 @@ import { getColorPaletteOptions } from "@/helper/getColorPaletteOptions";
 import { getWindowHeight } from "@/helper/getWindowHeight";
 import { updateCriteriaMap } from "@/helper/updateCriteriaMap";
 import Slider from "@react-native-community/slider";
-import React, { useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
   Animated,
   Dimensions,
   FlatList,
+  FlatListProps,
   Modal,
   NativeScrollEvent,
   NativeSyntheticEvent,
@@ -52,6 +59,14 @@ export type PaletteObj = {
   key?: string;
 };
 
+type PaletteCardProps = {
+  palette: PaletteObj;
+  index: number;
+  isSelected: boolean;
+  isMosaic: boolean;
+  onSelect: (index: number, locked: boolean) => void;
+};
+
 interface ColorPaletteOptionsContainerProps {
   colorPaletteOptions: PaletteObj[][];
   initialPage: number;
@@ -75,6 +90,11 @@ const PAGE_PADDING_H = GAP; // left/right padding per page
 const cardWidth = Math.floor(
   (screenWidth - PAGE_PADDING_H * 2 - GAP * (COLS - 1)) / COLS
 );
+
+const AnimatedFlatList =
+  Animated.createAnimatedComponent<
+    React.ComponentType<FlatListProps<PaletteObj[]>>
+  >(FlatList);
 
 function chunkArray<T>(arr: T[], size: number): T[][] {
   const out: T[][] = [];
@@ -482,316 +502,284 @@ const ColorPaletteOptionsWebView = ({
   );
 };
 
-const ColorPaletteOptionsContainer = (
-  props: ColorPaletteOptionsContainerProps
-) => {
-  const {
-    colorPaletteOptions,
-    initialPage,
-    selectedIndex,
-    isMosaic,
-    handleChangeColorPalette,
-  } = props;
-
+const ColorPaletteOptionsContainer = ({
+  colorPaletteOptions,
+  initialPage,
+  selectedIndex,
+  isMosaic,
+  handleChangeColorPalette,
+}: ColorPaletteOptionsContainerProps) => {
   const flatListRef = useRef<FlatList>(null);
   const scrollX = useRef(new Animated.Value(0)).current;
-
-  const totalPages = colorPaletteOptions.length;
   const [currentPage, setCurrentPage] = useState(0);
 
-  const handleMomentumScrollEnd = (
-    event: NativeSyntheticEvent<NativeScrollEvent>
-  ) => {
-    const offsetX = event.nativeEvent.contentOffset.x;
-    const page = Math.round(offsetX / SCREEN_WIDTH);
-    setCurrentPage(page);
-  };
+  // Native-driven scroll
+  const onScroll = useMemo(
+    () =>
+      Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], {
+        useNativeDriver: true,
+      }),
+    []
+  );
+
+  const handleMomentumScrollEnd = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const offsetX = event.nativeEvent.contentOffset.x;
+      const page = Math.round(offsetX / SCREEN_WIDTH);
+      // Only update if changed
+      setCurrentPage((prev) => (prev === page ? prev : page));
+    },
+    []
+  );
 
   useEffect(() => {
-    if (flatListRef.current) {
-      flatListRef.current.scrollToIndex({
-        index: initialPage,
-        animated: false, // no animation so it feels like initial load
-      });
-    }
+    flatListRef.current?.scrollToIndex({
+      index: initialPage,
+      animated: false,
+    });
   }, [initialPage]);
+
+  const renderItem = useCallback(
+    ({
+      item: pagePalettes,
+      index: pageIndex,
+    }: {
+      item: PaletteObj[];
+      index: number;
+    }) => (
+      <PalettePage
+        pagePalettes={pagePalettes}
+        pageIndex={pageIndex}
+        selectedIndex={selectedIndex}
+        isMosaic={isMosaic}
+        onSelect={handleChangeColorPalette}
+      />
+    ),
+    [selectedIndex, isMosaic, handleChangeColorPalette]
+  );
 
   return (
     <>
-      {/* Animated pagination dots */}
-      <View style={styles.paginationContainer}>
-        {colorPaletteOptions.map((_, i) => {
-          const inputRange = [
-            (i - 1) * SCREEN_WIDTH,
-            i * SCREEN_WIDTH,
-            (i + 1) * SCREEN_WIDTH,
-          ];
+      <PaginationDots count={colorPaletteOptions.length} scrollX={scrollX} />
 
-          const dotScale = scrollX.interpolate({
-            inputRange,
-            outputRange: [0.7, 1.4, 0.7],
-            extrapolate: "clamp",
-          });
-
-          const dotOpacity = scrollX.interpolate({
-            inputRange,
-            outputRange: [0.3, 1, 0.3],
-            extrapolate: "clamp",
-          });
-
-          return (
-            <Animated.View
-              key={i}
-              style={[
-                styles.dot,
-                {
-                  transform: [{ scale: dotScale }],
-                  opacity: dotOpacity,
-                },
-              ]}
-            />
-          );
-        })}
-      </View>
-      <FlatList
-        data={colorPaletteOptions}
+      <AnimatedFlatList
         ref={flatListRef}
+        data={colorPaletteOptions}
         horizontal
         pagingEnabled
-        showsHorizontalScrollIndicator={false}
+        snapToInterval={SCREEN_WIDTH}
         decelerationRate="fast"
-        snapToInterval={SCREEN_WIDTH} // full screen per page
-        snapToAlignment="start"
+        showsHorizontalScrollIndicator={false}
+        removeClippedSubviews
+        windowSize={3}
+        maxToRenderPerBatch={2}
+        updateCellsBatchingPeriod={50}
         getItemLayout={(_, index) => ({
           length: SCREEN_WIDTH,
           offset: SCREEN_WIDTH * index,
           index,
         })}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-          { useNativeDriver: false }
-        )}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         onMomentumScrollEnd={handleMomentumScrollEnd}
         initialScrollIndex={initialPage}
         style={{ maxHeight: 200 }}
-        renderItem={({ item: pagePalettes, index: pageIndex }) => (
-          <View style={[{ width: SCREEN_WIDTH }]}>
-            {/* First row */}
-            <View style={styles.row}>
-              {pagePalettes
-                .slice(0, 3)
-                .map((palette: PaletteObj, i: number) => {
-                  const paletteIndex = pageIndex * PAGE_SIZE + i;
-                  const isSelected = paletteIndex === selectedIndex;
-                  return (
-                    <TouchableOpacity
-                      key={paletteIndex}
-                      style={[
-                        styles.paletteCard,
-                        { width: cardWidth },
-                        isSelected && styles.selectedCard,
-                      ]}
-                      onPress={() =>
-                        handleChangeColorPalette(
-                          paletteIndex,
-                          palette.locked ?? false
-                        )
-                      }
-                      activeOpacity={0.7}
-                    >
-                      {palette.locked && (
-                        <ThemedText
-                          style={{
-                            position: "absolute",
-                            zIndex: 2,
-                            top: 20,
-                            fontSize: 20,
-                            fontWeight: "bold",
-                          }}
-                        >
-                          ?
-                        </ThemedText>
-                      )}
-                      <View style={styles.paletteRow}>
-                        <View
-                          style={[
-                            styles.paletteSquare,
-                            {
-                              backgroundColor: palette.locked
-                                ? "black"
-                                : palette[3],
-                              borderColor: "black",
-                              borderWidth: isMosaic ? 1 : 0,
-                            },
-                          ]}
-                        />
-                        <View
-                          style={[
-                            styles.paletteSquare,
-                            {
-                              backgroundColor: palette.locked
-                                ? "black"
-                                : palette[4],
-                              borderColor: "black",
-                              borderWidth: isMosaic ? 1 : 0,
-                            },
-                          ]}
-                        />
-                      </View>
-                      <View style={styles.paletteRow}>
-                        <View
-                          style={[
-                            styles.paletteSquare,
-                            {
-                              backgroundColor: palette.locked
-                                ? "black"
-                                : palette[0],
-                              borderColor: "black",
-                              borderWidth: isMosaic ? 1 : 0,
-                            },
-                          ]}
-                        />
-                        <View
-                          style={[
-                            styles.paletteSquare,
-                            {
-                              backgroundColor: palette.locked
-                                ? "black"
-                                : palette[1],
-                              borderColor: "black",
-                              borderWidth: isMosaic ? 1 : 0,
-                            },
-                          ]}
-                        />
-                        <View
-                          style={[
-                            styles.paletteSquare,
-                            {
-                              backgroundColor: palette.locked
-                                ? "black"
-                                : palette[2],
-                              borderColor: "black",
-                              borderWidth: isMosaic ? 1 : 0,
-                            },
-                          ]}
-                        />
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
-            </View>
-
-            {/* Second row */}
-            <View style={styles.row}>
-              {pagePalettes
-                .slice(3, 6)
-                .map((palette: PaletteObj, i: number) => {
-                  const paletteIndex = pageIndex * PAGE_SIZE + (i + 3); // <-- FIXED here
-                  const isSelected = paletteIndex === selectedIndex;
-                  return (
-                    <TouchableOpacity
-                      key={paletteIndex}
-                      style={[
-                        styles.paletteCard,
-                        { width: cardWidth },
-                        isSelected && styles.selectedCard,
-                      ]}
-                      onPress={() =>
-                        handleChangeColorPalette(
-                          paletteIndex,
-                          palette.locked ?? false
-                        )
-                      }
-                      activeOpacity={0.7}
-                    >
-                      {palette.locked && (
-                        <ThemedText
-                          style={{
-                            position: "absolute",
-                            zIndex: 2,
-                            top: 20,
-                            fontSize: 20,
-                            fontWeight: "bold",
-                          }}
-                        >
-                          ?
-                        </ThemedText>
-                      )}
-                      <View style={styles.paletteRow}>
-                        <View
-                          style={[
-                            styles.paletteSquare,
-                            {
-                              backgroundColor: palette.locked
-                                ? "black"
-                                : palette[3],
-                              borderColor: "black",
-                              borderWidth: isMosaic ? 1 : 0,
-                            },
-                          ]}
-                        />
-                        <View
-                          style={[
-                            styles.paletteSquare,
-                            {
-                              backgroundColor: palette.locked
-                                ? "black"
-                                : palette[4],
-                              borderColor: "black",
-                              borderWidth: isMosaic ? 1 : 0,
-                            },
-                          ]}
-                        />
-                      </View>
-                      <View style={styles.paletteRow}>
-                        <View
-                          style={[
-                            styles.paletteSquare,
-                            {
-                              backgroundColor: palette.locked
-                                ? "black"
-                                : palette[0],
-                              borderColor: "black",
-                              borderWidth: isMosaic ? 1 : 0,
-                            },
-                          ]}
-                        />
-                        <View
-                          style={[
-                            styles.paletteSquare,
-                            {
-                              backgroundColor: palette.locked
-                                ? "black"
-                                : palette[1],
-                              borderColor: "black",
-                              borderWidth: isMosaic ? 1 : 0,
-                            },
-                          ]}
-                        />
-                        <View
-                          style={[
-                            styles.paletteSquare,
-                            {
-                              backgroundColor: palette.locked
-                                ? "black"
-                                : palette[2],
-                              borderColor: "black",
-                              borderWidth: isMosaic ? 1 : 0,
-                            },
-                          ]}
-                        />
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
-            </View>
-          </View>
-        )}
+        renderItem={renderItem}
         keyExtractor={(_, i) => i.toString()}
       />
     </>
   );
 };
+
+const PaginationDots = React.memo(
+  ({ count, scrollX }: { count: number; scrollX: Animated.Value }) => (
+    <View style={styles.paginationContainer}>
+      {Array.from({ length: count }).map((_, i) => {
+        const inputRange = [
+          (i - 1) * SCREEN_WIDTH,
+          i * SCREEN_WIDTH,
+          (i + 1) * SCREEN_WIDTH,
+        ];
+
+        return (
+          <Animated.View
+            key={i}
+            style={[
+              styles.dot,
+              {
+                transform: [
+                  {
+                    scale: scrollX.interpolate({
+                      inputRange,
+                      outputRange: [0.7, 1.4, 0.7],
+                      extrapolate: "clamp",
+                    }),
+                  },
+                ],
+                opacity: scrollX.interpolate({
+                  inputRange,
+                  outputRange: [0.3, 1, 0.3],
+                  extrapolate: "clamp",
+                }),
+              },
+            ]}
+          />
+        );
+      })}
+    </View>
+  )
+);
+
+const PalettePage = React.memo(
+  ({
+    pagePalettes,
+    pageIndex,
+    selectedIndex,
+    isMosaic,
+    onSelect,
+  }: {
+    pagePalettes: PaletteObj[];
+    pageIndex: number;
+    selectedIndex: number;
+    isMosaic: boolean;
+    onSelect: (arg1: number, arg2: boolean) => void;
+  }) => (
+    <View style={{ width: SCREEN_WIDTH }}>
+      <PaletteRow
+        palettes={pagePalettes.slice(0, 3)}
+        offset={pageIndex * PAGE_SIZE}
+        selectedIndex={selectedIndex}
+        isMosaic={isMosaic}
+        onSelect={onSelect}
+      />
+      <PaletteRow
+        palettes={pagePalettes.slice(3, 6)}
+        offset={pageIndex * PAGE_SIZE + 3}
+        selectedIndex={selectedIndex}
+        isMosaic={isMosaic}
+        onSelect={onSelect}
+      />
+    </View>
+  )
+);
+
+const PaletteRow = React.memo(
+  ({
+    palettes,
+    offset,
+    selectedIndex,
+    isMosaic,
+    onSelect,
+  }: {
+    palettes: PaletteObj[];
+    offset: number;
+    selectedIndex: number;
+    isMosaic: boolean;
+    onSelect: (arg1: number, arg2: boolean) => void;
+  }) => (
+    <View style={styles.row}>
+      {palettes.map((palette, i) => {
+        const index = offset + i;
+        return (
+          <PaletteCard
+            key={index}
+            palette={palette}
+            index={index}
+            isSelected={index === selectedIndex}
+            isMosaic={isMosaic}
+            onSelect={onSelect}
+          />
+        );
+      })}
+    </View>
+  )
+);
+
+export const PaletteCard = React.memo(
+  ({ palette, index, isSelected, isMosaic, onSelect }: PaletteCardProps) => {
+    const borderWidth = isMosaic ? 1 : 0;
+    const lockedColor = palette.locked ? "black" : undefined;
+
+    return (
+      <TouchableOpacity
+        style={[
+          styles.paletteCard,
+          { width: cardWidth },
+          isSelected && styles.selectedCard,
+        ]}
+        activeOpacity={0.7}
+        onPress={() => onSelect(index, palette.locked ?? false)}
+      >
+        {palette.locked && (
+          <ThemedText
+            style={{
+              position: "absolute",
+              zIndex: 2,
+              top: 20,
+              fontSize: 20,
+              fontWeight: "bold",
+            }}
+          >
+            ?
+          </ThemedText>
+        )}
+
+        {/* Top row */}
+        <View style={styles.paletteRow}>
+          <View
+            style={[
+              styles.paletteSquare,
+              {
+                backgroundColor: lockedColor ?? palette[3],
+                borderWidth,
+              },
+            ]}
+          />
+          <View
+            style={[
+              styles.paletteSquare,
+              {
+                backgroundColor: lockedColor ?? palette[4],
+                borderWidth,
+              },
+            ]}
+          />
+        </View>
+
+        {/* Bottom row */}
+        <View style={styles.paletteRow}>
+          <View
+            style={[
+              styles.paletteSquare,
+              {
+                backgroundColor: lockedColor ?? palette[0],
+                borderWidth,
+              },
+            ]}
+          />
+          <View
+            style={[
+              styles.paletteSquare,
+              {
+                backgroundColor: lockedColor ?? palette[1],
+                borderWidth,
+              },
+            ]}
+          />
+          <View
+            style={[
+              styles.paletteSquare,
+              {
+                backgroundColor: lockedColor ?? palette[2],
+                borderWidth,
+              },
+            ]}
+          />
+        </View>
+      </TouchableOpacity>
+    );
+  }
+);
 
 const ColorPaletteProgressModal = (props: ColorPaletteModalProps) => {
   const { progressModalPalette, setProgressModalPalette } = props;
