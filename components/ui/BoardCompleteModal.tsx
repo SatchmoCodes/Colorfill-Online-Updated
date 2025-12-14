@@ -8,7 +8,7 @@ import CommonButton from "./CommonButton";
 interface ModalProps {
   setShowBoardCompleteModal: React.Dispatch<React.SetStateAction<boolean>>;
   newBoardProcess: (size: BoardSize) => void;
-  resetBoardProcess: () => void;
+  resetBoardProcess: (isRetrying: boolean) => void;
   boardSize: BoardSize;
   score: number;
   currentBestScore: number;
@@ -67,7 +67,7 @@ export default function BoardCompleteModal(props: ModalProps) {
               title="Retry Board"
               size={150}
               handlePress={() => {
-                resetBoardProcess();
+                resetBoardProcess(true);
                 setShowBoardCompleteModal(false);
               }}
             />

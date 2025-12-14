@@ -81,7 +81,7 @@ interface SquareViewProps {
 
 interface GameEffectButtonProps {
   newBoardProcess: (x: BoardSize) => void;
-  resetBoardProcess: () => void;
+  resetBoardProcess: (isRetrying?: boolean) => void;
   setShowBoardSizeModal: React.Dispatch<React.SetStateAction<boolean>>;
   boardSize: BoardSize;
 }
@@ -310,7 +310,7 @@ export default function Freeplay() {
     ];
   }
 
-  const resetBoardProcess = () => {
+  const resetBoardProcess = (isRetrying: boolean = false) => {
     resetPlayedDepths();
     const resetBoard = boardState.map((row) =>
       row.map((square) => ({
@@ -330,13 +330,16 @@ export default function Freeplay() {
       resetBoard[0][0].color,
       new Set()
     );
-    setIsReplayingBoard(true);
     resetSquareCount(resetBoard, capturedCount, setSquaresRemaining);
     setBoardState(resetBoard);
     setActiveColor(resetBoard[0][0].color);
     setBoardVersion((prev) => prev + 1);
     setUnlockedColorPalettes([]);
     setBoardComplete(false);
+    if (isRetrying) {
+      setCurrentBestScore(score);
+      setIsReplayingBoard(true);
+    }
     setScore(0);
   };
 
@@ -390,7 +393,6 @@ export default function Freeplay() {
     if (boardComplete) return;
     setBoardComplete(true);
     setLoadingSetScore(true);
-    setHasCreatedScore(true);
     setShowBoardCompleteModal(true);
     const boardData = boardState.flatMap((row) =>
       row.map((x) => x.defaultColor)
@@ -414,8 +416,8 @@ export default function Freeplay() {
       setLoadingSetScore(false);
       return;
     }
-    let currentBoardBestScore = null;
-    if (isReplayingBoard || boardId === currentBoardId) {
+    let currentBoardBestScore = updatedScore;
+    if ((isReplayingBoard && hasCreatedScore) || boardId === currentBoardId) {
       const currentBestScoreDocs = await getDocs(
         query(
           collection(db, "scores"),
@@ -426,8 +428,6 @@ export default function Freeplay() {
       );
       if (!currentBestScoreDocs.empty) {
         currentBoardBestScore = currentBestScoreDocs.docs[0].data().score;
-        console.log("this should be running", currentBoardBestScore);
-        setCurrentBestScore(currentBoardBestScore);
         if (updatedScore < currentBoardBestScore) {
           await Promise.all(
             currentBestScoreDocs.docs.map((doc) => {
@@ -438,9 +438,6 @@ export default function Freeplay() {
           );
         }
       }
-    } else {
-      currentBoardBestScore = updatedScore;
-      setCurrentBestScore(currentBoardBestScore);
     }
     console.log(
       "is replaying",
@@ -448,11 +445,6 @@ export default function Freeplay() {
       determineHighScore(updatedScore, currentBoardBestScore),
       currentBoardBestScore,
       updatedScore
-    );
-    setCurrentBestScore(
-      updatedScore < currentBoardBestScore
-        ? updatedScore
-        : currentBoardBestScore
     );
     if (user.displayName !== null) {
       const [userDoc] = await Promise.all([
@@ -517,6 +509,7 @@ export default function Freeplay() {
       });
     }
     setLoadingSetScore(false);
+    setHasCreatedScore(true);
   }
 
   return (
