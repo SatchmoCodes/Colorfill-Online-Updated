@@ -20,13 +20,8 @@ import { getColorPaletteOptions } from "@/helper/getColorPaletteOptions";
 import { getWindowHeight } from "@/helper/getWindowHeight";
 import { updateCriteriaMap } from "@/helper/updateCriteriaMap";
 import Slider from "@react-native-community/slider";
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { FlashList } from "@shopify/flash-list";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
@@ -514,13 +509,9 @@ const ColorPaletteOptionsContainer = ({
   const [currentPage, setCurrentPage] = useState(0);
 
   // Native-driven scroll
-  const onScroll = useMemo(
-    () =>
-      Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], {
-        useNativeDriver: true,
-      }),
-    []
-  );
+  const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    scrollX.setValue(e.nativeEvent.contentOffset.x);
+  }, []);
 
   const handleMomentumScrollEnd = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -562,11 +553,14 @@ const ColorPaletteOptionsContainer = ({
     <>
       <PaginationDots count={colorPaletteOptions.length} scrollX={scrollX} />
 
-      <AnimatedFlatList
+      <FlashList
+        // @ts-expect-error FlashList typing mismatch
         ref={flatListRef}
         data={colorPaletteOptions}
         horizontal
         pagingEnabled
+        estimatedItemSize={SCREEN_WIDTH}
+        removeClippedSubViews
         snapToInterval={SCREEN_WIDTH}
         decelerationRate="fast"
         showsHorizontalScrollIndicator={false}
@@ -574,7 +568,7 @@ const ColorPaletteOptionsContainer = ({
         windowSize={3}
         maxToRenderPerBatch={2}
         updateCellsBatchingPeriod={50}
-        getItemLayout={(_, index) => ({
+        getItemLayout={(_: any, index: number) => ({
           length: SCREEN_WIDTH,
           offset: SCREEN_WIDTH * index,
           index,

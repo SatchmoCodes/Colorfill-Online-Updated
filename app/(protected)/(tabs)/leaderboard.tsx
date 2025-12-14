@@ -11,6 +11,7 @@ import {
   saveLeaderboardRefreshTime,
 } from "@/helper/asyncStorageHelper";
 import { buildBOTDDateOptions, monthMap } from "@/helper/buildBOTDDateOptions";
+import { FlashList } from "@shopify/flash-list";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import {
@@ -31,7 +32,6 @@ import {
   ActivityIndicator,
   Animated,
   Easing,
-  FlatList,
   Platform,
   StyleSheet,
   TouchableOpacity,
@@ -572,9 +572,10 @@ const Table = ({
 
   return (
     <View style={{ flex: 1 }}>
-      <FlatList
+      <FlashList
         data={tableData}
         keyExtractor={(item) => item.id?.toString() ?? Math.random().toString()}
+        // @ts-expect-error FlashList typing mismatch
         initialNumToRender={20}
         maxToRenderPerBatch={20}
         windowSize={10}

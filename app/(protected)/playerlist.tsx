@@ -5,12 +5,12 @@ import { TimerPie } from "@/components/ui/TimerPie";
 import { db } from "@/firebaseConfig";
 import { useUser } from "@/hooks/useFirebaseUser";
 import { PlayerList, useOnlinePlayerList } from "@/hooks/useOnlinePlayerList";
+import { FlashList } from "@shopify/flash-list";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { addDoc, collection } from "firebase/firestore";
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
-  FlatList,
   Platform,
   Pressable,
   ScrollView,
@@ -106,26 +106,31 @@ export default function Playerlist() {
         </ThemedView>
       </ThemedView>
       {Platform.OS !== "web" ? (
-        <FlatList
+        <FlashList
           data={filteredPlayerList}
-          style={{ width: "100%", overflow: "visible", flex: 1 }}
-          contentContainerStyle={{ overflow: "visible" }}
-          renderItem={({ item: player }) => {
-            const currentInviteMapItem = inviteMap[player.id];
-            return (
-              <PlayerCard
-                key={player.id}
-                player={player}
-                isOpen={openPlayerId === player.id}
-                docId={docId}
-                inviteItem={currentInviteMapItem}
-                setInviteMap={setInviteMap}
-                onToggle={() =>
-                  setOpenPlayerId(openPlayerId === player.id ? null : player.id)
-                }
-              />
-            );
-          }}
+          renderItem={useCallback(
+            ({ item }: { item: PlayerList }) => {
+              const inviteItem = inviteMap[item.id];
+
+              return (
+                <PlayerCard
+                  player={item}
+                  isOpen={openPlayerId === item.id}
+                  docId={docId}
+                  inviteItem={inviteItem}
+                  setInviteMap={setInviteMap}
+                  onToggle={() =>
+                    setOpenPlayerId(openPlayerId === item.id ? null : item.id)
+                  }
+                />
+              );
+            },
+            [inviteMap, openPlayerId, docId]
+          )}
+          keyExtractor={(item) => item.id}
+          // @ts-expect-error FlashList typing mismatch
+          estimatedItemSize={140}
+          removeClippedSubviews
         />
       ) : (
         <ScrollView style={{ width: "100%", flex: 1 }}>
@@ -151,149 +156,146 @@ export default function Playerlist() {
   );
 }
 
-const PlayerCard = ({
-  player,
-  isOpen,
-  docId,
-  inviteItem,
-  setInviteMap,
-  onToggle,
-}: {
-  player: PlayerList;
-  isOpen: boolean;
-  docId: string | null;
-  inviteItem: InviteObj;
-  setInviteMap: React.Dispatch<React.SetStateAction<InviteMap>>;
-  onToggle: () => void;
-}) => {
-  const [pressed, setPressed] = useState(false);
-  const user = useUser();
+const PlayerCard = React.memo(
+  ({
+    player,
+    isOpen,
+    docId,
+    inviteItem,
+    setInviteMap,
+    onToggle,
+  }: {
+    player: PlayerList;
+    isOpen: boolean;
+    docId: string | null;
+    inviteItem: InviteObj;
+    setInviteMap: React.Dispatch<React.SetStateAction<InviteMap>>;
+    onToggle: () => void;
+  }) => {
+    const user = useUser();
 
-  const handleInvite = async () => {
-    if (docId) {
-      await addDoc(collection(db, "invites"), {
-        recipientUid: player.id,
-        senderName: user.displayName,
-        gameId: docId,
+    const handleInvite = async () => {
+      if (docId) {
+        await addDoc(collection(db, "invites"), {
+          recipientUid: player.id,
+          senderName: user.displayName,
+          gameId: docId,
+        });
+        setInviteMap((prev) => ({
+          ...prev,
+          [player.id]: { startTime: Date.now(), endTime: Date.now() + 3000 },
+        }));
+        showToast();
+      } else {
+        alert("error creating invitation");
+      }
+    };
+
+    const showToast = () => {
+      Toast.show({
+        type: "success",
+        text1: "Invite Sent!",
       });
-      setInviteMap((prev) => ({
-        ...prev,
-        [player.id]: { startTime: Date.now(), endTime: Date.now() + 3000 },
-      }));
-      showToast();
-    } else {
-      alert("error creating invitation");
-    }
-  };
+    };
 
-  const showToast = () => {
-    Toast.show({
-      type: "success",
-      text1: "Invite Sent!",
-    });
-  };
-
-  return (
-    <ThemedView style={[{ paddingBottom: 20 }, isOpen && { zIndex: 100 }]}>
-      <ThemedView
-        style={{
-          flexDirection: "row",
-          justifyContent: "center",
-          alignItems: "center",
-          gap: 5,
-        }}
-      >
-        <View
-          style={[
-            styles.onlineIndicator,
-            {
-              backgroundColor: player.online ? "green" : "red",
-            },
-          ]}
-        ></View>
-        <Pressable
-          onPressIn={() => setPressed(true)}
-          onPressOut={() => setPressed(false)}
+    return (
+      <ThemedView style={[{ paddingBottom: 20 }, isOpen && { zIndex: 100 }]}>
+        <ThemedView
           style={{
-            transform: [{ scale: pressed ? 0.97 : 1 }],
-            position: "relative",
-            zIndex: isOpen ? 100 : 1,
-            ...(Platform.OS === "web" && { minWidth: 350 }),
+            flexDirection: "row",
+            justifyContent: "center",
+            alignItems: "center",
+            gap: 5,
           }}
-          onPress={onToggle}
         >
-          {isOpen && (
-            <ThemedView
-              style={{
-                width: "95%",
-                height: "100%",
-                zIndex: 200,
-                position: "absolute",
-                backgroundColor: "rgba(0, 0, 0, 0.75)",
-                justifyContent: "space-evenly",
-                alignItems: "center",
-                borderRadius: 20,
-              }}
-            >
-              {user.displayName !== player.displayName && (
-                <View style={{ flexDirection: "row" }}>
-                  <TouchableOpacity
-                    style={{ opacity: inviteItem ? 0.25 : 1 }}
-                    onPress={() => docId && !inviteItem && handleInvite()}
-                  >
-                    <ThemedText style={{ color: docId ? "white" : "gray" }}>
-                      Invite to Game
-                    </ThemedText>
-                  </TouchableOpacity>
-                  {inviteItem && (
-                    <TimerPie
-                      duration={inviteItem.endTime - Date.now()}
-                      startTime={inviteItem.startTime}
-                      onComplete={() => {
-                        setInviteMap((prev) =>
-                          Object.fromEntries(
-                            Object.entries(prev).filter(
-                              ([key, value]) => key !== player.id
-                            )
-                          )
-                        );
-                      }}
-                      style={{ position: "absolute", right: -30 }}
-                    />
-                  )}
-                </View>
-              )}
-              <TouchableOpacity
-                onPress={() =>
-                  router.push({
-                    pathname: "/(protected)/viewprofile",
-                    params: { player: JSON.stringify(player) },
-                  })
-                }
-              >
-                <ThemedText>View Profile</ThemedText>
-              </TouchableOpacity>
-            </ThemedView>
-          )}
-          <LinearGradient
-            colors={[player.profileBanner, "#080808ff"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.card}
+          <View
+            style={[
+              styles.onlineIndicator,
+              {
+                backgroundColor: player.online ? "green" : "red",
+              },
+            ]}
+          ></View>
+          <Pressable
+            onPress={onToggle}
+            style={({ pressed }) => [
+              styles.pressable,
+              pressed && styles.pressed,
+            ]}
           >
-            <Avatar
-              profileBackground={player.profileBackground}
-              profileLetter={player.profileLetter}
-              username={player.displayName}
-              size="large"
-            />
-            <ThemedText type="subtitle">{player.displayName}</ThemedText>
-          </LinearGradient>
-        </Pressable>
+            {isOpen && (
+              <ThemedView
+                style={{
+                  width: "95%",
+                  height: "100%",
+                  zIndex: 200,
+                  position: "absolute",
+                  backgroundColor: "rgba(0, 0, 0, 0.75)",
+                  justifyContent: "space-evenly",
+                  alignItems: "center",
+                  borderRadius: 20,
+                }}
+              >
+                {user.displayName !== player.displayName && (
+                  <View style={{ flexDirection: "row" }}>
+                    <TouchableOpacity
+                      style={{ opacity: inviteItem ? 0.25 : 1 }}
+                      onPress={() => docId && !inviteItem && handleInvite()}
+                    >
+                      <ThemedText style={{ color: docId ? "white" : "gray" }}>
+                        Invite to Game
+                      </ThemedText>
+                    </TouchableOpacity>
+                    {inviteItem && (
+                      <TimerPie
+                        duration={inviteItem.endTime - Date.now()}
+                        startTime={inviteItem.startTime}
+                        onComplete={() => {
+                          setInviteMap((prev) =>
+                            Object.fromEntries(
+                              Object.entries(prev).filter(
+                                ([key, value]) => key !== player.id
+                              )
+                            )
+                          );
+                        }}
+                        style={{ position: "absolute", right: -30 }}
+                      />
+                    )}
+                  </View>
+                )}
+                <TouchableOpacity
+                  onPress={() =>
+                    router.push({
+                      pathname: "/(protected)/viewprofile",
+                      params: { player: JSON.stringify(player) },
+                    })
+                  }
+                >
+                  <ThemedText>View Profile</ThemedText>
+                </TouchableOpacity>
+              </ThemedView>
+            )}
+            <LinearGradient
+              colors={[player.profileBanner, "#080808ff"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.card}
+            >
+              <Avatar
+                profileBackground={player.profileBackground}
+                profileLetter={player.profileLetter}
+                username={player.displayName}
+                size="large"
+              />
+              <ThemedText type="subtitle">{player.displayName}</ThemedText>
+            </LinearGradient>
+          </Pressable>
+        </ThemedView>
       </ThemedView>
-    </ThemedView>
-  );
-};
+    );
+  }
+);
 
 const styles = StyleSheet.create({
   list: {
@@ -310,7 +312,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "black",
     borderRadius: 20,
-    overflow: "visible",
+    // overflow: "visible",
     position: "relative",
     zIndex: 1,
   },
@@ -367,5 +369,14 @@ const styles = StyleSheet.create({
     maxWidth: 600,
     minWidth: 300,
     width: "50%",
+  },
+  pressable: {
+    position: "relative",
+    zIndex: 1,
+    minWidth: 300,
+  },
+  pressed: {
+    transform: [{ scale: 0.97 }],
+    zIndex: 100,
   },
 });
