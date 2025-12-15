@@ -5,7 +5,7 @@ import { TimerPie } from "@/components/ui/TimerPie";
 import { db } from "@/firebaseConfig";
 import { useUser } from "@/hooks/useFirebaseUser";
 import { PlayerList, useOnlinePlayerList } from "@/hooks/useOnlinePlayerList";
-import { FlashList } from "@shopify/flash-list";
+import { FlashList, ListRenderItem } from "@shopify/flash-list";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { addDoc, collection } from "firebase/firestore";
@@ -70,6 +70,27 @@ export default function Playerlist() {
         })
     : [];
 
+  const renderItem: ListRenderItem<PlayerList> = useCallback(
+    ({ item }) => {
+      const inviteItem = inviteMap[item.id];
+      const isOpen = openPlayerId === item.id;
+      console.log("do this be rendering");
+      return (
+        <PlayerCard
+          player={item}
+          isOpen={isOpen}
+          docId={docId}
+          inviteItem={inviteItem}
+          setInviteMap={setInviteMap}
+          onToggle={() => {
+            setOpenPlayerId(isOpen ? null : item.id);
+          }}
+        />
+      );
+    },
+    [inviteMap, openPlayerId, docId]
+  );
+
   return (
     <ThemedView style={styles.list}>
       <ThemedView style={{ width: "100%", zIndex: 200, paddingTop: 20 }}>
@@ -108,29 +129,12 @@ export default function Playerlist() {
       {Platform.OS !== "web" ? (
         <FlashList
           data={filteredPlayerList}
-          renderItem={useCallback(
-            ({ item }: { item: PlayerList }) => {
-              const inviteItem = inviteMap[item.id];
-
-              return (
-                <PlayerCard
-                  player={item}
-                  isOpen={openPlayerId === item.id}
-                  docId={docId}
-                  inviteItem={inviteItem}
-                  setInviteMap={setInviteMap}
-                  onToggle={() =>
-                    setOpenPlayerId(openPlayerId === item.id ? null : item.id)
-                  }
-                />
-              );
-            },
-            [inviteMap, openPlayerId, docId]
-          )}
+          renderItem={renderItem}
           keyExtractor={(item) => item.id}
           // @ts-expect-error FlashList typing mismatch
           estimatedItemSize={140}
-          removeClippedSubviews
+          style={{ flex: 1, width: "100%" }}
+          contentContainerStyle={{ paddingBottom: 20 }}
         />
       ) : (
         <ScrollView style={{ width: "100%", flex: 1 }}>
@@ -300,8 +304,9 @@ const PlayerCard = React.memo(
 const styles = StyleSheet.create({
   list: {
     flex: 1,
-    justifyContent: "flex-start",
-    alignItems: "center",
+    // justifyContent: "flex-start",
+    // alignItems: "center",
+    width: "100%",
   },
   card: {
     flexDirection: "row",

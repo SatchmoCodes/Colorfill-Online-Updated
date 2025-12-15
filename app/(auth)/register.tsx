@@ -195,6 +195,7 @@ const styles = StyleSheet.create({
     minWidth: 300,
     marginLeft: "auto",
     marginRight: "auto",
+    color: "black",
   },
   buttonContainer: {
     width: "60%",
