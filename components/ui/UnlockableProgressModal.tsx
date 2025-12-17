@@ -127,6 +127,7 @@ export default function UnlockableProgressModal({
                     }}
                   >
                     <Text
+                      allowFontScaling={false}
                       style={{
                         color: "white",
                         textAlign: "center",
@@ -139,6 +140,7 @@ export default function UnlockableProgressModal({
                   </View>
                   <View style={{ flexBasis: "20%", justifyContent: "center" }}>
                     <Text
+                      allowFontScaling={false}
                       style={{
                         color: "white",
                         fontSize: 12,

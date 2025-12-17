@@ -34,7 +34,11 @@ export default function ColorButton({
         style,
       ]}
     >
-      {text && <Text style={styles.text}>{text}</Text>}
+      {text && (
+        <Text allowFontScaling={false} style={styles.text}>
+          {text}
+        </Text>
+      )}
     </Pressable>
   );
 }

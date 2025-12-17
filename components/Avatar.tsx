@@ -51,6 +51,7 @@ export default function Avatar(props: AvatarProps) {
         ]}
       >
         <Text
+          allowFontScaling={false}
           style={[
             styles.avatarText,
             { color: profileLetter ?? "#ffffff", fontSize: fontSizeMap[size] },
@@ -74,6 +75,7 @@ export default function Avatar(props: AvatarProps) {
       ]}
     >
       <Text
+        allowFontScaling={false}
         style={[
           styles.avatarText,
           { color: profileLetter ?? "#ffffff", fontSize: fontSizeMap[size] },

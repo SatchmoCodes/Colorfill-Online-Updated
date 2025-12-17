@@ -1,6 +1,7 @@
 import { User } from "firebase/auth";
 import { DocumentReference } from "firebase/firestore";
-import React, { RefObject, useEffect, useState } from "react";
+import React, { RefObject, useEffect, useRef, useState } from "react";
+import { Animated } from "react-native";
 import { ThemedText } from "../ThemedText";
 
 interface PlayerRefObject {
@@ -34,6 +35,8 @@ export const TimerDisplay = ({
   const opponent = opponentRef.current;
   const owner = ownerRef.current;
 
+  const pulse = useRef(new Animated.Value(1)).current;
+
   useEffect(() => {
     if (!turnDeadline || !isGameStarted) return;
 
@@ -63,5 +66,57 @@ export const TimerDisplay = ({
     return () => clearInterval(interval);
   }, [turnDeadline, isGameStarted, isGameCompleted, onEndOfTurn]);
 
-  return <ThemedText style={{ fontSize: 20 }}>{timeLeft}</ThemedText>;
+  useEffect(() => {
+    if (timeLeft > 5 || timeLeft <= 0) {
+      pulse.setValue(1);
+      return;
+    }
+
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, {
+          toValue: 1.15,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    animation.start();
+    return () => animation.stop();
+  }, [timeLeft]);
+
+  return (
+    <Animated.View
+      style={{
+        transform: [{ scale: pulse }],
+        paddingHorizontal: 12,
+        paddingVertical: 4,
+        borderRadius: 8,
+
+        shadowColor: timeLeft <= 5 ? "red" : "transparent",
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: timeLeft <= 5 ? 0.9 : 0,
+        shadowRadius: 10,
+
+        elevation: timeLeft <= 5 ? 8 : 0,
+        backgroundColor: "rgba(255,0,0,0.05)",
+      }}
+    >
+      <ThemedText
+        style={{
+          fontSize: 20,
+          color: timeLeft <= 5 ? "red" : "white",
+          fontWeight: timeLeft <= 5 ? "bold" : "normal",
+        }}
+      >
+        {timeLeft}
+      </ThemedText>
+    </Animated.View>
+  );
 };

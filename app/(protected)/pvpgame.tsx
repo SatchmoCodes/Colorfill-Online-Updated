@@ -110,6 +110,7 @@ interface ScoreSectionProps {
   ownerRef: RefObject<PlayerRefObject | null>;
   opponentRef: RefObject<PlayerRefObject | null>;
   user: User;
+  turn: PlayerType | null;
   onEndOfTurn: () => void;
   handlePlayerLeave: (gameRef: DocumentReference, username: string) => void;
 }
@@ -652,7 +653,7 @@ export default function PvpGame() {
     // ----------------------------------------------------
     // OWNER USER LOGIC
     // ----------------------------------------------------
-    if (ownerUserDoc) {
+    if (ownerUserDoc && isOwnerClient) {
       const d = ownerUserDoc.data;
       const nextStreak = isWinnerOwner ? d.currentWinStreak + 1 : 0;
 
@@ -678,7 +679,7 @@ export default function PvpGame() {
     // ----------------------------------------------------
     // OPPONENT USER LOGIC
     // ----------------------------------------------------
-    if (opponentUserDoc) {
+    if (opponentUserDoc && isOpponentClient) {
       const d = opponentUserDoc.data;
       const nextStreak = isWinnerOpponent ? d.currentWinStreak + 1 : 0;
 
@@ -753,9 +754,6 @@ export default function PvpGame() {
       await Promise.all(updates);
     }
 
-    // ----------------------------------------------------
-    // APPLY PALETTE UNLOCKS TO CURRENT USER ONLY
-    // ----------------------------------------------------
     if (isOwnerClient && ownerUnlocked.length > 0) {
       setUnlockedColorPalettes(ownerUnlocked);
     }
@@ -834,6 +832,7 @@ export default function PvpGame() {
               ownerRef={ownerRef}
               opponentRef={opponentRef}
               user={user}
+              turn={turn}
               onEndOfTurn={handleEndOfTurn}
               handlePlayerLeave={handlePlayerLeave}
             />
@@ -1121,6 +1120,7 @@ const ScoreSection = (props: ScoreSectionProps) => {
     opponentBackground,
     opponentLetter,
     isSmallDevice,
+    turn,
     turnDeadline,
     isGameStarted,
     isGameCompleted,
@@ -1132,81 +1132,190 @@ const ScoreSection = (props: ScoreSectionProps) => {
     handlePlayerLeave,
   } = props;
 
-  return (
-    <View
-      style={{
-        flexDirection: currentUserType === "owner" ? "row" : "row-reverse",
-        justifyContent: "space-evenly",
-        alignItems: "center",
-        width: "100%",
-        marginBottom: 30,
-      }}
-    >
-      {/* Owner */}
-      <View style={{ alignItems: "center", flexGrow: 1 }}>
-        <ThemedText style={{ textAlign: "center" }}>{ownerName}</ThemedText>
-        {!isSmallDevice && (
-          <Avatar
-            profileBackground={ownerBackground}
-            profileLetter={ownerLetter}
-            username={ownerName}
-            size="large"
-          />
-        )}
-        <View
-          style={[
-            styles.scoreSquare,
-            {
-              backgroundColor: selectedColorPalette[ownerSelectedColor],
-              marginTop: 10,
-            },
-          ]}
-        >
-          <ThemedText style={styles.scoreSquareText}>{ownerScore}</ThemedText>
-        </View>
-      </View>
+  const isOwner = currentUserType === "owner";
 
-      {/* Center Section: VS + Timer */}
-      <View style={{ alignItems: "center", minWidth: 50 }}>
-        <ThemedText style={{ textAlign: "center", marginBottom: 10 }}>
-          VS
-        </ThemedText>
-        <TimerDisplay
-          turnDeadline={turnDeadline}
-          isGameStarted={isGameStarted}
-          isGameCompleted={isGameCompleted}
-          gameRef={gameRef}
-          ownerRef={ownerRef}
-          opponentRef={opponentRef}
-          user={user}
-          onEndOfTurn={onEndOfTurn}
-          handlePlayerLeave={handlePlayerLeave}
-        />
-      </View>
-      {/* Opponent */}
-      <View style={{ alignItems: "center", flexGrow: 1 }}>
-        <ThemedText style={{ textAlign: "center" }}>{opponentName}</ThemedText>
-        {!isSmallDevice && (
-          <Avatar
-            profileBackground={opponentBackground}
-            profileLetter={opponentLetter}
-            username={opponentName}
-            size="large"
+  const leftPlayer = isOwner
+    ? {
+        id: "owner",
+        name: ownerName,
+        score: ownerScore,
+        color: ownerSelectedColor,
+        bg: ownerBackground,
+        letter: ownerLetter,
+      }
+    : {
+        id: "opponent",
+        name: opponentName,
+        score: opponentScore,
+        color: opponentSelectedColor,
+        bg: opponentBackground,
+        letter: opponentLetter,
+      };
+
+  const rightPlayer = isOwner
+    ? {
+        id: "opponent",
+        name: opponentName,
+        score: opponentScore,
+        color: opponentSelectedColor,
+        bg: opponentBackground,
+        letter: opponentLetter,
+      }
+    : {
+        id: "owner",
+        name: ownerName,
+        score: ownerScore,
+        color: ownerSelectedColor,
+        bg: ownerBackground,
+        letter: ownerLetter,
+      };
+
+  const renderPlayer = (player: typeof leftPlayer) => {
+    const scale = useRef(new Animated.Value(1)).current;
+
+    useEffect(() => {
+      Animated.sequence([
+        Animated.timing(scale, {
+          toValue: 1.2,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scale, {
+          toValue: 1,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }, [player.score]);
+
+    const isActive = turn === player.id;
+    const isLeftSide = player.id === leftPlayer.id;
+
+    return (
+      <>
+        {isActive && (
+          <View
+            style={{
+              position: "absolute",
+              top: 8,
+              bottom: 8,
+              width: 4,
+              borderRadius: 4,
+              backgroundColor: selectedColorPalette[player.color],
+
+              // Position on correct edge
+              left: isLeftSide ? 0 : undefined,
+              right: !isLeftSide ? 0 : undefined,
+
+              // Glow
+              shadowColor: selectedColorPalette[player.color],
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.8,
+              shadowRadius: 8,
+
+              elevation: 6,
+            }}
           />
         )}
         <View
-          style={[
-            styles.scoreSquare,
-            {
-              backgroundColor: selectedColorPalette[opponentSelectedColor],
-              marginTop: 10,
-            },
-          ]}
+          style={{
+            flex: 1,
+            alignItems: "center",
+            borderRadius: 14,
+            paddingVertical: 8,
+
+            // iOS glow
+            // shadowColor: isActive
+            //   ? selectedColorPalette[player.color]
+            //   : "transparent",
+            // shadowOffset: { width: 0, height: 0 },
+            // shadowOpacity: isActive ? 0.8 : 0,
+            // shadowRadius: isActive ? 8 : 0,
+
+            // // Android glow
+            // elevation: isActive ? 6 : 0,
+            // backgroundColor: "rgba(0,0,0,0.02)", // needed for elevation to render
+          }}
         >
-          <ThemedText style={styles.scoreSquareText}>
-            {opponentScore}
+          <ThemedText
+            numberOfLines={1}
+            ellipsizeMode="tail"
+            style={{ maxWidth: 120, textAlign: "center" }}
+          >
+            {player.name}
           </ThemedText>
+
+          <View style={{ height: isSmallDevice ? 0 : 72, marginTop: 6 }}>
+            {!isSmallDevice && (
+              <Avatar
+                profileBackground={player.bg}
+                profileLetter={player.letter}
+                username={player.name}
+                size="large"
+              />
+            )}
+          </View>
+
+          <Animated.View
+            style={{
+              transform: [{ scale }],
+              marginTop: 10,
+            }}
+          >
+            <View
+              style={[
+                styles.scoreSquare,
+                {
+                  backgroundColor: selectedColorPalette[player.color],
+                },
+              ]}
+            >
+              <ThemedText style={styles.scoreSquareText}>
+                {player.score}
+              </ThemedText>
+            </View>
+          </Animated.View>
         </View>
+      </>
+    );
+  };
+
+  return (
+    <View style={{ width: "100%", marginBottom: 30 }}>
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          width: "100%",
+        }}
+      >
+        {renderPlayer(leftPlayer)}
+
+        {/* Center column (reserved space) */}
+        <View
+          style={{
+            width: 80,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          pointerEvents="none"
+        >
+          {/* <ThemedText style={{ marginBottom: 10 }}>VS</ThemedText> */}
+
+          <TimerDisplay
+            turnDeadline={turnDeadline}
+            isGameStarted={isGameStarted}
+            isGameCompleted={isGameCompleted}
+            gameRef={gameRef}
+            ownerRef={ownerRef}
+            opponentRef={opponentRef}
+            user={user}
+            onEndOfTurn={onEndOfTurn}
+            handlePlayerLeave={handlePlayerLeave}
+          />
+        </View>
+
+        {renderPlayer(rightPlayer)}
       </View>
     </View>
   );
