@@ -382,10 +382,10 @@ export default function Freeplay() {
     updatedScore: number,
     currentBoardBestScore: number
   ) => {
-    if (!boardId) {
-      if (!isReplayingBoard) return true;
+    if (boardId && currentBoardId === boardId) {
       return updatedScore < currentBoardBestScore;
     }
+    if (!isReplayingBoard) return true;
     return updatedScore < currentBoardBestScore;
   };
 
@@ -439,18 +439,20 @@ export default function Freeplay() {
         }
       }
     }
-    console.log(
-      "is replaying",
-      isReplayingBoard,
-      determineHighScore(updatedScore, currentBoardBestScore),
-      currentBoardBestScore,
-      updatedScore
-    );
+    // console.log(
+    //   "is replaying",
+    //   isReplayingBoard,
+    //   determineHighScore(updatedScore, currentBoardBestScore),
+    //   currentBoardBestScore,
+    //   updatedScore,
+    //   boardId,
+    //   currentBoardId
+    // );
     if (user.displayName !== null) {
       const [userDoc] = await Promise.all([
         getUser(user.uid),
         addDoc(collection(db, "scores"), {
-          boardId: boardId ? boardId : currentBoardId,
+          boardId: currentBoardId,
           score: updatedScore,
           size: boardSize,
           boardData,
@@ -497,7 +499,7 @@ export default function Freeplay() {
       }
     } else {
       await addDoc(collection(db, "scores"), {
-        boardId: boardId ? boardId : currentBoardId,
+        boardId: currentBoardId,
         score: updatedScore,
         size: boardSize,
         boardData,
