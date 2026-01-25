@@ -565,8 +565,8 @@ const ColorPaletteOptionsContainer = ({
         decelerationRate="fast"
         showsHorizontalScrollIndicator={false}
         removeClippedSubviews
-        windowSize={3}
-        maxToRenderPerBatch={2}
+        windowSize={2}
+        maxToRenderPerBatch={1}
         updateCellsBatchingPeriod={50}
         getItemLayout={(_: any, index: number) => ({
           length: SCREEN_WIDTH,
@@ -574,7 +574,7 @@ const ColorPaletteOptionsContainer = ({
           index,
         })}
         onScroll={onScroll}
-        scrollEventThrottle={16}
+        scrollEventThrottle={0}
         onMomentumScrollEnd={handleMomentumScrollEnd}
         initialScrollIndex={initialPage}
         style={{ maxHeight: 200 }}

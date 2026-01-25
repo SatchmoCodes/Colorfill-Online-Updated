@@ -1,6 +1,7 @@
 import BaseModal from "@/components/BaseModal";
 import BoardSizeModal from "@/components/BoardSizeModal";
 import ColorPaletteUnlockModal from "@/components/ColorPaletteUnlockModal";
+import ConfirmNewBoardModal from "@/components/ConfirmNewBoardModal";
 import SquareCounter, { resetSquareCount } from "@/components/SquareCounter";
 import { ThemedBackground } from "@/components/ThemedBackground";
 import { ThemedText } from "@/components/ThemedText";
@@ -83,7 +84,9 @@ interface GameEffectButtonProps {
   newBoardProcess: (x: BoardSize) => void;
   resetBoardProcess: (isRetrying?: boolean) => void;
   setShowBoardSizeModal: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowConfirmModal: React.Dispatch<React.SetStateAction<boolean>>;
   boardSize: BoardSize;
+  score: number;
 }
 
 interface ColorRowButtons {
@@ -92,7 +95,7 @@ interface ColorRowButtons {
   handleColorChange: (color: ColorKey) => void;
 }
 
-const boardConfig = {
+export const boardConfig = {
   small: 64,
   medium: 144,
   large: 256,
@@ -180,6 +183,7 @@ export default function Freeplay() {
   const [currentBoardId, setCurrentBoardId] = useState(
     (boardId as string) ?? uuid.v4()
   );
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const isSmallDevice = getWindowHeight() <= 720;
 
@@ -549,7 +553,9 @@ export default function Freeplay() {
               newBoardProcess={newBoardProcess}
               resetBoardProcess={resetBoardProcess}
               setShowBoardSizeModal={setShowBoardSizeModal}
+              setShowConfirmModal={setShowConfirmModal}
               boardSize={boardSize}
+              score={score}
             />
             <ColorRowButtons
               activeColor={activeColor}
@@ -600,6 +606,18 @@ export default function Freeplay() {
             unlockedColorPalettes={unlockedColorPalettes}
             isMosaic={isMosaic}
             setUnlockedColorPalettes={setUnlockedColorPalettes}
+          />
+        </BaseModal>
+      )}
+      {showConfirmModal && (
+        <BaseModal
+          visible={showConfirmModal}
+          onClose={() => setShowConfirmModal(false)}
+        >
+          <ConfirmNewBoardModal
+            boardSize={boardSize}
+            setShowConfirmModal={setShowConfirmModal}
+            newBoardProcess={newBoardProcess}
           />
         </BaseModal>
       )}
@@ -708,14 +726,18 @@ const GameEffectButtons = (props: GameEffectButtonProps) => {
     newBoardProcess,
     resetBoardProcess,
     setShowBoardSizeModal,
+    setShowConfirmModal,
     boardSize,
+    score,
   } = props;
   return (
     <View style={[styles.colorRow, { justifyContent: "center" }]}>
       <ColorButton
         isDisabled={false}
         text="New Board"
-        handlePress={() => newBoardProcess(boardSize)}
+        handlePress={() =>
+          score >= 1 ? setShowConfirmModal(true) : newBoardProcess(boardSize)
+        }
         style={{ backgroundColor: "rgba(40, 40, 40, 1)" }}
       />
       <ColorButton
