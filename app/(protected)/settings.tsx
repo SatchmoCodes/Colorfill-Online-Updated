@@ -20,7 +20,6 @@ import { getColorPaletteOptions } from "@/helper/getColorPaletteOptions";
 import { getWindowHeight } from "@/helper/getWindowHeight";
 import { updateCriteriaMap } from "@/helper/updateCriteriaMap";
 import Slider from "@react-native-community/slider";
-import { FlashList } from "@shopify/flash-list";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -553,14 +552,11 @@ const ColorPaletteOptionsContainer = ({
     <>
       <PaginationDots count={colorPaletteOptions.length} scrollX={scrollX} />
 
-      <FlashList
-        // @ts-expect-error FlashList typing mismatch
+      <FlatList
         ref={flatListRef}
         data={colorPaletteOptions}
         horizontal
         pagingEnabled
-        estimatedItemSize={SCREEN_WIDTH}
-        removeClippedSubViews
         snapToInterval={SCREEN_WIDTH}
         decelerationRate="fast"
         showsHorizontalScrollIndicator={false}
@@ -579,7 +575,7 @@ const ColorPaletteOptionsContainer = ({
         initialScrollIndex={initialPage}
         style={{ maxHeight: 200 }}
         renderItem={renderItem}
-        keyExtractor={(_, i) => i.toString()}
+        keyExtractor={(_: PaletteObj[], i: number) => i.toString()}
       />
     </>
   );

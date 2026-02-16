@@ -11,7 +11,6 @@ import {
   saveLeaderboardRefreshTime,
 } from "@/helper/asyncStorageHelper";
 import { buildBOTDDateOptions, monthMap } from "@/helper/buildBOTDDateOptions";
-import { FlashList } from "@shopify/flash-list";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import {
@@ -32,6 +31,7 @@ import {
   ActivityIndicator,
   Animated,
   Easing,
+  FlatList,
   Platform,
   StyleSheet,
   TouchableOpacity,
@@ -572,10 +572,9 @@ const Table = ({
 
   return (
     <View style={{ flex: 1 }}>
-      <FlashList
+      <FlatList
         data={tableData}
-        keyExtractor={(item) => item.id?.toString() ?? Math.random().toString()}
-        // @ts-expect-error FlashList typing mismatch
+        keyExtractor={(item: DocumentData) => item.id?.toString() ?? Math.random().toString()}
         initialNumToRender={20}
         maxToRenderPerBatch={20}
         windowSize={10}
@@ -600,7 +599,7 @@ const Table = ({
         ListFooterComponent={
           loadingMore ? <ActivityIndicator size="small" /> : null
         }
-        renderItem={({ item, index }) => {
+        renderItem={({ item, index }: { item: DocumentData; index: number }) => {
           let readableDate = "";
 
           if (item.createdAt && typeof item.createdAt.toDate === "function") {
@@ -682,7 +681,7 @@ const Table = ({
             </TouchableOpacity>
           );
         }}
-      />
+        />
     </View>
   );
 };

@@ -5,7 +5,7 @@ import { TimerPie } from "@/components/ui/TimerPie";
 import { db } from "@/firebaseConfig";
 import { useUser } from "@/hooks/useFirebaseUser";
 import { PlayerList, useOnlinePlayerList } from "@/hooks/useOnlinePlayerList";
-import { FlashList, ListRenderItem } from "@shopify/flash-list";
+import { FlatList, ListRenderItem } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { addDoc, collection } from "firebase/firestore";
@@ -127,12 +127,10 @@ export default function Playerlist() {
         </ThemedView>
       </ThemedView>
       {Platform.OS !== "web" ? (
-        <FlashList
+        <FlatList
           data={filteredPlayerList}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
-          // @ts-expect-error FlashList typing mismatch
-          estimatedItemSize={140}
           style={{ flex: 1, width: "100%" }}
           contentContainerStyle={{ paddingBottom: 20 }}
         />
