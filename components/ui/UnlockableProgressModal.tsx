@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { ThemedText } from "../ThemedText";
@@ -22,32 +23,36 @@ export default function UnlockableProgressModal({
   isMosaic: boolean;
   setUnlockableProgressModal: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
+  const { height } = useWindowDimensions();
   return (
     <Modal
       onRequestClose={() => setUnlockableProgressModal(false)}
       transparent
       animationType="slide"
     >
-      <ThemedView style={styles.modalBody}>
-        <ThemedView style={styles.fixedHeader}>
-          <TouchableOpacity
-            style={{ position: "absolute", top: 50, right: 10 }}
-            onPress={() => setUnlockableProgressModal(false)}
-          >
-            <IconSymbol size={28} name="clear.fill" color={"white"} />
-          </TouchableOpacity>
-        </ThemedView>
-        <ThemedView style={{ padding: 20 }}>
-          <ThemedText type="subtitle" style={{ textAlign: "center" }}>
-            Full Unlockable List (
-            {colorPaletteOptions.filter((x) => !x.locked).length}/
-            {colorPaletteOptions.length})
-          </ThemedText>
-        </ThemedView>
+      <View style={{ height }}>
+        <ThemedView style={[styles.modalBody]}>
+          <ThemedView style={styles.fixedHeader}>
+            <TouchableOpacity
+              style={{ position: "absolute", top: 50, right: 10 }}
+              onPress={() => setUnlockableProgressModal(false)}
+            >
+              <IconSymbol size={28} name="clear.fill" color={"white"} />
+            </TouchableOpacity>
+          </ThemedView>
+          <ThemedView style={{ padding: 20 }}>
+            <ThemedText type="subtitle" style={{ textAlign: "center" }}>
+              Full Unlockable List (
+              {colorPaletteOptions.filter((x) => !x.locked).length}/
+              {colorPaletteOptions.length})
+            </ThemedText>
+          </ThemedView>
 
-        <ScrollView>
-          <ThemedView style={styles.container}>
-            <View style={{ gap: 20 }}>
+          <ScrollView
+            style={[styles.container, { flex: 1 }]}
+            showsVerticalScrollIndicator
+          >
+            <View style={{ gap: 20, paddingBottom: 60 }}>
               {colorPaletteOptions.slice(3).map((x, i) => (
                 <View key={i} style={styles.tableRow}>
                   <View style={[styles.paletteCard, { flexBasis: "25%" }]}>
@@ -153,9 +158,9 @@ export default function UnlockableProgressModal({
                 </View>
               ))}
             </View>
-          </ThemedView>
-        </ScrollView>
-      </ThemedView>
+          </ScrollView>
+        </ThemedView>
+      </View>
     </Modal>
   );
 }
@@ -170,17 +175,14 @@ const styles = StyleSheet.create({
     paddingTop: 60,
   },
   container: {
-    flex: 1,
     padding: 10,
     maxWidth: 500,
     width: "100%",
-    margin: "auto",
-    paddingBottom: 60,
+    alignSelf: "center",
   },
   modalBody: {
     width: "100%",
     flex: 1,
-    margin: "auto",
   },
   paletteRow: {
     flexDirection: "row",
