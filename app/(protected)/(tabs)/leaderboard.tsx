@@ -26,7 +26,7 @@ import {
   startAfter,
   where,
 } from "firebase/firestore";
-import { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
@@ -502,6 +502,119 @@ const TopRow = ({ gamemode }: { gamemode: Gamemode }) => {
   );
 };
 
+const displayValue = (item: any, parameter: string) => {
+  if (parameter === "winRate") {
+    if (item["totalGames"] < 10) return `${item["totalGames"]}/10`;
+    return `${item[parameter]}%`;
+  }
+  return item[parameter];
+};
+
+const getValueColor = (item: any, parameter: string) => {
+  if (parameter === "winRate") {
+    if (item["totalGames"] < 10) return "white";
+    if (item[parameter] < 50) return "red";
+    if (item[parameter] >= 50) return "green";
+  }
+  return "white";
+};
+
+const getRowColor = (index: number) => {
+  if (index === 0) return ["#c4b214ff", "#504803ff"];
+  if (index === 1) return ["#b9b9b9ff", "rgba(100, 100, 99, 1)"];
+  if (index === 2) return ["#ac691dff", "#5e370bff"];
+  if (index % 2 === 0) return ["#8eb7faff", "#053070ff"];
+  return ["#266bdbff", "#031736ff"];
+};
+
+const LeaderboardRow = React.memo(
+  ({
+    item,
+    index,
+    gamemode,
+    pvpQueryParameter,
+    translateX,
+  }: {
+    item: DocumentData;
+    index: number;
+    gamemode: Gamemode;
+    pvpQueryParameter: string;
+    translateX: any;
+  }) => {
+    let readableDate = "";
+    if (item.createdAt && typeof item.createdAt.toDate === "function") {
+      readableDate = item.createdAt.toDate().toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } else {
+      readableDate = "N/A";
+    }
+
+    const [firstRowColor, secondRowColor] = getRowColor(index);
+
+    return (
+      <TouchableOpacity
+        style={{ marginTop: 5, marginBottom: 5, position: "relative" }}
+        onPress={() =>
+          gamemode === "freeplay" &&
+          router.push({
+            pathname: "/viewscore",
+            params: {
+              boardId: item.boardId,
+              boardSize: item.size,
+              boardData: item.boardData,
+              bestScore: item.score,
+              createdBy: item.createdBy,
+              createdAt: readableDate,
+            },
+          })
+        }
+      >
+        <LinearGradient
+          style={styles.row}
+          colors={[firstRowColor, secondRowColor]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          {index < 3 && <ShimmerOverlay translateX={translateX} />}
+
+          <ThemedView style={[styles.cell, { width: "20%" }]}>
+            <ThemedText style={styles.cellText}>{index + 1}</ThemedText>
+          </ThemedView>
+
+          <ThemedView style={[styles.cell, { width: "55%" }]}>
+            <ThemedText style={styles.cellText}>
+              {gamemode === "pvp" ? item.username : item.createdBy}
+            </ThemedText>
+          </ThemedView>
+
+          <ThemedView style={[styles.cell, { width: "25%" }]}>
+            <ThemedText
+              style={[
+                styles.cellText,
+                {
+                  color:
+                    gamemode === "pvp"
+                      ? getValueColor(item, pvpQueryParameter)
+                      : "white",
+                },
+              ]}
+            >
+              {gamemode === "pvp"
+                ? displayValue(item, pvpQueryParameter)
+                : item.score}
+            </ThemedText>
+          </ThemedView>
+        </LinearGradient>
+      </TouchableOpacity>
+    );
+  }
+);
+
 const Table = ({
   tableData,
   gamemode,
@@ -515,73 +628,50 @@ const Table = ({
   loadingMore: boolean;
   handlePagination: () => void;
 }) => {
-  // console.log("data", tableData);
   const translateX = useShimmer();
-
-  const displayValue = (item: any, parameter: string) => {
-    if (parameter === "winRate") {
-      if (item["totalGames"] < 10) return `${item["totalGames"]}/10`;
-      return `${item[parameter]}%`;
-    }
-    return item[parameter];
-  };
-
-  const getValueColor = (item: any, parameter: string) => {
-    if (parameter === "winRate") {
-      if (item["totalGames"] < 10) return "white";
-      if (item[parameter] < 50) return "red";
-      if (item[parameter] >= 50) return "green";
-    }
-    return "white";
-  };
-
-  const getRowColor = (index: number) => {
-    if (index === 0) return ["#c4b214ff", "#504803ff"];
-    if (index === 1) return ["#b9b9b9ff", "rgba(100, 100, 99, 1)"];
-    if (index === 2) return ["#ac691dff", "#5e370bff"];
-    if (index % 2 === 0) return ["#8eb7faff", "#053070ff"];
-    return ["#266bdbff", "#031736ff"];
-  };
 
   const webScrollLock = useRef(false);
   const nativeEndReachedLock = useRef(false);
 
-  // make sure you pass handlePagination from parent
-  const WEB_THRESHOLD_PX = 150; // how close to bottom (px) to trigger on web
-  const NATIVE_THRESHOLD = 0.1; // keep small
+  const NATIVE_THRESHOLD = 0.1;
+  const WEB_THRESHOLD_PX = 150;
 
-  // web onScroll handler
   const handleWebScroll = (e: any) => {
-    // nativeEvent has layoutMeasurement, contentOffset, contentSize on RN web too
     const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
-
     const distanceFromBottom =
       contentSize.height - (layoutMeasurement.height + contentOffset.y);
-
-    if (distanceFromBottom <= WEB_THRESHOLD_PX) {
-      if (!webScrollLock.current) {
-        webScrollLock.current = true;
-        handlePagination();
-        // unlock after a short delay — adjust depending on your load speed
-        setTimeout(() => {
-          webScrollLock.current = false;
-        }, 800);
-      }
+    if (distanceFromBottom <= WEB_THRESHOLD_PX && !webScrollLock.current) {
+      webScrollLock.current = true;
+      handlePagination();
+      setTimeout(() => { webScrollLock.current = false; }, 800);
     }
   };
+
+  const renderItem = useCallback(
+    ({ item, index }: { item: DocumentData; index: number }) => (
+      <LeaderboardRow
+        item={item}
+        index={index}
+        gamemode={gamemode}
+        pvpQueryParameter={pvpQueryParameter}
+        translateX={translateX}
+      />
+    ),
+    [gamemode, pvpQueryParameter, translateX]
+  );
 
   return (
     <View style={{ flex: 1 }}>
       <FlatList
         data={tableData}
         keyExtractor={(item: DocumentData) => item.id?.toString() ?? Math.random().toString()}
-        initialNumToRender={20}
-        maxToRenderPerBatch={20}
-        windowSize={10}
+        initialNumToRender={15}
+        maxToRenderPerBatch={10}
+        windowSize={7}
+        removeClippedSubviews
         onEndReached={
           Platform.OS !== "web"
             ? () => {
-                // native lock to avoid duplicates across events
                 if (!nativeEndReachedLock.current) {
                   nativeEndReachedLock.current = true;
                   handlePagination();
@@ -591,97 +681,15 @@ const Table = ({
             : undefined
         }
         onEndReachedThreshold={NATIVE_THRESHOLD}
-        // web fallback:
         onScroll={Platform.OS === "web" ? handleWebScroll : undefined}
         scrollEventThrottle={16}
         contentContainerStyle={{ paddingBottom: 20 }}
-        style={{ flex: 1 }} // IMPORTANT: ensure parent / list is flexible so scrolling works
+        style={{ flex: 1 }}
         ListFooterComponent={
           loadingMore ? <ActivityIndicator size="small" /> : null
         }
-        renderItem={({ item, index }: { item: DocumentData; index: number }) => {
-          let readableDate = "";
-
-          if (item.createdAt && typeof item.createdAt.toDate === "function") {
-            const jsDate = item.createdAt.toDate();
-
-            readableDate = jsDate.toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "short",
-              day: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            });
-          } else {
-            readableDate = "N/A";
-          }
-          const firstRowColor = getRowColor(index)[0];
-          const secondRowColor = getRowColor(index)[1];
-
-          return (
-            <TouchableOpacity
-              style={{
-                marginTop: 5,
-                marginBottom: 5,
-                position: "relative",
-              }}
-              onPress={() =>
-                gamemode === "freeplay" &&
-                router.push({
-                  pathname: "/viewscore",
-                  params: {
-                    boardId: item.boardId,
-                    boardSize: item.size,
-                    boardData: item.boardData,
-                    bestScore: item.score,
-                    createdBy: item.createdBy,
-                    // 🚀 Pass the new readable date
-                    createdAt: readableDate,
-                  },
-                })
-              }
-            >
-              {/* ... Rest of your rendering logic remains the same ... */}
-              <LinearGradient
-                style={styles.row}
-                colors={[firstRowColor, secondRowColor]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                {index < 3 && <ShimmerOverlay translateX={translateX} />}
-
-                <ThemedView style={[styles.cell, { width: "20%" }]}>
-                  <ThemedText style={styles.cellText}>{index + 1}</ThemedText>
-                </ThemedView>
-
-                <ThemedView style={[styles.cell, { width: "55%" }]}>
-                  <ThemedText style={styles.cellText}>
-                    {gamemode === "pvp" ? item.username : item.createdBy}
-                  </ThemedText>
-                </ThemedView>
-
-                <ThemedView style={[styles.cell, { width: "25%" }]}>
-                  <ThemedText
-                    style={[
-                      styles.cellText,
-                      {
-                        color:
-                          gamemode === "pvp"
-                            ? getValueColor(item, pvpQueryParameter)
-                            : "white",
-                      },
-                    ]}
-                  >
-                    {gamemode === "pvp"
-                      ? displayValue(item, pvpQueryParameter)
-                      : item.score}
-                  </ThemedText>
-                </ThemedView>
-              </LinearGradient>
-            </TouchableOpacity>
-          );
-        }}
-        />
+        renderItem={renderItem}
+      />
     </View>
   );
 };

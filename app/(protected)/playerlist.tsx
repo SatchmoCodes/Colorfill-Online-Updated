@@ -131,6 +131,10 @@ export default function Playerlist() {
           data={filteredPlayerList}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
+          initialNumToRender={10}
+          maxToRenderPerBatch={5}
+          windowSize={7}
+          removeClippedSubviews
           style={{ flex: 1, width: "100%" }}
           contentContainerStyle={{ paddingBottom: 20 }}
         />

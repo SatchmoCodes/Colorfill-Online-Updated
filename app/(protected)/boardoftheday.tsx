@@ -124,7 +124,7 @@ const boardConverter = {
   },
   fromFirestore(
     snapshot: QueryDocumentSnapshot,
-    options: SnapshotOptions
+    options: SnapshotOptions,
   ): BoardDoc {
     return snapshot.data(options) as BoardDoc;
   },
@@ -171,7 +171,7 @@ export default function BoardoftheDay() {
         }
       };
       loadInitialSettings();
-    }, [])
+    }, []),
   );
 
   useEffect(() => {
@@ -186,7 +186,7 @@ export default function BoardoftheDay() {
     let remainingSquares = false;
     let capturedCount = 0;
     const currentBoardState = boardState.map((row) =>
-      row.map((square) => ({ ...square }))
+      row.map((square) => ({ ...square })),
     );
     currentBoardState.forEach((row) => {
       row.forEach((square) => {
@@ -197,7 +197,7 @@ export default function BoardoftheDay() {
               square,
               currentBoardState,
               color,
-              visited
+              visited,
             );
           }
         }
@@ -209,7 +209,7 @@ export default function BoardoftheDay() {
           if (!square.landLocked) {
             const neighbors = getAdjacentSquares(square, currentBoardState);
             const allNeighborsCaptured = neighbors.every(
-              (n) => !n || n.captured
+              (n) => !n || n.captured,
             );
             if (allNeighborsCaptured) {
               square.landLocked = true;
@@ -232,7 +232,7 @@ export default function BoardoftheDay() {
             return [colorKey, value - capturedCount];
           }
           return [colorKey, value];
-        })
+        }),
       ) as Record<ColorKey, number>;
     });
     if (!remainingSquares) {
@@ -245,7 +245,7 @@ export default function BoardoftheDay() {
     board: Square[][],
     color: ColorKey,
     visited: Set<string>,
-    depth: number = 0
+    depth: number = 0,
   ) {
     const key = `${currentSquare.x},${currentSquare.y}`;
     if (visited.has(key)) return 0;
@@ -264,7 +264,7 @@ export default function BoardoftheDay() {
           board,
           color,
           visited,
-          depth + 1
+          depth + 1,
         );
       }
     }
@@ -273,7 +273,7 @@ export default function BoardoftheDay() {
 
   function getAdjacentSquares(
     square: Square,
-    board: Square[][]
+    board: Square[][],
   ): (Square | undefined)[] {
     const x = square.x - 1;
     const y = square.y - 1;
@@ -293,7 +293,7 @@ export default function BoardoftheDay() {
         color: square.defaultColor,
         captured: false,
         landLocked: false,
-      }))
+      })),
     );
 
     resetBoard[0][0].captured = true;
@@ -303,7 +303,7 @@ export default function BoardoftheDay() {
       resetBoard[0][0],
       resetBoard,
       resetBoard[0][0].color,
-      new Set()
+      new Set(),
     );
 
     resetSquareCount(resetBoard, capturedCount, setSquaresRemaining);
@@ -316,7 +316,7 @@ export default function BoardoftheDay() {
   async function handleScoreSubmission() {
     try {
       const boardData = boardState.flatMap((row) =>
-        row.map((x) => x.defaultColor)
+        row.map((x) => x.defaultColor),
       );
       const createdAt = serverTimestamp();
       if (user.displayName !== null) {
@@ -345,7 +345,7 @@ export default function BoardoftheDay() {
           });
           const newlyUnlockedColorPalettes = await getUnlockedColorPalettes(
             prevCriteriaMap,
-            newCriteriaMap
+            newCriteriaMap,
           );
           if (newlyUnlockedColorPalettes.length > 0) {
             setUnlockedColorPalettes(newlyUnlockedColorPalettes);
@@ -438,7 +438,7 @@ export default function BoardoftheDay() {
         board[0][0],
         board,
         board[0][0].color,
-        new Set()
+        new Set(),
       );
 
       resetSquareCount(board, capturedCount, setSquaresRemaining);
@@ -461,7 +461,7 @@ export default function BoardoftheDay() {
       console.log("Fetching BOTD for (ET):", yyyyMMdd);
 
       const boardRef = doc(db, "boards", yyyyMMdd).withConverter(
-        boardConverter
+        boardConverter,
       );
       const boardSnap = await getDoc(boardRef);
 
@@ -480,7 +480,7 @@ export default function BoardoftheDay() {
       const userHasBOTDScoreQuery = query(
         collection(db, "scores"),
         where("uid", "==", user?.uid),
-        where("boardId", "==", boardId)
+        where("boardId", "==", boardId),
       );
 
       const existingScore = await getDocs(userHasBOTDScoreQuery);
@@ -498,7 +498,7 @@ export default function BoardoftheDay() {
         board[0][0],
         board,
         board[0][0].color,
-        new Set()
+        new Set(),
       );
 
       resetSquareCount(board, capturedCount, setSquaresRemaining);
@@ -782,16 +782,43 @@ export const TimeUntilNextBoard = () => {
   const getNextBoardTime = () => {
     const now = new Date();
 
-    // next 8am in local time
-    const next = new Date(now);
-    next.setHours(8, 0, 0, 0);
+    // Get current date/time in ET
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/New_York",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      hour12: false,
+    });
 
-    // if it's already past 8am, set to tomorrow 8am
-    if (now >= next) {
-      next.setDate(next.getDate() + 1);
-    }
+    const parts = formatter.formatToParts(now);
+    const get = (type: string) =>
+      parts.find((p) => p.type === type)?.value ?? "00";
 
-    return next;
+    const hour = parseInt(get("hour"), 10);
+
+    // Target today's noon ET, or tomorrow's if it's already past noon ET
+    const etDate = new Date(`${get("year")}-${get("month")}-${get("day")}T00:00:00`);
+    if (hour >= 12) etDate.setDate(etDate.getDate() + 1);
+
+    const targetYear = etDate.getFullYear();
+    const targetMonth = String(etDate.getMonth() + 1).padStart(2, "0");
+    const targetDay = String(etDate.getDate()).padStart(2, "0");
+
+    // Find the UTC timestamp for noon ET on the target day.
+    // Start with noon UTC, check what ET hour that is, then correct.
+    // This handles DST automatically.
+    const noonUTC = new Date(`${targetYear}-${targetMonth}-${targetDay}T12:00:00Z`);
+    const etHourAtNoonUTC = parseInt(
+      new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/New_York",
+        hour: "2-digit",
+        hour12: false,
+      }).format(noonUTC),
+      10
+    );
+    return new Date(noonUTC.getTime() + (12 - etHourAtNoonUTC) * 60 * 60 * 1000);
   };
 
   const formatTimeLeft = (ms: number) => {

@@ -16,7 +16,7 @@ const boardOptions: Record<number, { size: string; count: number }> = {
 };
 
 export const generateDailyBoard = onSchedule(
-  { schedule: "59 7 * * *", timeZone: "America/New_York" },
+  { schedule: "59 11 * * *", timeZone: "America/New_York" },
   async () => {
     const options = Object.values(boardOptions);
     const randomIndex = Math.floor(Math.random() * options.length);
@@ -39,8 +39,11 @@ export const generateDailyBoard = onSchedule(
       generatedAt: today.toISOString(),
     });
 
-    console.log("Daily board generated at 8 AM!", { yyyyMMdd, boardSelection });
-  }
+    console.log("Daily board generated at 11:59 AM!", {
+      yyyyMMdd,
+      boardSelection,
+    });
+  },
 );
 
 const createRandomColorList = (numberOfSquares: number) => {
