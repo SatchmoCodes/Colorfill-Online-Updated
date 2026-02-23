@@ -14,9 +14,9 @@ export function useNotificationResponse(user: User | null) {
         const lastNotificationResponse =
           Notifications.getLastNotificationResponse();
 
-        if (lastNotificationResponse?.notification?.request?.content?.data) {
-          const data =
-            lastNotificationResponse.notification.request.content.data;
+        const data =
+          lastNotificationResponse?.notification?.request?.content?.data;
+        if (data?.gameId) {
           handleNotificationNavigation(user, data.gameId as string);
         }
       })();
