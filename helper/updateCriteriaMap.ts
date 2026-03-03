@@ -102,7 +102,7 @@ export const updateCriteriaMap = async ({
       locked:
         (bestXLargeScore === null || bestXLargeScore > 25) &&
         savedCriteriaMap["xlarge_1"]?.locked !== false,
-      message: "Score 30 or lower on an XL board to unlock this color scheme",
+      message: "Score 25 or lower on an XL board to unlock this color scheme",
       progress: bestXLargeScore ? `Current best: ${bestXLargeScore}` : "n/a",
     },
     xlarge_2: {
