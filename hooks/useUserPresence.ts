@@ -181,9 +181,8 @@ const updateAsyncStorageValuesOnLoad = async (userDoc: UserDoc) => {
       wins: userDoc.wins,
       bestWinStreak: userDoc.bestWinStreak,
     });
-    const updatedColorPaletteOptions = await getColorPaletteOptions(
-      updatedCriteriaMap
-    );
+    const updatedColorPaletteOptions =
+      await getColorPaletteOptions(updatedCriteriaMap);
     await saveColorPaletteOptions(updatedColorPaletteOptions);
     await saveProfileBackgroundColor(userDoc.profileBackground);
     await saveProfileLetterColor(userDoc.profileLetter);

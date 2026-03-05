@@ -23,13 +23,13 @@ export default function ViewProfile() {
   const [userDocData, setUserDocData] = useState<UserDoc | null>(null);
   const [openProfile, setOpenProfile] = useState(false);
   const [profileBackground, setProfileBackground] = useState(
-    profile.profileBackground ?? "#313131ff"
+    profile.profileBackground ?? "#313131ff",
   );
   const [profileLetter, setProfileLetter] = useState(
-    profile.profileLetter ?? "#ffffff"
+    profile.profileLetter ?? "#ffffff",
   );
   const [profileBanner, setProfileBanner] = useState(
-    profile.profileBanner ?? "#0b40b3ff"
+    profile.profileBanner ?? "#0b40b3ff",
   );
   const [loading, setLoading] = useState<LoadingState>("loading");
 
@@ -192,7 +192,11 @@ export default function ViewProfile() {
         {loading === "error" && <ThemedText>Profile not found</ThemedText>}
       </>
       {openProfile && (
-        <BaseModal visible={openProfile} onClose={() => setOpenProfile(false)}>
+        <BaseModal
+          visible={openProfile}
+          onClose={() => setOpenProfile(false)}
+          containerStyle={{ maxWidth: 1000 }}
+        >
           <EditProfile
             user={user}
             profileBackground={profileBackground}

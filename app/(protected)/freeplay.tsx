@@ -156,7 +156,7 @@ export default function Freeplay() {
       boardData[0][0],
       boardData,
       boardData[0][0].color,
-      new Set()
+      new Set(),
     );
     resetSquareCount(boardData, initialNumberCaptured, setSquaresRemaining);
     return boardData;
@@ -174,14 +174,14 @@ export default function Freeplay() {
   const [isMosaic, setIsMosaic] = useState(false);
   const [showSquareCounter, setShowSquareCounter] = useState(true);
   const [currentBestScore, setCurrentBestScore] = useState(
-    parseInt(bestScore ?? "0")
+    parseInt(bestScore ?? "0"),
   );
   const [loadingSetScore, setLoadingSetScore] = useState(false);
   const [hasCreatedScore, setHasCreatedScore] = useState(false); //state variable for board loaded from leaderboard in case user resets board before actually solving
   const [boardComplete, setBoardComplete] = useState(false);
   const [isReplayingBoard, setIsReplayingBoard] = useState(false);
   const [currentBoardId, setCurrentBoardId] = useState(
-    (boardId as string) ?? uuid.v4()
+    (boardId as string) ?? uuid.v4(),
   );
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
@@ -207,7 +207,7 @@ export default function Freeplay() {
         }
       };
       loadInitialSettings();
-    }, [])
+    }, []),
   );
 
   const handleColorChange = (color: ColorKey) => {
@@ -216,7 +216,7 @@ export default function Freeplay() {
     let remainingSquares = false;
     let capturedCount = 0;
     const currentBoardState = boardState.map((row) =>
-      row.map((square) => ({ ...square }))
+      row.map((square) => ({ ...square })),
     );
     currentBoardState.forEach((row) => {
       row.forEach((square) => {
@@ -227,7 +227,7 @@ export default function Freeplay() {
               square,
               currentBoardState,
               color,
-              visited
+              visited,
             );
           }
         }
@@ -239,7 +239,7 @@ export default function Freeplay() {
           if (!square.landLocked) {
             const neighbors = getAdjacentSquares(square, currentBoardState);
             const allNeighborsCaptured = neighbors.every(
-              (n) => !n || n.captured
+              (n) => !n || n.captured,
             );
             if (allNeighborsCaptured) {
               square.landLocked = true;
@@ -262,7 +262,7 @@ export default function Freeplay() {
             return [colorKey, value - capturedCount];
           }
           return [colorKey, value];
-        })
+        }),
       ) as Record<ColorKey, number>;
     });
     if (!remainingSquares) {
@@ -275,7 +275,7 @@ export default function Freeplay() {
     board: Square[][],
     color: ColorKey,
     visited: Set<string>,
-    depth: number = 0
+    depth: number = 0,
   ) {
     const key = `${currentSquare.x},${currentSquare.y}`;
     if (visited.has(key)) return 0;
@@ -293,7 +293,7 @@ export default function Freeplay() {
           board,
           color,
           visited,
-          depth + 1
+          depth + 1,
         );
       }
     }
@@ -302,7 +302,7 @@ export default function Freeplay() {
 
   function getAdjacentSquares(
     square: Square,
-    board: Square[][]
+    board: Square[][],
   ): (Square | undefined)[] {
     const x = square.x - 1;
     const y = square.y - 1;
@@ -322,7 +322,7 @@ export default function Freeplay() {
         color: square.defaultColor,
         captured: false,
         landLocked: false,
-      }))
+      })),
     );
 
     resetBoard[0][0].captured = true;
@@ -332,7 +332,7 @@ export default function Freeplay() {
       resetBoard[0][0],
       resetBoard,
       resetBoard[0][0].color,
-      new Set()
+      new Set(),
     );
     resetSquareCount(resetBoard, capturedCount, setSquaresRemaining);
     setBoardState(resetBoard);
@@ -354,7 +354,7 @@ export default function Freeplay() {
       boardData[0][0],
       boardData,
       boardData[0][0].color,
-      new Set()
+      new Set(),
     );
     resetSquareCount(boardData, capturedCount, setSquaresRemaining);
     setBoardState(boardData);
@@ -372,19 +372,21 @@ export default function Freeplay() {
   const determineIsBetterScore = (
     userBest: number | null,
     boardBest: number,
-    updatedScore: number
+    updatedScore: number,
   ) => {
     if (boardId === currentBoardId) {
+      if (!userBest) return updatedScore < boardBest;
       if (userBest) return updatedScore < boardBest && updatedScore < userBest;
       return false;
     }
+    if (!userBest) return true;
     if (userBest) return updatedScore < userBest;
     return false;
   };
 
   const determineHighScore = (
     updatedScore: number,
-    currentBoardBestScore: number
+    currentBoardBestScore: number,
   ) => {
     if (boardId && currentBoardId === boardId) {
       return updatedScore < currentBoardBestScore;
@@ -399,7 +401,7 @@ export default function Freeplay() {
     setLoadingSetScore(true);
     setShowBoardCompleteModal(true);
     const boardData = boardState.flatMap((row) =>
-      row.map((x) => x.defaultColor)
+      row.map((x) => x.defaultColor),
     );
     if (!networkState.isConnected) {
       if (!boardId) {
@@ -427,8 +429,8 @@ export default function Freeplay() {
           collection(db, "scores"),
           where("boardId", "==", currentBoardId),
           where("highScore", "==", true),
-          orderBy("score", "asc")
-        )
+          orderBy("score", "asc"),
+        ),
       );
       if (!currentBestScoreDocs.empty) {
         currentBoardBestScore = currentBestScoreDocs.docs[0].data().score;
@@ -438,7 +440,7 @@ export default function Freeplay() {
               return updateDoc(doc.ref, {
                 highScore: false,
               });
-            })
+            }),
           );
         }
       }
@@ -469,11 +471,11 @@ export default function Freeplay() {
       ]);
       if (userDoc) {
         const scoreField = scoreFieldMap[boardSize];
-        const currentBest = userDoc.data[scoreField];
+        const currentBest = userDoc.data[scoreField] ?? null;
         const isBetterScore = determineIsBetterScore(
           currentBest,
           currentBoardBestScore,
-          updatedScore
+          updatedScore,
         );
         const updatedScoreMap = Object.fromEntries(
           Object.entries(scoreFieldMap).map(([key, value]) => {
@@ -481,7 +483,7 @@ export default function Freeplay() {
               return [value, updatedScore];
             }
             return [value, userDoc.data[value] ?? null]; // always default to null
-          })
+          }),
         );
         await updateDoc(userDoc.ref, {
           boardsCompleted: increment(1),
@@ -494,7 +496,7 @@ export default function Freeplay() {
         });
         const newlyUnlockedColorPalettes = await getUnlockedColorPalettes(
           prevCriteriaMap,
-          newCriteriaMap
+          newCriteriaMap,
         );
         if (newlyUnlockedColorPalettes.length > 0) {
           setUnlockedColorPalettes(newlyUnlockedColorPalettes);
