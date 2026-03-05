@@ -28,15 +28,29 @@ import {
   update,
 } from "firebase/database";
 import { addDoc, collection, updateDoc } from "firebase/firestore";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { AppState, DeviceEventEmitter, Platform } from "react-native";
 
 export const useUserPresence = (user?: User | null) => {
+  const presenceCleanupRef = useRef<(() => void) | null>(null);
+
   useEffect(() => {
     if (!user) return;
 
-    // Establish initial presence
-    establishUserPresence(user);
+    let cancelled = false;
+
+    // Establish initial presence and store cleanup
+    establishUserPresence(user)
+      .then((cleanup) => {
+        if (cancelled) {
+          cleanup();
+        } else {
+          presenceCleanupRef.current = cleanup;
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to establish user presence:", error);
+      });
 
     // Handle foreground/background transitions
     const subscription = AppState.addEventListener("change", async (state) => {
@@ -60,6 +74,9 @@ export const useUserPresence = (user?: User | null) => {
     });
 
     return () => {
+      cancelled = true;
+      presenceCleanupRef.current?.();
+      presenceCleanupRef.current = null;
       subscription.remove();
     };
   }, [user]);
@@ -81,7 +98,7 @@ export const useUserPresence = (user?: User | null) => {
   }, []);
 };
 
-const establishUserPresence = async (user: User) => {
+const establishUserPresence = async (user: User): Promise<() => void> => {
   uploadOfflineScores();
   const userDoc = await getUser(user.uid);
   const userStatusRef = ref(rtdb, `/onlineUsers/${user.uid}`);
@@ -112,6 +129,8 @@ const establishUserPresence = async (user: User) => {
       profileLetter,
     };
 
+    // Defer permission prompt so the screen finishes rendering first
+    await new Promise((resolve) => setTimeout(resolve, 1500));
     const expoToken = await registerForPushNotificationsAsync();
     if (expoToken) {
       updatedUserDocData.expoPushToken = expoToken;
@@ -123,7 +142,7 @@ const establishUserPresence = async (user: User) => {
   await setSoundVolume(savedCaptureAudioLevel ?? 0.25);
 
   const connectedRef = ref(rtdb, ".info/connected");
-  onValue(connectedRef, (snap) => {
+  const unsubscribeConnected = onValue(connectedRef, (snap) => {
     if (snap.val() === false) return;
 
     // Set user online
@@ -145,6 +164,8 @@ const establishUserPresence = async (user: User) => {
       });
     }
   });
+
+  return unsubscribeConnected;
 };
 
 const updateAsyncStorageValuesOnLoad = async (userDoc: UserDoc) => {

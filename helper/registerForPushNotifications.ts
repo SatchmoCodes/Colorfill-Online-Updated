@@ -29,10 +29,20 @@ export async function registerForPushNotificationsAsync() {
     return null;
   }
 
-  const { data: token } = await Notifications.getExpoPushTokenAsync({
-    projectId: "495c2cc3-7384-4eaa-a937-648fad614abb",
-  });
-
-  console.log("Expo Push Token:", token);
-  return token;
+  try {
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Push token fetch timed out")), 10000)
+    );
+    const { data: token } = await Promise.race([
+      Notifications.getExpoPushTokenAsync({
+        projectId: "495c2cc3-7384-4eaa-a937-648fad614abb",
+      }),
+      timeoutPromise,
+    ]);
+    console.log("Expo Push Token:", token);
+    return token;
+  } catch (error) {
+    console.log("Failed to get push token:", error);
+    return null;
+  }
 }

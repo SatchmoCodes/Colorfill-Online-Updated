@@ -1,13 +1,13 @@
 {
   "expo": {
-    "name": "ColorFillOnlineUpdated",
+    "name": "ColorFillOnline",
     "slug": "ColorFillOnlineUpdated",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/ColorFill-iOS.png",
     "scheme": "colorfillonlineupdated",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "googleServicesFile": "./GoogleService-Info.plist",
