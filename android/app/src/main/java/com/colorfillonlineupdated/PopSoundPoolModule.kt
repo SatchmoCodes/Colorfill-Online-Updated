@@ -11,6 +11,7 @@ class PopSoundPoolModule(reactContext: ReactApplicationContext) :
 
     private val soundPool: SoundPool
     private val soundIds = mutableMapOf<String, Int>()
+    private val activeStreams = mutableMapOf<String, Int>()
 
     init {
         val attrs = AudioAttributes.Builder()
@@ -38,12 +39,17 @@ class PopSoundPoolModule(reactContext: ReactApplicationContext) :
     @ReactMethod
     fun play(filename: String, volume: Float) {
         val id = soundIds[filename] ?: return
-        soundPool.play(id, volume, volume, 1, 0, 1.0f)
+        activeStreams[filename]?.let { soundPool.stop(it) }
+        val streamId = soundPool.play(id, volume, volume, 1, 0, 1.0f)
+        if (streamId != 0) {
+            activeStreams[filename] = streamId
+        }
     }
 
     @ReactMethod
     fun release() {
         soundPool.release()
         soundIds.clear()
+        activeStreams.clear()
     }
 }
