@@ -11,6 +11,7 @@ import {
   saveLeaderboardRefreshTime,
 } from "@/helper/asyncStorageHelper";
 import { buildBOTDDateOptions, monthMap } from "@/helper/buildBOTDDateOptions";
+import { getEasternBoardDate } from "@/helper/getEasternBoardDate";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import {
@@ -67,8 +68,6 @@ const COOLDOWN_SECONDS = 15;
 
 const botdDateOptions = buildBOTDDateOptions();
 
-const today = new Date();
-
 interface LeaderboardOptionsModal {
   gamemode: string;
   size: string;
@@ -113,6 +112,8 @@ interface LeaderboardOptionsModal {
   }) => Promise<void>;
 }
 
+const currentDate = getEasternBoardDate();
+
 export default function Leaderboard() {
   const [openLeaderboardOptionsModal, setOpenLeaderboardOptionsModal] =
     useState(false);
@@ -121,14 +122,20 @@ export default function Leaderboard() {
   const [pvpQueryParameter, setPvpQueryParameter] = useState("wins");
   const [tableData, setTableData] = useState<DocumentData[]>([]);
   const [loadingQuery, setLoadingQuery] = useState(false);
-  const [year, setYear] = useState(today.getFullYear().toString());
-  const [month, setMonth] = useState((today.getMonth() + 1).toString());
-  const [day, setDay] = useState(today.getDate().toString());
+  const [year, setYear] = useState(
+    Number(currentDate.split("-")[0]).toString(),
+  );
+  const [month, setMonth] = useState(
+    Number(currentDate.split("-")[1]).toString(),
+  );
+  const [day, setDay] = useState(Number(currentDate.split("-")[2]).toString());
   const [botdId, setBotdId] = useState("");
   const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot<
     DocumentData,
     DocumentData
   > | null>(null);
+
+  console.log("these", year, month, day);
 
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -169,7 +176,7 @@ export default function Leaderboard() {
               where("highScore", "==", true),
               orderBy("score", "asc"),
               orderBy("createdAt", "asc"),
-              limit(25)
+              limit(25),
             );
 
             // 👇 add pagination dynamically
@@ -188,7 +195,7 @@ export default function Leaderboard() {
                       id: doc.id,
                       ...doc.data(),
                     })),
-                  ]
+                  ],
             );
           } else {
             console.log("no size selected");
@@ -209,13 +216,13 @@ export default function Leaderboard() {
                 where("boardId", "==", boardId),
                 orderBy("score", "asc"),
                 orderBy("createdAt", "asc"),
-                limit(25)
+                limit(25),
               );
 
               if (startAfterDoc) {
                 botdScoreQuery = query(
                   botdScoreQuery,
-                  startAfter(startAfterDoc)
+                  startAfter(startAfterDoc),
                 );
               }
 
@@ -230,7 +237,7 @@ export default function Leaderboard() {
                         id: doc.id,
                         ...doc.data(),
                       })),
-                    ]
+                    ],
               );
             } else {
               setTableData([]);
@@ -249,13 +256,13 @@ export default function Leaderboard() {
                 collection(db, "users"),
                 where("totalGames", ">=", 10),
                 orderBy("winRate", "desc"),
-                limit(25)
+                limit(25),
               );
             } else {
               userQuery = query(
                 collection(db, "users"),
                 orderBy(queryPVPOption, "desc"),
-                limit(25)
+                limit(25),
               );
             }
 
@@ -274,7 +281,7 @@ export default function Leaderboard() {
                       id: doc.id,
                       ...doc.data(),
                     })),
-                  ]
+                  ],
             );
           } else {
             console.log("no pvp query option selected");
@@ -612,7 +619,7 @@ const LeaderboardRow = React.memo(
         </LinearGradient>
       </TouchableOpacity>
     );
-  }
+  },
 );
 
 const Table = ({
@@ -643,7 +650,9 @@ const Table = ({
     if (distanceFromBottom <= WEB_THRESHOLD_PX && !webScrollLock.current) {
       webScrollLock.current = true;
       handlePagination();
-      setTimeout(() => { webScrollLock.current = false; }, 800);
+      setTimeout(() => {
+        webScrollLock.current = false;
+      }, 800);
     }
   };
 
@@ -657,14 +666,16 @@ const Table = ({
         translateX={translateX}
       />
     ),
-    [gamemode, pvpQueryParameter, translateX]
+    [gamemode, pvpQueryParameter, translateX],
   );
 
   return (
     <View style={{ flex: 1 }}>
       <FlatList
         data={tableData}
-        keyExtractor={(item: DocumentData) => item.id?.toString() ?? Math.random().toString()}
+        keyExtractor={(item: DocumentData) =>
+          item.id?.toString() ?? Math.random().toString()
+        }
         initialNumToRender={15}
         maxToRenderPerBatch={10}
         windowSize={7}
@@ -808,7 +819,7 @@ const OptionsModal = ({
           const updatedMonth = parseInt(tempMonth).toString();
           const queryBotdId = `${tempYear}-${updatedMonth.padStart(
             2,
-            "0"
+            "0",
           )}-${tempDay.padStart(2, "0")}`;
           setBotdId(queryBotdId);
           setYear(tempYear);
@@ -844,7 +855,7 @@ const OptionsModal = ({
         botdDateOptions[tempYear].map((x) => ({
           label: monthMap[parseInt(x.month)],
           value: x.month,
-        }))
+        })),
       );
       const updatedDayOptions = botdDateOptions[tempYear]
         .find((x) => x.month === tempMonth.toString())
