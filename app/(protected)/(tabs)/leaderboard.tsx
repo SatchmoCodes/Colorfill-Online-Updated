@@ -135,8 +135,6 @@ export default function Leaderboard() {
     DocumentData
   > | null>(null);
 
-  console.log("these", year, month, day);
-
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
 

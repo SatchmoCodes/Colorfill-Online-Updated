@@ -12,11 +12,15 @@ export default function CommonButton({
   title,
   size,
   style,
+  firstColor,
+  secondColor,
   handlePress,
 }: {
   title: string;
   size: number;
   style?: StyleProp<ViewStyle>;
+  firstColor?: string;
+  secondColor?: string;
   handlePress: () => void;
 }) {
   return (
@@ -26,7 +30,7 @@ export default function CommonButton({
       activeOpacity={0.8}
     >
       <LinearGradient
-        colors={["#448ee2ff", "#162c44ff"]}
+        colors={[firstColor ?? "#448ee2ff", secondColor ?? "#162c44ff"]}
         style={[styles.createButtonBackground]}
       >
         <ThemedText style={styles.createButtonText}>{title}</ThemedText>

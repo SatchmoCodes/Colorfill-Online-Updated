@@ -2,18 +2,38 @@ import Avatar from "@/components/Avatar";
 import BaseModal from "@/components/BaseModal";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
+import CommonButton from "@/components/ui/CommonButton";
 import EditProfile from "@/components/ui/EditProfile";
 import { IconSymbol } from "@/components/ui/IconSymbol";
+import { db, rtdb } from "@/firebaseConfig";
 import { getUser } from "@/helper/commonQueries";
 import { useUser } from "@/hooks/useFirebaseUser";
 import { PlayerList } from "@/hooks/useOnlinePlayerList";
 import { UserDoc } from "@/schema/userDocModel";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams } from "expo-router";
+import { ref, remove } from "firebase/database";
+import {
+  collection,
+  deleteDoc,
+  DocumentReference,
+  getDocs,
+  query,
+  where,
+} from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { ActivityIndicator } from "react-native-paper";
+import Toast from "react-native-toast-message";
 
 type LoadingState = "loading" | "complete" | "error";
+
+const showErrorToast = () => {
+  Toast.show({
+    type: "error",
+    text1: "Error deleting account",
+  });
+};
 
 export default function ViewProfile() {
   const { player } = useLocalSearchParams<{ player: string }>();
@@ -21,6 +41,7 @@ export default function ViewProfile() {
   const user = useUser();
 
   const [userDocData, setUserDocData] = useState<UserDoc | null>(null);
+  const [userDocRef, setUserDocRef] = useState<DocumentReference | null>(null);
   const [openProfile, setOpenProfile] = useState(false);
   const [profileBackground, setProfileBackground] = useState(
     profile.profileBackground ?? "#313131ff",
@@ -32,6 +53,8 @@ export default function ViewProfile() {
     profile.profileBanner ?? "#0b40b3ff",
   );
   const [loading, setLoading] = useState<LoadingState>("loading");
+  const [openDeleteModal, setOpenDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   if (!profile) return <ThemedText>No Profile Found</ThemedText>;
 
@@ -42,6 +65,7 @@ export default function ViewProfile() {
       const userDoc = await getUser(uid);
       if (userDoc) {
         setUserDocData(userDoc.data);
+        setUserDocRef(userDoc.ref);
         setLoading("complete");
       } else {
         setUserDocData(null);
@@ -53,6 +77,33 @@ export default function ViewProfile() {
       setLoading("error");
     }
   };
+
+  async function handleDeleteAccount() {
+    if (userDocRef) {
+      try {
+        setIsDeleting(true);
+        const userStatusRef = ref(rtdb, `/onlineUsers/${user.uid}`);
+        remove(userStatusRef);
+        const scoreQuery = query(
+          collection(db, "scores"),
+          where("uid", "==", user.uid),
+        );
+        const userScoreDocs = await getDocs(scoreQuery);
+        await Promise.all([
+          userScoreDocs.docs.map((doc) => deleteDoc(doc.ref)),
+          deleteDoc(userDocRef),
+          AsyncStorage.clear(),
+          user.delete(),
+        ]);
+      } catch (error) {
+        showErrorToast();
+      } finally {
+        setIsDeleting(false);
+      }
+    } else {
+      showErrorToast();
+    }
+  }
 
   useEffect(() => {
     if (profile && !userDocData) {
@@ -207,6 +258,48 @@ export default function ViewProfile() {
             setProfileBanner={setProfileBanner}
             setOpenProfile={setOpenProfile}
           />
+        </BaseModal>
+      )}
+      {profile.displayName === user.displayName &&
+        profile.displayName !== null && (
+          <ThemedView style={{ marginTop: "auto" }}>
+            <CommonButton
+              title="Delete Account"
+              size={200}
+              firstColor="#e30505"
+              secondColor="#7d0404"
+              handlePress={() => setOpenDeleteModal(true)}
+            />
+          </ThemedView>
+        )}
+      {openDeleteModal && (
+        <BaseModal
+          visible={openDeleteModal}
+          onClose={() => setOpenDeleteModal(false)}
+        >
+          <ThemedText
+            type="subtitle"
+            style={{ textAlign: "center", marginBottom: 20 }}
+          >
+            Are you sure you want to delete your account?
+          </ThemedText>
+          <ThemedText
+            style={{ textAlign: "center", fontSize: 16, marginBottom: 20 }}
+          >
+            All data associated to account will be deleted and unrecoverable.
+          </ThemedText>
+          <ThemedView style={{ flexDirection: "row", gap: 20 }}>
+            <CommonButton
+              title="Yes"
+              size={200}
+              handlePress={() => handleDeleteAccount()}
+            />
+            <CommonButton
+              title="No"
+              size={200}
+              handlePress={() => setOpenDeleteModal(false)}
+            />
+          </ThemedView>
         </BaseModal>
       )}
     </ThemedView>

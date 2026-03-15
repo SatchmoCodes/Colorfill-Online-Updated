@@ -21,7 +21,7 @@ export default function ViewScore() {
     useLocalSearchParams();
 
   const [originalCreator, setOriginalCreator] = useState<DocumentData | null>(
-    null
+    null,
   );
 
   if (!boardId) {
@@ -32,15 +32,13 @@ export default function ViewScore() {
     );
   }
 
-  console.log("created at", createdAt);
-
   async function getScoreCreator() {
     try {
       const creatorQuery = query(
         collection(db, "scores"),
         where("boardId", "==", boardId),
         orderBy("createdAt", "asc"),
-        limit(1)
+        limit(1),
       );
       const querySnapshot = await getDocs(creatorQuery);
       if (!querySnapshot.empty) {
