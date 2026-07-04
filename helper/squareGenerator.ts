@@ -1,8 +1,9 @@
 import { ColorKey, Square } from "@/app/(protected)/freeplay";
+import { solveBoard } from "./boardSolver";
 
 export const squareGenerator = (
   numberOfSquares: number,
-  boardColors?: number[]
+  boardColors?: number[],
 ) => {
   const squareGrid: Square[][] = [];
   let xCoord = 1;
@@ -11,6 +12,7 @@ export const squareGenerator = (
   const colorData = boardColors
     ? [...boardColors]
     : createRandomColorList(numberOfSquares);
+  console.log("solution", solveBoard(colorData));
   for (let x = 0; x < numberOfSquares; x++) {
     const color = colorData[x] as ColorKey;
     squareRow.push({

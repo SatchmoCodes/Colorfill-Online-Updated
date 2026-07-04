@@ -158,9 +158,6 @@ export default function EditProfile({
 }
 
 const styles = StyleSheet.create({
-  modalStyle: {
-    width: 200,
-  },
   centeredView: {
     justifyContent: "center",
     alignItems: "center",
